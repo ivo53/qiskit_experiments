@@ -9,14 +9,41 @@ from scipy.optimize import root
 from scipy.integrate import quad, quad_vec
 from scipy.misc import derivative
 from scipy.special import ellipk
+
+AREA_VALUES = {
+    "half": 0.5 * np.pi,
+    "pi": np.pi,
+    "3pi": 3 * np.pi,
+    "5pi": 5 * np.pi,
+    "7pi": 7 * np.pi,
+}
+
+times = {
+    "gauss": "174431",
+    "constant": "174532",
+    "sine": "174541",
+    "sine2": "174543",
+    "sine3": "174546",
+    "rz": "174403",
+    "sech2": "174406",
+    "demkov": "174352"
+}
+
+date = "2022-06-16"
+area = "pi"
+pulse_type = "demkov"
+fit_func = pulse_type #"gauss_sech2"
+baseline_fit_func = "sinc2" if pulse_type == "constant" else "lorentzian"
+
+
 def fit_function(x_values, y_values, function, init_params, lower, higher):
     fitparams, conv = curve_fit(function, x_values, y_values, init_params, maxfev=1000000, bounds=(lower, higher))
     y_fit = function(x_values, *fitparams)
     
     return fitparams, y_fit
 
-def lorentzian(x, A, q_freq, B):
-    return A / (((x - q_freq) / B)**2 + 1) 
+def lorentzian(x, O, q_freq):
+    return 1 / (((x - q_freq) / O) ** 2 + 1) 
 
 def inverse_lorentzian(y, A, q_freq, B):
     return B * np.sqrt(A / (y) - 1) + q_freq
@@ -25,9 +52,22 @@ def sech2(x, A, q_freq, B):
     x_normalised = (x - q_freq) / B
     return A * (1 / np.cosh(x_normalised)) ** 2
 
-def gauss_sech2(x, A, q_freq, T, B):
-    x = np.abs(x - q_freq) / B
-    return A * (1 / np.cosh(np.pi * T * x / np.log(np.sqrt(1 / x)))) ** 2
+def rz(x, O, q_freq, T):
+    # T = amplitude_coeff * AREA_VALUES[area] / O
+    return np.sin(0.5 * np.pi * O * T) ** 2 \
+        / np.cosh(0.5 * np.pi * (x - q_freq) * T) ** 2
+
+def demkov(x, O, q_freq, T):
+    # T = amplitude_coeff * AREA_VALUES[area] / O
+    return np.sin(0.5 * np.pi * O * T) ** 2 \
+        / np.cosh(0.5 * np.pi * (x - q_freq) * T) ** 2
+
+def gauss_sech2(x, O, q_freq, T):
+    # T = amplitude_coeff * AREA_VALUES[area] / O
+    numerator = np.sin(0.5 * np.sqrt(np.pi) * O * T) ** 2
+    denomenator = np.cosh(np.pi * (x - q_freq) * T / (4 * np.sqrt(np.log(O / (x - q_freq))))) ** 2
+    print(denomenator)
+    return numerator / denomenator
 
 def inverse_sech2(y, A, q_freq, B, tol=1e-10):
     rhs = A / (y)
@@ -53,11 +93,13 @@ def inverse_sech2(y, A, q_freq, B, tol=1e-10):
     # return predicted_x_vals
     return B * arccosh + q_freq
 
-def sinc2(x, A, q_freq, B):
-    return A * (np.sinc((x - q_freq) / B)) ** 2
+def sinc2(x, O, q_freq):
+    return (np.sinc((x - q_freq) / O)) ** 2
 
-def special_sinc(x, A, q_freq, B):
-    return (A / (1 + ((x - q_freq) / B) ** 2)) * np.sin(0.5 * AREA_VALUES[area] * np.sqrt(1 + ((x - q_freq) / B) ** 2)) ** 2
+def special_sinc(x, O, q_freq, T):
+    # T = amplitude_coeff * AREA_VALUES[area] / O
+    return (O ** 2 / (O**2 + ((x - q_freq)) ** 2)) * \
+        np.sin(0.5 * T * np.sqrt(O**2 + ((x - q_freq)) ** 2)) ** 2
 
 def inverse_special_sinc(y, A, q_freq, B, tol=1e-10):
     predicted_x_vals = []
@@ -148,7 +190,10 @@ def inverse_quadruple_lorentzian(y, A, q_freq, B):
 FIT_FUNCTIONS = {
     "lorentzian": lorentzian,
     "sech2": sech2,
-    "gauss_sech2": gauss_sech2,
+    "constant": special_sinc,
+    "gauss": gauss_sech2,
+    "rz": rz,
+    "demkov": demkov,
     "sinc2": sinc2,
     "special_sinc": special_sinc,
     "double_lorentzian": double_lorentzian,
@@ -167,30 +212,6 @@ INVERSE_FIT_FUNCTIONS = {
     "triple_lorentzian": inverse_triple_lorentzian,
     "quadruple_lorentzian": inverse_quadruple_lorentzian    
 }
-AREA_VALUES = {
-    "half": 0.5 * np.pi,
-    "pi": np.pi,
-    "3pi": 3 * np.pi,
-    "5pi": 5 * np.pi,
-    "7pi": 7 * np.pi,
-}
-
-date = "2022-06-16"
-times = {
-    "gauss": "174431",
-    "constant": "174532",
-    "sine": "174541",
-    "sine2": "174543",
-    "sine3": "174546",
-    "sech": "174403",
-    "sech2": "174406",
-    "demkov": "174352"
-}
-area = "pi"
-
-pulse_type = "gauss"
-fit_func = "gauss_sech2"
-baseline_fit_func = "lorentzian"
 
 file_dir = os.path.dirname(__file__)
 data_folder = os.path.join(file_dir, "data", "armonk", "calibration", date)
@@ -214,12 +235,13 @@ fit_params, y_fit = fit_function(
     detuning,#[:int(len(detuning) / 2.1)],
     vals,#[:int(len(detuning) / 2.1)], 
     FIT_FUNCTIONS[fit_func],
-    # [1e2, 1e-2],
-    # [0, 0],
-    # [1000, 1000]
-    [1, 0, 15, 15], # initial parameters for curve_fit
-    [0, -10, -0.05, 0], # upper bounds on parameters
-    [1e8, 10, 100, 100] # lower bounds on parameters
+    [.95, -0.1, .5],
+    [0, -100, 0],
+    [1000, 100, 1000]
+
+    # [1, 0, 15, 15], # initial parameters for curve_fit
+    # [0, -10, -0.05, 0], # upper bounds on parameters
+    # [1e8, 10, 100, 100] # lower bounds on parameters
 
     # [1, 4.97, 5e-5, 0.01, 0, .01, 1, .1, 100, 5], # initial parameters for curve_fit
     # [0, 4.9, 0, 0, -0.05, 0, 0, 0, 0, 0], # upper bounds on parameters
@@ -235,9 +257,13 @@ baseline_fit_params, baseline_y_fit = fit_function(
     detuning,
     vals, 
     FIT_FUNCTIONS[baseline_fit_func],
-    [1, 0, 10], # initial parameters for curve_fit
-    [0, -10, 0],
-    [10, 10, 100]
+    [1, 0], # initial parameters for curve_fit
+    [0, -10],
+    [10, 10]
+
+    # [1, 0, 10], # initial parameters for curve_fit
+    # [0, -10, 0],
+    # [10, 10, 100]
 )
 ##
 print(fit_params, "\n", baseline_fit_params)
