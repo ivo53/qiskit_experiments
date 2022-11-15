@@ -96,8 +96,9 @@ def inverse_sech2(y, A, q_freq, B, tol=1e-10):
 def sinc2(x, O, q_freq):
     return (np.sinc((x - q_freq) / O)) ** 2
 
-def special_sinc(x, O, q_freq, T):
+def special_sinc(x, q_freq, T):
     # T = amplitude_coeff * AREA_VALUES[area] / O
+    O = AREA_VALUES[area] / T
     return (O ** 2 / (O**2 + ((x - q_freq)) ** 2)) * \
         np.sin(0.5 * T * np.sqrt(O**2 + ((x - q_freq)) ** 2)) ** 2
 

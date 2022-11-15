@@ -98,7 +98,7 @@ job = job_manager.run(
     circuits,
     backend=backend,
     shots=num_shots,
-    # optimization_level=0
+    optimization_level=0
 )
 # job_monitor(job)
 results = job.results()
