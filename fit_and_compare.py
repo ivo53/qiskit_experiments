@@ -31,7 +31,7 @@ times = {
 
 date = "2022-06-16"
 area = "pi"
-pulse_type = "demkov"
+pulse_type = "gauss"
 fit_func = pulse_type #"gauss_sech2"
 baseline_fit_func = "sinc2" if pulse_type == "constant" else "lorentzian"
 
@@ -65,7 +65,8 @@ def demkov(x, O, q_freq, T):
 def gauss_sech2(x, O, q_freq, T):
     # T = amplitude_coeff * AREA_VALUES[area] / O
     numerator = np.sin(0.5 * np.sqrt(np.pi) * O * T) ** 2
-    denomenator = np.cosh(np.pi * (x - q_freq) * T / (4 * np.sqrt(np.log(O / (x - q_freq))))) ** 2
+    print(np.stack(x, np.log(O) - np.log(x - q_freq)))
+    denomenator = np.cosh(np.pi * (x - q_freq) * T / (4 * np.sqrt(np.log(O) - np.log(x - q_freq)))) ** 2
     print(denomenator)
     return numerator / denomenator
 
@@ -235,8 +236,8 @@ fit_params, y_fit = fit_function(
     detuning,#[:int(len(detuning) / 2.1)],
     vals,#[:int(len(detuning) / 2.1)], 
     FIT_FUNCTIONS[fit_func],
-    [.95, -0.1, .5],
-    [0, -100, 0],
+    [.95, 0.1, .5],
+    [0.1, 0.001, 0.1],
     [1000, 100, 1000]
 
     # [1, 0, 15, 15], # initial parameters for curve_fit
