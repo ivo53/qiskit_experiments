@@ -18,6 +18,24 @@ AREA_VALUES = {
     "7pi": 7 * np.pi,
 }
 
+RABI_FREQ = {
+    "constant": 6266474.70796,
+    "rabi": 6266474.70796,
+    "rz": 42874911.4203,
+    "gauss": 25179780.7441,
+    "demkov": 31739880.846,
+    "sech2": 35460561.388
+}
+
+Tt = {
+    "constant": 1504e-9 / 3,
+    "rabi": 1504e-9 / 3,
+    "rz": (284 + 4/9) * 1e-9,
+    "gauss": (398 + 2/9) * 1e-9,
+    "demkov": (572 + 4/9) * 1e-9,
+    "sech2": (284 + 4/9) * 1e-9
+}
+
 times = {
     "gauss": "174431",
     "constant": "174532",
@@ -43,7 +61,7 @@ def fit_function(x_values, y_values, function, init_params, lower, higher):
     return fitparams, y_fit
 
 def lorentzian(x, O, q_freq):
-    return 1 / (((x - q_freq) / O) ** 2 + 1) 
+    return 1 / (((x - q_freq) / O) ** 2 + 1)
 
 def inverse_lorentzian(y, A, q_freq, B):
     return B * np.sqrt(A / (y) - 1) + q_freq
@@ -52,18 +70,19 @@ def sech2(x, A, q_freq, B):
     x_normalised = (x - q_freq) / B
     return A * (1 / np.cosh(x_normalised)) ** 2
 
-def rz(x, O, q_freq, T):
-    # T = amplitude_coeff * AREA_VALUES[area] / O
-    return np.sin(0.5 * np.pi * O * T) ** 2 \
+def rz(x, q_freq):
+    T = Tt["rz"]
+    return np.sin(0.5 * np.pi * RABI_FREQ["rz"] * T) ** 2 \
         / np.cosh(0.5 * np.pi * (x - q_freq) * T) ** 2
 
-def demkov(x, O, q_freq, T):
-    # T = amplitude_coeff * AREA_VALUES[area] / O
-    return np.sin(0.5 * np.pi * O * T) ** 2 \
+def demkov(x, q_freq):
+    T = Tt["demkov"]
+    return np.sin(0.5 * np.pi * RABI_FREQ["demkov"] * T) ** 2 \
         / np.cosh(0.5 * np.pi * (x - q_freq) * T) ** 2
 
-def gauss_sech2(x, O, q_freq, T):
-    # T = amplitude_coeff * AREA_VALUES[area] / O
+def gauss_sech2(x, q_freq):
+    O = RABI_FREQ["gauss"]
+    T = Tt["gauss"]
     numerator = np.sin(0.5 * np.sqrt(np.pi) * O * T) ** 2
     print(np.stack(x, np.log(O) - np.log(x - q_freq)))
     denomenator = np.cosh(np.pi * (x - q_freq) * T / (4 * np.sqrt(np.log(O) - np.log(x - q_freq)))) ** 2
@@ -97,9 +116,9 @@ def inverse_sech2(y, A, q_freq, B, tol=1e-10):
 def sinc2(x, O, q_freq):
     return (np.sinc((x - q_freq) / O)) ** 2
 
-def special_sinc(x, q_freq, T):
-    # T = amplitude_coeff * AREA_VALUES[area] / O
-    O = AREA_VALUES[area] / T
+def special_sinc(x, q_freq):
+    T = Tt["rabi"]
+    O = RABI_FREQ["rabi"]
     return (O ** 2 / (O**2 + ((x - q_freq)) ** 2)) * \
         np.sin(0.5 * T * np.sqrt(O**2 + ((x - q_freq)) ** 2)) ** 2
 
@@ -218,7 +237,7 @@ INVERSE_FIT_FUNCTIONS = {
 file_dir = os.path.dirname(__file__)
 data_folder = os.path.join(file_dir, "data", "armonk", "calibration", date)
 data_files = os.listdir(data_folder)
-center_freq = 4.97169 * 1.e3 
+center_freq = 4.97169 * 1.e3
 for d in data_files:
     if d.startswith(times[pulse_type]):
         csv_file = d
