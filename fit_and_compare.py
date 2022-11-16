@@ -9,7 +9,7 @@ from scipy.optimize import root
 from scipy.integrate import quad, quad_vec
 from scipy.misc import derivative
 from scipy.special import ellipk
-
+import mpmath as mp
 AREA_VALUES = {
     "half": 0.5 * np.pi,
     "pi": np.pi,
@@ -36,6 +36,13 @@ Tt = {
     "sech2": (284 + 4/9) * 1e-9
 }
 
+SIGMA = {
+    "rz": 23.39181 * 1e-9,
+    "gauss": (49 + 7/9) * 1e-9,
+    "demkov": (55 + 5/9) * 1e-9,
+    "sech2": (44 + 4/9) * 1e-9
+}
+
 times = {
     "gauss": "174431",
     "constant": "174532",
@@ -49,7 +56,7 @@ times = {
 
 date = "2022-06-16"
 area = "pi"
-pulse_type = "gauss"
+pulse_type = "demkov"
 fit_func = pulse_type #"gauss_sech2"
 baseline_fit_func = "sinc2" if pulse_type == "constant" else "lorentzian"
 
@@ -59,6 +66,9 @@ def fit_function(x_values, y_values, function, init_params, lower, higher):
     y_fit = function(x_values, *fitparams)
     
     return fitparams, y_fit
+
+def with_dephasing(P2, gamma):
+    return ((2 * P2 - 1) * np.exp(- gamma) + 1) / 2
 
 def lorentzian(x, O, q_freq):
     return 1 / (((x - q_freq) / O) ** 2 + 1)
@@ -70,24 +80,53 @@ def sech2(x, A, q_freq, B):
     x_normalised = (x - q_freq) / B
     return A * (1 / np.cosh(x_normalised)) ** 2
 
-def rz(x, q_freq):
+def rz(x, q_freq, gamma):
     T = Tt["rz"]
-    return np.sin(0.5 * np.pi * RABI_FREQ["rz"] * T) ** 2 \
+    P2 =  np.sin(0.5 * np.pi * RABI_FREQ["rz"] * T) ** 2 \
         / np.cosh(0.5 * np.pi * (x - q_freq) * T) ** 2
+    return with_dephasing(P2, gamma)
 
-def demkov(x, q_freq):
+def demkov_old(x, q_freq, gamma):
     T = Tt["demkov"]
-    return np.sin(0.5 * np.pi * RABI_FREQ["demkov"] * T) ** 2 \
+    P2 = np.sin(0.5 * np.pi * RABI_FREQ["demkov"] * T) ** 2 \
         / np.cosh(0.5 * np.pi * (x - q_freq) * T) ** 2
+    return with_dephasing(P2, gamma)
 
-def gauss_sech2(x, q_freq):
+def demkov(x, q_freq, gamma):
+    T = Tt["demkov"]
+    sigma = SIGMA["demkov"]
+    omega_0 = RABI_FREQ["demkov"]
+    alpha = 0.5 * (x - q_freq) * T
+    if not (isinstance(alpha, np.ndarray) or isinstance(alpha, list)):
+        alpha = [alpha]
+    # print(alpha)
+    def f_(t):
+        return omega_0 * mp.exp(-np.abs(t - T/2) / sigma)
+    # trange = np.arange(0, 5e-7, 1e-10)
+    # plt.plot(trange, f_(trange))
+    # plt.show()
+    s_inf = np.float64(mp.quad(f_, [0, np.inf]))
+    bessel1 = np.array([complex(mp.besselj(1/2 + 1j * a, s_inf)) for a in alpha])
+    bessel2 = np.array([complex(mp.besselj(-1/2 - 1j * a, s_inf)) for a in alpha])
+    bessel3 = np.array([complex(mp.besselj(1/2 - 1j * a, s_inf)) for a in alpha])
+    bessel4 = np.array([complex(mp.besselj(-1/2 + 1j * a, s_inf)) for a in alpha])
+    if len(alpha) == 1:
+        alpha = alpha[0]
+    P2 = (np.pi * s_inf / 2) ** 2 * np.abs(bessel1 * bessel2 \
+         + bessel3 * bessel4) ** 2 / np.cosh(alpha * np.pi) ** 2
+    # np.sin(0.5 * np.pi * RABI_FREQ["demkov"] * T) ** 2 \
+    #     / np.cosh(0.5 * np.pi * (x - q_freq) * T) ** 2
+    return with_dephasing(P2, gamma)
+
+def gauss_sech2(x, q_freq, gamma):
     O = RABI_FREQ["gauss"]
     T = Tt["gauss"]
     numerator = np.sin(0.5 * np.sqrt(np.pi) * O * T) ** 2
-    print(np.stack(x, np.log(O) - np.log(x - q_freq)))
+    # print(np.stack(x, np.log(O) - np.log(x - q_freq)))
     denomenator = np.cosh(np.pi * (x - q_freq) * T / (4 * np.sqrt(np.log(O) - np.log(x - q_freq)))) ** 2
-    print(denomenator)
-    return numerator / denomenator
+    # print(denomenator)
+    P2 = numerator / denomenator
+    return with_dephasing(P2, gamma)
 
 def inverse_sech2(y, A, q_freq, B, tol=1e-10):
     rhs = A / (y)
@@ -116,11 +155,12 @@ def inverse_sech2(y, A, q_freq, B, tol=1e-10):
 def sinc2(x, O, q_freq):
     return (np.sinc((x - q_freq) / O)) ** 2
 
-def special_sinc(x, q_freq):
+def special_sinc(x, q_freq, gamma):
     T = Tt["rabi"]
     O = RABI_FREQ["rabi"]
-    return (O ** 2 / (O**2 + ((x - q_freq)) ** 2)) * \
+    P2 = (O ** 2 / (O**2 + ((x - q_freq)) ** 2)) * \
         np.sin(0.5 * T * np.sqrt(O**2 + ((x - q_freq)) ** 2)) ** 2
+    return with_dephasing(P2, gamma)
 
 def inverse_special_sinc(y, A, q_freq, B, tol=1e-10):
     predicted_x_vals = []
@@ -256,9 +296,9 @@ fit_params, y_fit = fit_function(
     detuning,#[:int(len(detuning) / 2.1)],
     vals,#[:int(len(detuning) / 2.1)], 
     FIT_FUNCTIONS[fit_func],
-    [.95, 0.1, .5],
-    [0.1, 0.001, 0.1],
-    [1000, 100, 1000]
+    [0.1, .5],
+    [0.001, 0.1],
+    [100, 1000]
 
     # [1, 0, 15, 15], # initial parameters for curve_fit
     # [0, -10, -0.05, 0], # upper bounds on parameters
@@ -271,7 +311,7 @@ fit_params, y_fit = fit_function(
     # [0, -10, 0, 0, -0.05, 0], # upper bounds on parameters
     # [1e8, 10, 1e8, 100, 1, 1e6] # lower bounds on parameters
 )
-y_fit = [FIT_FUNCTIONS[fit_func](det, *fit_params) for det in detuning]
+y_fit = FIT_FUNCTIONS[fit_func](detuning, *fit_params) 
 ##
 ## sech^2 fit
 baseline_fit_params, baseline_y_fit = fit_function(
@@ -287,7 +327,7 @@ baseline_fit_params, baseline_y_fit = fit_function(
     # [10, 10, 100]
 )
 ##
-print(fit_params, "\n", baseline_fit_params)
+# print(fit_params, "\n", baseline_fit_params)
 extended_freq = np.linspace(detuning[0], detuning[-1], 5000)
 extended_y_fit = FIT_FUNCTIONS[fit_func](extended_freq, *fit_params)
 baseline_extended_y_fit = FIT_FUNCTIONS[baseline_fit_func](extended_freq, *baseline_fit_params)
@@ -298,7 +338,7 @@ overfitting_idx = np.mean(np.abs(np.diff(extended_y_fit)))
 baseline_overfitting_idx = np.mean(np.abs(np.diff(baseline_extended_y_fit)))
 overfitting = overfitting_idx > 0.1
 baseline_overfitting = baseline_overfitting_idx > 0.1
-print(overfitting_idx, baseline_overfitting_idx)
+# print(overfitting_idx, baseline_overfitting_idx)
 if overfitting:
     print("Strong overfitting present.")
     exit(1)
