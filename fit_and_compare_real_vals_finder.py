@@ -27,6 +27,14 @@ RABI_FREQ = {
     "demkov": 31739880.846,
     "sech2": 35460561.388
 }
+RABI_FREQ_MOD = {
+    "constant": 6266474.70796 / (2 * np.pi),
+    "rabi": 6266474.70796 / (2 * np.pi),
+    "rz": 6823754.08717,
+    "gauss": 4007486.5714,
+    "demkov": 5051558.92979,
+    "sech2": 5643723.62971
+}
 
 Tt = {
     "constant": 1504e-9 / 3,
@@ -53,6 +61,13 @@ SIGMA = {
     "sech2": (44 + 4/9) * 1e-9
 }
 
+SIGMA_MOD = {
+    "rz": 2 * np.pi * 23.39181 * 1e-9,
+    "gauss": 2 * np.pi * (49 + 7/9) * 1e-9,
+    "demkov": 2 * np.pi * (55 + 5/9) * 1e-9,
+    "sech2": 2 * np.pi * (44 + 4/9) * 1e-9
+}
+
 times = {
     "gauss": "174431",
     "constant": "174532",
@@ -66,7 +81,7 @@ times = {
 
 date = "2022-06-16"
 area = "pi"
-pulse_type = "rz"
+pulse_type = "gauss"
 fit_func = pulse_type #"gauss_sech2"
 baseline_fit_func = "sinc2" if pulse_type == "constant" else "lorentzian"
 
@@ -78,25 +93,20 @@ def fit_function(x_values, y_values, function, init_params, lower, higher):
     return fitparams, y_fit
 
 def with_dephasing(P2, egamma):
-    # print(egamma)
     # return ((2 * P2 - 1) * np.exp(- gamma) + 1) / 2
     return P2 * egamma - egamma / 2 + 1 / 2
 
 def lorentzian(x, O, q_freq):
     return 1 / (((x - q_freq) / O) ** 2 + 1)
 
-def rz(x, q_freq, gamma, k, l):
+def rz(x, q_freq, gamma):
     T = Tmod["rz"]
-    O = RABI_FREQ["rz"]
-    sigma = SIGMA["rz"]
+    O = RABI_FREQ_MOD["rz"]
+    sigma = SIGMA_MOD["rz"]
     # T = np.pi / RABI_FREQ["rz"]
-    def f_(t):
-        return O / mp.cosh((t - T/2) / sigma)
-    S = np.float64(mp.quad(f_, [0, T]))
     D = (x - q_freq) * 1e6
-    P2 = np.sin(0.5 * np.pi * O * T) ** 2 \
-        / np.cosh(l * np.pi * D * T) ** 2
-    # print(np.amax(P2))
+    P2 = np.sin(0.5 * np.pi * O * sigma) ** 2 \
+        / np.cosh(0.5 * np.pi * D * sigma) ** 2
     return with_dephasing(P2, gamma)
 
 def demkov(x, q_freq, gamma):
@@ -151,12 +161,45 @@ def gauss_sech2(x, q_freq, gamma):
     def f_(t):
         return O * mp.exp(-0.5 * ((t - T/2) / sigma) ** 2)
     S = np.float64(mp.quad(f_, [0, T]))
-    numerator = np.sin(0.5 * np.sqrt(np.pi) * S) ** 2
+    numerator = np.sin(0.5 * np.sqrt(np.pi) * O * sigma) ** 2
     # print(np.stack(x, np.log(O) - np.log(x - q_freq)))
     denomenator = np.cosh(np.pi * D * T / (4 * np.sqrt(np.log(O) - np.log(np.abs(D))))) ** 2
     # print(denomenator)
     P2 = numerator / denomenator
     return with_dephasing(P2, gamma)
+
+def gauss(x, q_freq, egamma):
+    O = RABI_FREQ_MOD["gauss"]
+    T = Tmod["gauss"]
+    sigma = SIGMA_MOD["gauss"]
+    D = (x - q_freq) * 1e6
+    alpha = np.abs(O / D)
+    print(alpha)
+    alpha[np.isnan(alpha)] = 10000000
+    print(alpha)
+    m, mu, nu = (1.311468, 0.316193, 0.462350)
+
+    ImD = D * sigma * np.sqrt(
+        np.sqrt(
+            4 * np.log(m * alpha) ** 2 + np.pi ** 2
+        ) \
+            - np.log(m * alpha)
+    ) / np.sqrt(2)
+
+    ReD = np.sqrt(2) * D * sigma * (
+        (np.sqrt(alpha ** 2 + 1) - 1) * \
+            np.sqrt(
+                0.5 * np.log(
+                    alpha ** 2 / ((1 + nu * (np.sqrt(alpha ** 2 + 1) - 1)) ** 2 - 1)
+                )
+            ) + 0.5 * np.sqrt(
+                np.sqrt(
+                    np.log(alpha ** 2 / (mu * (2 - mu))) ** 2 + np.pi ** 2
+                ) + np.log(alpha ** 2 / (mu * (2 - mu)))
+            )
+    )
+    P2 = np.sin(ReD) ** 2 / np.cosh(ImD) ** 2
+    return with_dephasing(P2, egamma)
 
 def sinc2(x, O, q_freq):
     return (np.sinc((x - q_freq) / O)) ** 2
@@ -176,7 +219,7 @@ def special_sinc(x, q_freq, gamma, O):
 FIT_FUNCTIONS = {
     "lorentzian": lorentzian,
     "constant": special_sinc,
-    "gauss": gauss_sech2,
+    "gauss": gauss,
     "rz": rz,
     "demkov": demkov,
     "sinc2": sinc2,
@@ -208,17 +251,17 @@ def fit_once(
         detuning,#[:int(len(detuning) / 2.1)],
         vals,#[:int(len(detuning) / 2.1)], 
         FIT_FUNCTIONS[fit_func],
-        # [0.1, 0.9],
-        # [-3, .9],
-        # [3, 1]
+        [0.1, 0.9],
+        [-3, .9],
+        [3, 1]
 
         # [q_freq, egamma, O],
         # [q_freq_min, egamma_min, O_min],
         # [q_freq_max, egamma_max, O_max]
 
-        [0, 1, 1, 1], # initial parameters for curve_fit
-        [-3, 0.999, -0.05, 0], # upper bounds on parameters
-        [3, 1, 100, 100] # lower bounds on parameters
+        # [0, 0.9, 1, 1], # initial parameters for curve_fit
+        # [-3, 0.5, -0.05, 0], # upper bounds on parameters
+        # [3, 1, 100, 100] # lower bounds on parameters
     )
     y_fit = FIT_FUNCTIONS[fit_func](detuning, *fit_params) 
     ##
@@ -269,7 +312,7 @@ fit, baseline = fit_once(
 similarity_idx, y_fit, extended_y_fit, fit_params = fit
 baseline_similarity_idx, baseline_y_fit, \
     baseline_extended_y_fit, baseline_fit_params = baseline
-
+print(fit_params)
 # for o in np.linspace(5e5, 1e9, 500):
 #     fit_, baseline_ = fit_once(
 #         detuning, vals, fit_func, 0, 1, o,
