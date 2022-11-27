@@ -81,7 +81,7 @@ times = {
 
 date = "2022-06-16"
 area = "pi"
-pulse_type = "gauss"
+pulse_type = "demkov"
 fit_func = pulse_type #"gauss_sech2"
 baseline_fit_func = "sinc2" if pulse_type == "constant" else "lorentzian"
 
@@ -110,9 +110,9 @@ def rz(x, q_freq, gamma):
     return with_dephasing(P2, gamma)
 
 def demkov(x, q_freq, gamma):
-    T = Tt["demkov"]
-    sigma = SIGMA["demkov"]
-    omega_0 = RABI_FREQ["demkov"]
+    T = Tmod["demkov"]
+    sigma = SIGMA_MOD["demkov"]
+    omega_0 = RABI_FREQ_MOD["demkov"]
     alpha = 0.5 * (x - q_freq) * T
     # print(alpha)
     if not (isinstance(alpha, np.ndarray) or isinstance(alpha, list)):
@@ -174,9 +174,7 @@ def gauss(x, q_freq, egamma):
     sigma = SIGMA_MOD["gauss"]
     D = (x - q_freq) * 1e6
     alpha = np.abs(O / D)
-    print(alpha)
     alpha[np.isnan(alpha)] = 10000000
-    print(alpha)
     m, mu, nu = (1.311468, 0.316193, 0.462350)
 
     ImD = D * sigma * np.sqrt(
