@@ -118,13 +118,13 @@ def demkov(x, q_freq, gamma):
     if not (isinstance(alpha, np.ndarray) or isinstance(alpha, list)):
         alpha = [alpha]
     # print(alpha)
-    # def f_(t):
-    #     return omega_0 * mp.exp(-np.abs(t - T/2) / sigma)
-    # trange = np.arange(0, 5e-7, 1e-10)
+    def f_(t):
+        return omega_0 * np.exp(-np.abs(t) / sigma)
+    trange = np.arange(0, 5e-7, 1e-10)
     # plt.plot(trange, f_(trange))
     # plt.show()
-    # s_inf = np.float64(mp.quad(f_, [0, np.inf]))
-    s_inf = omega_0 * sigma
+    s_inf = (quad(f_, 0, 1e-4))[0]
+    # s_inf = omega_0 * sigma
     bessel1 = np.array([complex(mp.besselj(1/2 + 1j * a, s_inf)) for a in alpha])
     bessel2 = np.array([complex(mp.besselj(-1/2 - 1j * a, s_inf)) for a in alpha])
     bessel3 = np.array([complex(mp.besselj(1/2 - 1j * a, s_inf)) for a in alpha])
@@ -252,25 +252,14 @@ def fit_once(
     detuning, vals, fit_func,
     args, args_min, args_max
 ):
+    initial = [1, 0, 1] if fit_func == "sech2" else [0.1, 0.9]
+    initial_min = [0, -10, 0] if fit_func == "sech2" else [-3, .9]
+    initial_max = [10, 10, 1] if fit_func == "sech2" else [3, 1]
     fit_params, y_fit = fit_function(
         detuning,#[:int(len(detuning) / 2.1)],
         vals,#[:int(len(detuning) / 2.1)], 
         FIT_FUNCTIONS[fit_func],
-        # [0.1, 0.9],
-        # [-3, .9],
-        # [3, 1]
-
-        [1, 0, 1], # initial parameters for curve_fit
-        [0, -10, 0],
-        [10, 10, 1]
-
-        # [q_freq, egamma, O],
-        # [q_freq_min, egamma_min, O_min],
-        # [q_freq_max, egamma_max, O_max]
-
-        # [0, 0.9, 1, 1], # initial parameters for curve_fit
-        # [-3, 0.5, -0.05, 0], # upper bounds on parameters
-        # [3, 1, 100, 100] # lower bounds on parameters
+        initial, initial_min, initial_max
     )
     y_fit = FIT_FUNCTIONS[fit_func](detuning, *fit_params) 
     ##
