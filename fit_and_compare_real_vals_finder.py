@@ -113,27 +113,28 @@ def demkov(x, q_freq, gamma):
     T = Tmod["demkov"]
     sigma = SIGMA_MOD["demkov"]
     omega_0 = RABI_FREQ_MOD["demkov"]
-    alpha = 0.5 * (x - q_freq) * T
+    alpha = 0.5 * (x - q_freq) * 1e6 * sigma 
     # print(alpha)
     if not (isinstance(alpha, np.ndarray) or isinstance(alpha, list)):
         alpha = [alpha]
     # print(alpha)
-    def f_(t):
-        return omega_0 * mp.exp(-np.abs(t - T/2) / sigma)
+    # def f_(t):
+    #     return omega_0 * mp.exp(-np.abs(t - T/2) / sigma)
     # trange = np.arange(0, 5e-7, 1e-10)
     # plt.plot(trange, f_(trange))
     # plt.show()
-    s_inf = np.float64(mp.quad(f_, [0, np.inf]))
+    # s_inf = np.float64(mp.quad(f_, [0, np.inf]))
+    s_inf = omega_0 * sigma
     bessel1 = np.array([complex(mp.besselj(1/2 + 1j * a, s_inf)) for a in alpha])
     bessel2 = np.array([complex(mp.besselj(-1/2 - 1j * a, s_inf)) for a in alpha])
     bessel3 = np.array([complex(mp.besselj(1/2 - 1j * a, s_inf)) for a in alpha])
     bessel4 = np.array([complex(mp.besselj(-1/2 + 1j * a, s_inf)) for a in alpha])
-    print("0", x - q_freq)
-    print("1", np.pi * s_inf / 2)
-    print("2", np.abs(bessel1 * bessel2 \
-         + bessel3 * bessel4))
-    print("3_0", alpha * np.pi)
-    print("3", np.cosh(alpha * np.pi))
+    # print("0", x - q_freq)
+    # print("1", np.pi * s_inf / 2)
+    # print("2", np.abs(bessel1 * bessel2 \
+    #      + bessel3 * bessel4))
+    # print("3_0", alpha * np.pi)
+    # print("3", np.cosh(alpha * np.pi))
     if len(alpha) == 1:
         alpha = alpha[0]
     P2 = (np.pi * s_inf / 2) ** 2 * np.abs(bessel1 * bessel2 \
@@ -143,14 +144,19 @@ def demkov(x, q_freq, gamma):
     return with_dephasing(P2, gamma)
 
 def sech_sq(x, q_freq, gamma, alpha):
-    T = Tt["sech2"]
-    sigma = SIGMA["sech2"]
-    omega_0 = RABI_FREQ["sech2"]
+    T = Tmod["sech2"]
+    sigma = SIGMA_MOD["sech2"]
+    omega_0 = RABI_FREQ_MOD["sech2"]
+    D = (x - q_freq) * 1e6
     def f_(t):
-        return omega_0 * mp.sech((t - T/2) / sigma) ** 2 * mp.exp(1j * (x - q_freq) * t)
-    G = np.float64(mp.quad(f_, [-np.inf, np.inf]))
-    S_mod = 2 * np.pi * (0.5 - (alpha * (x - q_freq) * T / (2 * np.pi)) ** 2)
-    P2 = np.sin(S_mod / 2) ** 2 * np.abs(G / T) ** 2
+        return 1 / np.cosh((t) / sigma) ** 2 
+    def g_(t):
+        return np.exp(1j * D * t)
+    def fg_(t):
+        return f_(t) * g_(t)
+    tau = quad(f_, -1e-4, 1e-4, epsabs=1e-13, epsrel=1e-5)[0]
+    G = quad_vec(fg_, -1e-4, 1e-4, epsabs=1e-13, epsrel=1e-5)[0]
+    P2 = np.sin(0.5 * tau * np.sqrt(omega_0 ** 2 + alpha * D ** 2)) ** 2 * np.abs(G / tau) ** 2
     return with_dephasing(P2, gamma)
 
 def gauss_sech2(x, q_freq, gamma):
@@ -163,7 +169,7 @@ def gauss_sech2(x, q_freq, gamma):
     S = np.float64(mp.quad(f_, [0, T]))
     numerator = np.sin(0.5 * np.sqrt(np.pi) * O * sigma) ** 2
     # print(np.stack(x, np.log(O) - np.log(x - q_freq)))
-    denomenator = np.cosh(np.pi * D * T / (4 * np.sqrt(np.log(O) - np.log(np.abs(D))))) ** 2
+    denomenator = np.cosh(np.pi * D * sigma / (4 * np.sqrt(np.log(O) - np.log(np.abs(D))))) ** 2
     # print(denomenator)
     P2 = numerator / denomenator
     return with_dephasing(P2, gamma)
@@ -220,6 +226,7 @@ FIT_FUNCTIONS = {
     "gauss": gauss,
     "rz": rz,
     "demkov": demkov,
+    "sech2": sech_sq,
     "sinc2": sinc2,
     "special_sinc": special_sinc
 }
@@ -249,9 +256,13 @@ def fit_once(
         detuning,#[:int(len(detuning) / 2.1)],
         vals,#[:int(len(detuning) / 2.1)], 
         FIT_FUNCTIONS[fit_func],
-        [0.1, 0.9],
-        [-3, .9],
-        [3, 1]
+        # [0.1, 0.9],
+        # [-3, .9],
+        # [3, 1]
+
+        [1, 0, 1], # initial parameters for curve_fit
+        [0, -10, 0],
+        [10, 10, 1]
 
         # [q_freq, egamma, O],
         # [q_freq_min, egamma_min, O_min],
@@ -272,9 +283,9 @@ def fit_once(
         [0, -10],
         [10, 10]
 
-        # [1, 0, 10], # initial parameters for curve_fit
+        # [1, 0, 1], # initial parameters for curve_fit
         # [0, -10, 0],
-        # [10, 10, 100]
+        # [10, 10, 1]
     )
     ##
     # print(fit_params, "\n", baseline_fit_params)
