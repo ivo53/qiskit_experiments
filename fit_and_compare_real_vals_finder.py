@@ -27,14 +27,14 @@ RABI_FREQ = {
     "demkov": 31739880.846,
     "sech2": 35460561.388
 }
-RABI_FREQ_MOD = {
-    "constant": 6266474.70796 / (2 * np.pi),
-    "rabi": 6266474.70796 / (2 * np.pi),
-    "rz": 6823754.08717,
-    "gauss": 4007486.5714,
-    "demkov": 5051558.92979,
-    "sech2": 5643723.62971
-}
+# RABI_FREQ_MOD = {
+#     "constant": 6266474.70796 / (2 * np.pi),
+#     "rabi": 6266474.70796 / (2 * np.pi),
+#     "rz": 6823754.08717,
+#     "gauss": 4007486.5714,
+#     "demkov": 5051558.92979,
+#     "sech2": 5643723.62971
+# }
 
 Tt = {
     "constant": 1504e-9 / 3,
@@ -45,14 +45,14 @@ Tt = {
     "sech2": (284 + 4/9) * 1e-9
 }
 
-Tmod = {
-    "constant": 2 * np.pi * 1504e-9 / 3,
-    "rabi": 2 * np.pi * 1504e-9 / 3,
-    "rz": 2 * np.pi * (284 + 4/9) * 1e-9,
-    "gauss": 2 * np.pi * (398 + 2/9) * 1e-9,
-    "demkov": 2 * np.pi * (572 + 4/9) * 1e-9,
-    "sech2": 2 * np.pi * (284 + 4/9) * 1e-9
-}
+# Tmod = {
+#     "constant": 2 * np.pi * 1504e-9 / 3,
+#     "rabi": 2 * np.pi * 1504e-9 / 3,
+#     "rz": 2 * np.pi * (284 + 4/9) * 1e-9,
+#     "gauss": 2 * np.pi * (398 + 2/9) * 1e-9,
+#     "demkov": 2 * np.pi * (572 + 4/9) * 1e-9,
+#     "sech2": 2 * np.pi * (284 + 4/9) * 1e-9
+# }
 
 SIGMA = {
     "rz": 23.39181 * 1e-9,
@@ -61,16 +61,17 @@ SIGMA = {
     "sech2": (44 + 4/9) * 1e-9
 }
 
-SIGMA_MOD = {
-    "rz": 2 * np.pi * 23.39181 * 1e-9,
-    "gauss": 2 * np.pi * (49 + 7/9) * 1e-9,
-    "demkov": 2 * np.pi * (55 + 5/9) * 1e-9,
-    "sech2": 2 * np.pi * (44 + 4/9) * 1e-9
-}
+# SIGMA_MOD = {
+#     "rz": 2 * np.pi * 23.39181 * 1e-9,
+#     "gauss": 2 * np.pi * (49 + 7/9) * 1e-9,
+#     "demkov": 2 * np.pi * (55 + 5/9) * 1e-9,
+#     "sech2": 2 * np.pi * (44 + 4/9) * 1e-9
+# }
 
 times = {
     "gauss": "174431",
     "constant": "174532",
+    "rabi": "174532",
     "sine": "174541",
     "sine2": "174543",
     "sine3": "174546",
@@ -82,8 +83,8 @@ times = {
 date = "2022-06-16"
 area = "pi"
 pulse_type = "demkov"
-fit_func = pulse_type #"gauss_sech2"
-baseline_fit_func = "sinc2" if pulse_type == "constant" else "lorentzian"
+fit_func = pulse_type 
+baseline_fit_func = "sinc2" if pulse_type in ["rabi", "constant"] else "lorentzian"
 
 
 def fit_function(x_values, y_values, function, init_params, lower, higher):
@@ -100,9 +101,9 @@ def lorentzian(x, O, q_freq):
     return 1 / (((x - q_freq) / O) ** 2 + 1)
 
 def rz(x, q_freq, gamma):
-    T = Tmod["rz"]
-    O = RABI_FREQ_MOD["rz"]
-    sigma = SIGMA_MOD["rz"]
+    T = Tt["rz"]
+    O = RABI_FREQ["rz"]
+    sigma = SIGMA["rz"]
     # T = np.pi / RABI_FREQ["rz"]
     D = (x - q_freq) * 1e6
     P2 = np.sin(0.5 * np.pi * O * sigma) ** 2 \
@@ -110,21 +111,21 @@ def rz(x, q_freq, gamma):
     return with_dephasing(P2, gamma)
 
 def demkov(x, q_freq, gamma):
-    T = Tmod["demkov"]
-    sigma = SIGMA_MOD["demkov"]
-    omega_0 = RABI_FREQ_MOD["demkov"]
+    T = Tt["demkov"]
+    sigma = SIGMA["demkov"]
+    omega_0 = RABI_FREQ["demkov"]
     alpha = 0.5 * (x - q_freq) * 1e6 * sigma 
     # print(alpha)
     if not (isinstance(alpha, np.ndarray) or isinstance(alpha, list)):
         alpha = [alpha]
     # print(alpha)
-    def f_(t):
-        return omega_0 * np.exp(-np.abs(t) / sigma)
-    trange = np.arange(0, 5e-7, 1e-10)
-    # plt.plot(trange, f_(trange))
-    # plt.show()
-    s_inf = (quad(f_, 0, 1e-4))[0]
-    # s_inf = omega_0 * sigma
+    # def f_(t):
+    #     return omega_0 * np.exp(-np.abs(t) / sigma)
+    # trange = np.arange(0, 5e-7, 1e-10)
+    # # plt.plot(trange, f_(trange))
+    # # plt.show()
+    # s_inf = (quad(f_, 0, 1e-4))[0]
+    s_inf = np.pi * omega_0 * sigma
     bessel1 = np.array([complex(mp.besselj(1/2 + 1j * a, s_inf)) for a in alpha])
     bessel2 = np.array([complex(mp.besselj(-1/2 - 1j * a, s_inf)) for a in alpha])
     bessel3 = np.array([complex(mp.besselj(1/2 - 1j * a, s_inf)) for a in alpha])
@@ -137,16 +138,18 @@ def demkov(x, q_freq, gamma):
     # print("3", np.cosh(alpha * np.pi))
     if len(alpha) == 1:
         alpha = alpha[0]
-    P2 = (np.pi * s_inf / 2) ** 2 * np.abs(bessel1 * bessel2 \
-         + bessel3 * bessel4) ** 2 / np.cosh(alpha * np.pi) ** 2
-    # np.sin(0.5 * np.pi * RABI_FREQ["demkov"] * T) ** 2 \
-    #     / np.cosh(0.5 * np.pi * (x - q_freq) * T) ** 2
+    # P2 = (np.pi * s_inf / 2) ** 2 * np.abs(bessel1 * bessel2 \
+    #      + bessel3 * bessel4) ** 2 / np.cosh(alpha * np.pi) ** 2
+    al = (x - q_freq) * 1e6 * sigma
+    bessel11 = np.array([complex(mp.besselj(1/2 + 1j * a / 2, s_inf / (2 * np.pi))) for a in al])
+    bessel21 = np.array([complex(mp.besselj(-1/2 - 1j * a / 2, s_inf / (2 * np.pi))) for a in al])
+    P2 = (s_inf / 4) ** 2 * np.abs(2 * np.real(bessel11 * bessel21)) ** 2 / np.cosh(al * np.pi / 2) ** 2
     return with_dephasing(P2, gamma)
 
 def sech_sq(x, q_freq, gamma, alpha):
-    T = Tmod["sech2"]
-    sigma = SIGMA_MOD["sech2"]
-    omega_0 = RABI_FREQ_MOD["sech2"]
+    T = Tt["sech2"]
+    sigma = SIGMA["sech2"]
+    omega_0 = RABI_FREQ["sech2"]
     D = (x - q_freq) * 1e6
     def f_(t):
         return 1 / np.cosh((t) / sigma) ** 2 
@@ -168,16 +171,14 @@ def gauss_sech2(x, q_freq, gamma):
         return O * mp.exp(-0.5 * ((t - T/2) / sigma) ** 2)
     S = np.float64(mp.quad(f_, [0, T]))
     numerator = np.sin(0.5 * np.sqrt(np.pi) * O * sigma) ** 2
-    # print(np.stack(x, np.log(O) - np.log(x - q_freq)))
     denomenator = np.cosh(np.pi * D * sigma / (4 * np.sqrt(np.log(O) - np.log(np.abs(D))))) ** 2
-    # print(denomenator)
     P2 = numerator / denomenator
     return with_dephasing(P2, gamma)
 
 def gauss(x, q_freq, egamma):
-    O = RABI_FREQ_MOD["gauss"]
-    T = Tmod["gauss"]
-    sigma = SIGMA_MOD["gauss"]
+    O = RABI_FREQ["gauss"]
+    T = Tt["gauss"]
+    sigma = SIGMA["gauss"]
     D = (x - q_freq) * 1e6
     alpha = np.abs(O / D)
     alpha[np.isnan(alpha)] = 10000000
@@ -208,27 +209,24 @@ def gauss(x, q_freq, egamma):
 def sinc2(x, O, q_freq):
     return (np.sinc((x - q_freq) / O)) ** 2
 
-def special_sinc(x, q_freq, gamma, O):
+def rabi(x, q_freq, gamma):
     T = Tt["rabi"]
-    # O = RABI_FREQ["rabi"]
+    O = RABI_FREQ["rabi"]
     T = np.pi/O
     D = (x - q_freq) * 1e6
-    # print((O ** 2 / (O**2 + ((x - q_freq)) ** 2)))
     P2 = (O ** 2 / (O**2 + (D) ** 2)) * \
         np.sin(0.5 * T * np.sqrt(O**2 + (D) ** 2)) ** 2
-    # print(P2, with_dephasing(P2, gamma))
-    # print(T)
     return with_dephasing(P2, gamma)
 
 FIT_FUNCTIONS = {
     "lorentzian": lorentzian,
-    "constant": special_sinc,
+    "constant": rabi,
+    "rabi": rabi,
     "gauss": gauss,
     "rz": rz,
     "demkov": demkov,
     "sech2": sech_sq,
-    "sinc2": sinc2,
-    "special_sinc": special_sinc
+    "sinc2": sinc2
 }
 file_dir = os.path.dirname(__file__)
 data_folder = os.path.join(file_dir, "data", "armonk", "calibration", date)
@@ -240,20 +238,20 @@ for d in data_files:
         break
 
 pulse_type = d.split("_")[1]
-pulse_type = "constant" if pulse_type == "sq" else pulse_type
+pulse_type = "rabi" if pulse_type in ["sq", "constant"] else pulse_type
 df = pd.read_csv(os.path.join(data_folder, csv_file))
 
 freq = df["frequency_ghz"].to_numpy() * 1e3
 vals = df["transition_probability"].to_numpy()
-detuning = freq - center_freq
+detuning = 2 * np.pi * (freq - center_freq)
 extended_freq = np.linspace(detuning[0], detuning[-1], 5000)
 
 def fit_once(
     detuning, vals, fit_func,
     args, args_min, args_max
 ):
-    initial = [1, 0, 1] if fit_func == "sech2" else [0.1, 0.9]
-    initial_min = [0, -10, 0] if fit_func == "sech2" else [-3, .9]
+    initial = [1, 0, 1] if fit_func == "sech2" else [0.1, 0.99]
+    initial_min = [0, -10, 0] if fit_func == "sech2" else [-3, .96]
     initial_max = [10, 10, 1] if fit_func == "sech2" else [3, 1]
     fit_params, y_fit = fit_function(
         detuning,#[:int(len(detuning) / 2.1)],
@@ -261,16 +259,16 @@ def fit_once(
         FIT_FUNCTIONS[fit_func],
         initial, initial_min, initial_max
     )
-    y_fit = FIT_FUNCTIONS[fit_func](detuning, *fit_params) 
+    y_fit = FIT_FUNCTIONS[fit_func](detuning, *fit_params)
     ##
     ## sech^2 fit
     baseline_fit_params, baseline_y_fit = fit_function(
         detuning,
         vals, 
         FIT_FUNCTIONS[baseline_fit_func],
-        [1, 0], # initial parameters for curve_fit
+        [2, 0], # initial parameters for curve_fit
         [0, -10],
-        [10, 10]
+        [100, 10]
 
         # [1, 0, 1], # initial parameters for curve_fit
         # [0, -10, 0],
@@ -311,6 +309,7 @@ similarity_idx, y_fit, extended_y_fit, fit_params = fit
 baseline_similarity_idx, baseline_y_fit, \
     baseline_extended_y_fit, baseline_fit_params = baseline
 print(fit_params)
+print(baseline_fit_params)
 # for o in np.linspace(5e5, 1e9, 500):
 #     fit_, baseline_ = fit_once(
 #         detuning, vals, fit_func, 0, 1, o,
@@ -327,9 +326,9 @@ ax0.plot(extended_freq, baseline_extended_y_fit, color='blue')
 ax0.plot(extended_freq, extended_y_fit, color='red')
 ax0.set_xlim(extended_freq[0], -extended_freq[0])
 
-major_xticks = np.round(np.arange(extended_freq[0], -extended_freq[0] + 1e-4, 5),1)
+major_xticks = np.round(np.arange(extended_freq[0], -extended_freq[0] + 1e-1, 5*2*np.pi),1)
 major_xticks[major_xticks>-0.01] = np.abs(major_xticks[major_xticks>-0.01])
-minor_xticks = np.round(np.arange(extended_freq[0], -extended_freq[0] + 1e-4, 1),1)
+minor_xticks = np.round(np.arange(extended_freq[0], -extended_freq[0] + 1e-1, 2*np.pi),1)
 major_yticks = np.arange(0, 1.01, 0.2).round(1)
 minor_yticks = np.arange(0, 1.01, 0.1).round(1)
 
@@ -342,8 +341,8 @@ ax0.set_yticks(minor_yticks, minor="True")
 ax0.grid(which='minor', alpha=0.3)
 ax0.grid(which='major', alpha=0.6)
 
-ax0.set_title(f"Fitted {pulse_type.capitalize()} Frequency Curve \
-(Area {area.capitalize()}) SI = {np.round(similarity_idx, 2)} vs BSI = \
+ax0.set_title(f"{pulse_type.capitalize()} Frequency Curve \
+- SI = {np.round(similarity_idx, 2)} vs BSI = \
 {np.round(baseline_similarity_idx, 2)}", fontsize=22)
 ax0.set_ylabel("Transition Probability", fontsize=20)
 
@@ -384,7 +383,7 @@ ax1.errorbar(detuning, y_fit - vals, yerr=err * np.ones(detuning.shape), fmt="+"
 ax2 = fig.add_subplot(gs[6:, :], sharey=ax1)
 ax2.set_xlim(extended_freq[0], -extended_freq[0])
 ax2.set_xticks(major_xticks)
-ax2.set_xticklabels(major_xticks, fontsize=16)
+ax2.set_xticklabels(np.round(major_xticks / (2 * np.pi), 1), fontsize=16)
 ax2.set_xticks(minor_xticks, minor="True")
 ax2.set_yticklabels(y_ticks_res, fontsize=13)
 ax2.errorbar(detuning, baseline_y_fit - vals, yerr=err * np.ones(detuning.shape), fmt="+", color="b")

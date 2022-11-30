@@ -173,7 +173,6 @@ for j, a in enumerate(amplitude_multipliers):
         # Get the results for `qubit` from this experiment
         dd_values.append(counts[1] / length)
 
-
     plt.figure(j)
     plt.scatter(num_dd_blocks * 2, dd_values, color='black')
     plt.xlabel("# Pi pulses")
