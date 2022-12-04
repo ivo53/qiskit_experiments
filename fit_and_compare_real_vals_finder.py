@@ -27,14 +27,6 @@ RABI_FREQ = {
     "demkov": 31739880.846,
     "sech2": 35460561.388
 }
-# RABI_FREQ_MOD = {
-#     "constant": 6266474.70796 / (2 * np.pi),
-#     "rabi": 6266474.70796 / (2 * np.pi),
-#     "rz": 6823754.08717,
-#     "gauss": 4007486.5714,
-#     "demkov": 5051558.92979,
-#     "sech2": 5643723.62971
-# }
 
 Tt = {
     "constant": 1504e-9 / 3,
@@ -45,15 +37,6 @@ Tt = {
     "sech2": (284 + 4/9) * 1e-9
 }
 
-# Tmod = {
-#     "constant": 2 * np.pi * 1504e-9 / 3,
-#     "rabi": 2 * np.pi * 1504e-9 / 3,
-#     "rz": 2 * np.pi * (284 + 4/9) * 1e-9,
-#     "gauss": 2 * np.pi * (398 + 2/9) * 1e-9,
-#     "demkov": 2 * np.pi * (572 + 4/9) * 1e-9,
-#     "sech2": 2 * np.pi * (284 + 4/9) * 1e-9
-# }
-
 SIGMA = {
     "rz": 23.39181 * 1e-9,
     "gauss": (49 + 7/9) * 1e-9,
@@ -61,12 +44,6 @@ SIGMA = {
     "sech2": (44 + 4/9) * 1e-9
 }
 
-# SIGMA_MOD = {
-#     "rz": 2 * np.pi * 23.39181 * 1e-9,
-#     "gauss": 2 * np.pi * (49 + 7/9) * 1e-9,
-#     "demkov": 2 * np.pi * (55 + 5/9) * 1e-9,
-#     "sech2": 2 * np.pi * (44 + 4/9) * 1e-9
-# }
 
 times = {
     "gauss": "174431",
@@ -82,60 +59,48 @@ times = {
 
 date = "2022-06-16"
 area = "pi"
-pulse_type = "demkov"
-fit_func = pulse_type 
+pulse_type = "sech2"
+fit_func = pulse_type
 baseline_fit_func = "sinc2" if pulse_type in ["rabi", "constant"] else "lorentzian"
 
-
 def fit_function(x_values, y_values, function, init_params, lower, higher):
-    fitparams, conv = curve_fit(function, x_values, y_values, init_params, maxfev=1000000, bounds=(lower, higher))
+    fitparams, conv = curve_fit(function, x_values, y_values, init_params, maxfev=1e6, bounds=(lower, higher))
     y_fit = function(x_values, *fitparams)
     
     return fitparams, y_fit
 
+def post_process(P2, eps, delta):
+    # eps = eps0 + 1/2 * (1 - eps0 - eps1)
+    # delta = 1/2 * (1 - eps0 - eps1) * e^(-gamma * t)
+    return eps + delta * (2 * P2 - 1)
+
 def with_dephasing(P2, egamma):
-    # return ((2 * P2 - 1) * np.exp(- gamma) + 1) / 2
     return P2 * egamma - egamma / 2 + 1 / 2
 
-def lorentzian(x, O, q_freq):
-    return 1 / (((x - q_freq) / O) ** 2 + 1)
+def lorentzian(x, s, A, q_freq, c):
+    return A / (((x - q_freq) / s) ** 2 + 1) + c
 
-def rz(x, q_freq, gamma):
+def rz(x, q_freq, delta, eps):
     T = Tt["rz"]
     O = RABI_FREQ["rz"]
     sigma = SIGMA["rz"]
-    # T = np.pi / RABI_FREQ["rz"]
     D = (x - q_freq) * 1e6
     P2 = np.sin(0.5 * np.pi * O * sigma) ** 2 \
         / np.cosh(0.5 * np.pi * D * sigma) ** 2
-    return with_dephasing(P2, gamma)
+    return post_process(P2, eps, delta)
 
-def demkov(x, q_freq, gamma):
+def demkov(x, q_freq, delta, eps):
     T = Tt["demkov"]
     sigma = SIGMA["demkov"]
     omega_0 = RABI_FREQ["demkov"]
     alpha = 0.5 * (x - q_freq) * 1e6 * sigma 
-    # print(alpha)
     if not (isinstance(alpha, np.ndarray) or isinstance(alpha, list)):
         alpha = [alpha]
-    # print(alpha)
-    # def f_(t):
-    #     return omega_0 * np.exp(-np.abs(t) / sigma)
-    # trange = np.arange(0, 5e-7, 1e-10)
-    # # plt.plot(trange, f_(trange))
-    # # plt.show()
-    # s_inf = (quad(f_, 0, 1e-4))[0]
     s_inf = np.pi * omega_0 * sigma
     bessel1 = np.array([complex(mp.besselj(1/2 + 1j * a, s_inf)) for a in alpha])
     bessel2 = np.array([complex(mp.besselj(-1/2 - 1j * a, s_inf)) for a in alpha])
     bessel3 = np.array([complex(mp.besselj(1/2 - 1j * a, s_inf)) for a in alpha])
     bessel4 = np.array([complex(mp.besselj(-1/2 + 1j * a, s_inf)) for a in alpha])
-    # print("0", x - q_freq)
-    # print("1", np.pi * s_inf / 2)
-    # print("2", np.abs(bessel1 * bessel2 \
-    #      + bessel3 * bessel4))
-    # print("3_0", alpha * np.pi)
-    # print("3", np.cosh(alpha * np.pi))
     if len(alpha) == 1:
         alpha = alpha[0]
     # P2 = (np.pi * s_inf / 2) ** 2 * np.abs(bessel1 * bessel2 \
@@ -144,9 +109,9 @@ def demkov(x, q_freq, gamma):
     bessel11 = np.array([complex(mp.besselj(1/2 + 1j * a / 2, s_inf / (2 * np.pi))) for a in al])
     bessel21 = np.array([complex(mp.besselj(-1/2 - 1j * a / 2, s_inf / (2 * np.pi))) for a in al])
     P2 = (s_inf / 4) ** 2 * np.abs(2 * np.real(bessel11 * bessel21)) ** 2 / np.cosh(al * np.pi / 2) ** 2
-    return with_dephasing(P2, gamma)
+    return post_process(P2, eps, delta)
 
-def sech_sq(x, q_freq, gamma, alpha):
+def sech_sq(x, q_freq, delta, eps, alpha):
     T = Tt["sech2"]
     sigma = SIGMA["sech2"]
     omega_0 = RABI_FREQ["sech2"]
@@ -160,9 +125,9 @@ def sech_sq(x, q_freq, gamma, alpha):
     tau = quad(f_, -1e-4, 1e-4, epsabs=1e-13, epsrel=1e-5)[0]
     G = quad_vec(fg_, -1e-4, 1e-4, epsabs=1e-13, epsrel=1e-5)[0]
     P2 = np.sin(0.5 * tau * np.sqrt(omega_0 ** 2 + alpha * D ** 2)) ** 2 * np.abs(G / tau) ** 2
-    return with_dephasing(P2, gamma)
+    return post_process(P2, eps, delta)
 
-def gauss_sech2(x, q_freq, gamma):
+def gauss_sech2(x, q_freq, delta, eps):
     O = RABI_FREQ["gauss"]
     T = Tt["gauss"]
     sigma = SIGMA["gauss"]
@@ -173,9 +138,9 @@ def gauss_sech2(x, q_freq, gamma):
     numerator = np.sin(0.5 * np.sqrt(np.pi) * O * sigma) ** 2
     denomenator = np.cosh(np.pi * D * sigma / (4 * np.sqrt(np.log(O) - np.log(np.abs(D))))) ** 2
     P2 = numerator / denomenator
-    return with_dephasing(P2, gamma)
+    return post_process(P2, eps, delta)
 
-def gauss(x, q_freq, egamma):
+def gauss(x, q_freq, delta, eps):
     O = RABI_FREQ["gauss"]
     T = Tt["gauss"]
     sigma = SIGMA["gauss"]
@@ -204,19 +169,19 @@ def gauss(x, q_freq, egamma):
             )
     )
     P2 = np.sin(ReD) ** 2 / np.cosh(ImD) ** 2
-    return with_dephasing(P2, egamma)
+    return post_process(P2, eps, delta)
 
-def sinc2(x, O, q_freq):
-    return (np.sinc((x - q_freq) / O)) ** 2
+def sinc2(x, s, A, q_freq, c):
+    return A * (np.sinc((x - q_freq) / s)) ** 2 + c
 
-def rabi(x, q_freq, gamma):
+def rabi(x, q_freq, delta, eps):
     T = Tt["rabi"]
     O = RABI_FREQ["rabi"]
     T = np.pi/O
     D = (x - q_freq) * 1e6
     P2 = (O ** 2 / (O**2 + (D) ** 2)) * \
         np.sin(0.5 * T * np.sqrt(O**2 + (D) ** 2)) ** 2
-    return with_dephasing(P2, gamma)
+    return post_process(P2, eps, delta)
 
 FIT_FUNCTIONS = {
     "lorentzian": lorentzian,
@@ -250,9 +215,9 @@ def fit_once(
     detuning, vals, fit_func,
     args, args_min, args_max
 ):
-    initial = [1, 0, 1] if fit_func == "sech2" else [0.1, 0.99]
-    initial_min = [0, -10, 0] if fit_func == "sech2" else [-3, .96]
-    initial_max = [10, 10, 1] if fit_func == "sech2" else [3, 1]
+    initial = [0, 0.4, 0.4, 0.4] if fit_func in ["sech2"] else [0.1, 0, 0]
+    initial_min = [-3, 0.3, 0.3, 0] if fit_func in ["sech2"] else [-3, 0, 0]
+    initial_max = [3, 0.5, 0.6, 1] if fit_func in ["sech2"] else [3, 0.5, 0.6]
     fit_params, y_fit = fit_function(
         detuning,#[:int(len(detuning) / 2.1)],
         vals,#[:int(len(detuning) / 2.1)], 
@@ -266,9 +231,9 @@ def fit_once(
         detuning,
         vals, 
         FIT_FUNCTIONS[baseline_fit_func],
-        [2, 0], # initial parameters for curve_fit
-        [0, -10],
-        [100, 10]
+        [2, 0, 1, 0], # initial parameters for curve_fit
+        [0, -10, 0, 0],
+        [100, 10, 100, 0.5]
 
         # [1, 0, 1], # initial parameters for curve_fit
         # [0, -10, 0],
