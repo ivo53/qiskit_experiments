@@ -291,9 +291,11 @@ ax0.plot(extended_freq, baseline_extended_y_fit, color='blue')
 ax0.plot(extended_freq, extended_y_fit, color='red')
 ax0.set_xlim(extended_freq[0], -extended_freq[0])
 
-major_xticks = np.round(np.arange(extended_freq[0], -extended_freq[0] + 1e-1, 5*2*np.pi),1)
+# major_xticks = np.round(np.arange(extended_freq[0], -extended_freq[0] + 1e-1, 5*2*np.pi),1)
+major_xticks = np.round(np.arange(-90, 90 + 1e-3, 15),0)
 major_xticks[major_xticks>-0.01] = np.abs(major_xticks[major_xticks>-0.01])
-minor_xticks = np.round(np.arange(extended_freq[0], -extended_freq[0] + 1e-1, 2*np.pi),1)
+# minor_xticks = np.round(np.arange(extended_freq[0], -extended_freq[0] + 1e-1, 2*np.pi),1)
+minor_xticks = np.round(np.arange(-93, 93 + 1e-3, 3),0)
 major_yticks = np.arange(0, 1.01, 0.2).round(1)
 minor_yticks = np.arange(0, 1.01, 0.1).round(1)
 
@@ -344,11 +346,11 @@ if limit_num > 0.1:
 else:
     ax1.grid()
 ax1.errorbar(detuning, y_fit - vals, yerr=err * np.ones(detuning.shape), fmt="+", color="r")
-
+print(major_xticks)
 ax2 = fig.add_subplot(gs[6:, :], sharey=ax1)
 ax2.set_xlim(extended_freq[0], -extended_freq[0])
 ax2.set_xticks(major_xticks)
-ax2.set_xticklabels(np.round(major_xticks / (2 * np.pi), 1), fontsize=16)
+ax2.set_xticklabels(np.round(major_xticks, 1), fontsize=16)
 ax2.set_xticks(minor_xticks, minor="True")
 ax2.set_yticklabels(y_ticks_res, fontsize=13)
 ax2.errorbar(detuning, baseline_y_fit - vals, yerr=err * np.ones(detuning.shape), fmt="+", color="b")
