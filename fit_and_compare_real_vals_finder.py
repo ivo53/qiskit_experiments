@@ -59,7 +59,7 @@ times = {
 
 date = "2022-06-16"
 area = "pi"
-pulse_type = "sech2"
+pulse_type = "gauss"
 fit_func = pulse_type
 baseline_fit_func = "sinc2" if pulse_type in ["rabi", "constant"] else "lorentzian"
 
@@ -219,8 +219,8 @@ def fit_once(
     initial_min = [-3, 0.3, 0.3, 0] if fit_func in ["sech2"] else [-3, 0, 0]
     initial_max = [3, 0.5, 0.6, 1] if fit_func in ["sech2"] else [3, 0.5, 0.6]
     fit_params, y_fit = fit_function(
-        detuning,#[:int(len(detuning) / 2.1)],
-        vals,#[:int(len(detuning) / 2.1)], 
+        detuning[int(len(detuning) / 4):int(3 * len(detuning) / 4)],
+        vals[int(len(detuning) / 4):int(3 * len(detuning) / 4)], 
         FIT_FUNCTIONS[fit_func],
         initial, initial_min, initial_max
     )
