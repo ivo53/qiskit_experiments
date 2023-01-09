@@ -59,7 +59,7 @@ times = {
 
 date = "2022-06-16"
 area = "pi"
-pulse_type = "gauss"
+pulse_type = "sech2"
 fit_func = pulse_type
 baseline_fit_func = "sinc2" if pulse_type in ["rabi", "constant"] else "lorentzian"
 
@@ -70,8 +70,8 @@ def fit_function(x_values, y_values, function, init_params, lower, higher):
     return fitparams, y_fit
 
 def post_process(P2, eps, delta):
-    # eps = eps0 + 1/2 * (1 - eps0 - eps1)
-    # delta = 1/2 * (1 - eps0 - eps1) * e^(-gamma * t)
+    # eps = eps0 + 1/2 * (1 - eps1)
+    # delta = 1/2 * (1 - eps1) * e^(-gamma * t)
     return eps + delta * (2 * P2 - 1)
 
 def with_dephasing(P2, egamma):
@@ -219,11 +219,11 @@ def fit_once(
     initial_min = [-3, 0.3, 0.3, 0] if fit_func in ["sech2"] else [-3, 0, 0]
     initial_max = [3, 0.5, 0.6, 1] if fit_func in ["sech2"] else [3, 0.5, 0.6]
     fit_params, y_fit = fit_function(
-        detuning[int(len(detuning) / 4):int(3 * len(detuning) / 4)],
-        vals[int(len(detuning) / 4):int(3 * len(detuning) / 4)], 
+        detuning,#[int(len(detuning) / 4):int(3 * len(detuning) / 4)],
+        vals,#[int(len(detuning) / 4):int(3 * len(detuning) / 4)], 
         FIT_FUNCTIONS[fit_func],
         initial, initial_min, initial_max
-    )
+    ) 
     y_fit = FIT_FUNCTIONS[fit_func](detuning, *fit_params)
     ##
     ## sech^2 fit
@@ -292,10 +292,14 @@ ax0.plot(extended_freq, extended_y_fit, color='red')
 ax0.set_xlim(extended_freq[0], -extended_freq[0])
 
 # major_xticks = np.round(np.arange(extended_freq[0], -extended_freq[0] + 1e-1, 5*2*np.pi),1)
-major_xticks = np.round(np.arange(-90, 90 + 1e-3, 15),0)
+x_limit = np.floor(np.abs(extended_freq[0]) / 5) * 5
+x_interval = np.round(x_limit / 5) if pulse_type == "rabi" else np.round(x_limit / 6)
+x_small_interval = np.round(x_interval / 3) if pulse_type == "rabi" else np.round(x_limit / 30)
+print(x_limit)
+major_xticks = np.round(np.arange(-x_limit, x_limit + 1e-3, x_interval),0)
 major_xticks[major_xticks>-0.01] = np.abs(major_xticks[major_xticks>-0.01])
 # minor_xticks = np.round(np.arange(extended_freq[0], -extended_freq[0] + 1e-1, 2*np.pi),1)
-minor_xticks = np.round(np.arange(-93, 93 + 1e-3, 3),0)
+minor_xticks = np.round(np.arange(-x_limit, x_limit + 1e-3, x_small_interval),0)
 major_yticks = np.arange(0, 1.01, 0.2).round(1)
 minor_yticks = np.arange(0, 1.01, 0.1).round(1)
 
