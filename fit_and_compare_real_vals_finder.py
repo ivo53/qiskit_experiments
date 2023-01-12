@@ -59,15 +59,15 @@ times = {
 
 date = "2022-06-16"
 area = "pi"
-pulse_type = "sech2"
+pulse_type = "gauss"
 fit_func = pulse_type
 baseline_fit_func = "sinc2" if pulse_type in ["rabi", "constant"] else "lorentzian"
 
 def fit_function(x_values, y_values, function, init_params, lower, higher):
     fitparams, conv = curve_fit(function, x_values, y_values, init_params, maxfev=1e6, bounds=(lower, higher))
     y_fit = function(x_values, *fitparams)
-    
-    return fitparams, y_fit
+    perr = np.sqrt(np.diag(conv))
+    return fitparams, y_fit, perr
 
 def post_process(P2, eps, delta):
     # eps = eps0 + 1/2 * (1 - eps1)
@@ -147,13 +147,14 @@ def gauss(x, q_freq, delta, eps):
     D = (x - q_freq) * 1e6
     alpha = np.abs(O / D)
     alpha[np.isnan(alpha)] = 10000000
+    # print(alpha)
     m, mu, nu = (1.311468, 0.316193, 0.462350)
 
     ImD = D * sigma * np.sqrt(
         np.sqrt(
             4 * np.log(m * alpha) ** 2 + np.pi ** 2
         ) \
-            - np.log(m * alpha)
+            - 2 * np.log(m * alpha)
     ) / np.sqrt(2)
 
     ReD = np.sqrt(2) * D * sigma * (
@@ -218,16 +219,16 @@ def fit_once(
     initial = [0, 0.4, 0.4, 0.4] if fit_func in ["sech2"] else [0.1, 0, 0]
     initial_min = [-3, 0.3, 0.3, 0] if fit_func in ["sech2"] else [-3, 0, 0]
     initial_max = [3, 0.5, 0.6, 1] if fit_func in ["sech2"] else [3, 0.5, 0.6]
-    fit_params, y_fit = fit_function(
+    fit_params, y_fit, err = fit_function(
         detuning,#[int(len(detuning) / 4):int(3 * len(detuning) / 4)],
         vals,#[int(len(detuning) / 4):int(3 * len(detuning) / 4)], 
         FIT_FUNCTIONS[fit_func],
         initial, initial_min, initial_max
-    ) 
+    )
     y_fit = FIT_FUNCTIONS[fit_func](detuning, *fit_params)
     ##
     ## sech^2 fit
-    baseline_fit_params, baseline_y_fit = fit_function(
+    baseline_fit_params, baseline_y_fit, baseline_err = fit_function(
         detuning,
         vals, 
         FIT_FUNCTIONS[baseline_fit_func],
@@ -258,11 +259,13 @@ def fit_once(
     return (similarity_idx, 
             y_fit, 
             extended_y_fit, 
-            fit_params), \
+            fit_params,
+            err), \
            (baseline_similarity_idx, 
             baseline_y_fit, 
             baseline_extended_y_fit, 
-            baseline_fit_params)
+            baseline_fit_params,
+            baseline_err)
 
 fit, baseline = fit_once(
     detuning, vals, fit_func,
@@ -270,11 +273,13 @@ fit, baseline = fit_once(
     args_min=[-3, .99, 1e4],
     args_max=[3, 1., 1e8]
 )
-similarity_idx, y_fit, extended_y_fit, fit_params = fit
+similarity_idx, y_fit, extended_y_fit, fit_params, err = fit
 baseline_similarity_idx, baseline_y_fit, \
-    baseline_extended_y_fit, baseline_fit_params = baseline
+    baseline_extended_y_fit, baseline_fit_params, baseline_err = baseline
 print(fit_params)
 print(baseline_fit_params)
+print(err)
+print(baseline_err)
 # for o in np.linspace(5e5, 1e9, 500):
 #     fit_, baseline_ = fit_once(
 #         detuning, vals, fit_func, 0, 1, o,
@@ -295,7 +300,7 @@ ax0.set_xlim(extended_freq[0], -extended_freq[0])
 x_limit = np.floor(np.abs(extended_freq[0]) / 5) * 5
 x_interval = np.round(x_limit / 5) if pulse_type == "rabi" else np.round(x_limit / 6)
 x_small_interval = np.round(x_interval / 3) if pulse_type == "rabi" else np.round(x_limit / 30)
-print(x_limit)
+# print(x_limit)
 major_xticks = np.round(np.arange(-x_limit, x_limit + 1e-3, x_interval),0)
 major_xticks[major_xticks>-0.01] = np.abs(major_xticks[major_xticks>-0.01])
 # minor_xticks = np.round(np.arange(extended_freq[0], -extended_freq[0] + 1e-1, 2*np.pi),1)
@@ -350,7 +355,7 @@ if limit_num > 0.1:
 else:
     ax1.grid()
 ax1.errorbar(detuning, y_fit - vals, yerr=err * np.ones(detuning.shape), fmt="+", color="r")
-print(major_xticks)
+# print(major_xticks)
 ax2 = fig.add_subplot(gs[6:, :], sharey=ax1)
 ax2.set_xlim(extended_freq[0], -extended_freq[0])
 ax2.set_xticks(major_xticks)
@@ -364,7 +369,7 @@ if limit_num > 0.1:
     ax2.grid(which='major', alpha=0.6)
 else:
     ax2.grid()
-plt.xlabel("Detuning [MHz]", fontsize=20)
+plt.xlabel("Detuning [$\\times 10^6$ rad/s]", fontsize=20)
 
 # fig2_name = date.strftime("%H%M%S") + f"_{pulse_type}_area_{area}_frequency_sweep_fitted.png" if pulse_type not in lorentz_pulses else \
 #     date.strftime("%H%M%S") + f"_{pulse_type}_cutoff_{cutoff}_{ctrl_param}_{c_p}_area_{area}_frequency_sweep_fitted.png"
