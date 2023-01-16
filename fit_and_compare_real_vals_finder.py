@@ -285,10 +285,13 @@ fit, baseline = fit_once(
 similarity_idx, y_fit, extended_y_fit, fit_params, err = fit
 baseline_similarity_idx, baseline_y_fit, \
     baseline_extended_y_fit, baseline_fit_params, baseline_err = baseline
-print(fit_params)
-print(baseline_fit_params)
-print(err)
-print(baseline_err)
+# print(fit_params)
+# print(baseline_fit_params)
+# print(err)
+# print(baseline_err)
+print(fit_params[0], "+-", err[0])
+print(baseline_fit_params[-2], "+-", baseline_err[-2])
+print("deviation:", fit_params[0] - baseline_fit_params[-2], "+-", np.sqrt(err[0] ** 2 + baseline_err[-2] ** 2))
 # for o in np.linspace(5e5, 1e9, 500):
 #     fit_, baseline_ = fit_once(
 #         detuning, vals, fit_func, 0, 1, o,
@@ -326,9 +329,10 @@ ax0.set_yticks(minor_yticks, minor="True")
 ax0.grid(which='minor', alpha=0.3)
 ax0.grid(which='major', alpha=0.6)
 
-ax0.set_title(f"{pulse_type.capitalize()} Frequency Curve \
-- SI = {np.round(similarity_idx, 2)} vs BSI = \
-{np.round(baseline_similarity_idx, 2)}", fontsize=22)
+ax0.set_title(f"{pulse_type.capitalize()} Model Frequency Curve" \
+# - SI = {np.round(similarity_idx, 2)} vs BSI = \
+# {np.round(baseline_similarity_idx, 2)}"
+, fontsize=22)
 ax0.set_ylabel("Transition Probability", fontsize=20)
 
 ax = fig.add_subplot(gs[5:, :])
@@ -382,5 +386,8 @@ plt.xlabel("Detuning [$\\times 10^6$ rad/s]", fontsize=20)
 
 # fig2_name = date.strftime("%H%M%S") + f"_{pulse_type}_area_{area}_frequency_sweep_fitted.png" if pulse_type not in lorentz_pulses else \
 #     date.strftime("%H%M%S") + f"_{pulse_type}_cutoff_{cutoff}_{ctrl_param}_{c_p}_area_{area}_frequency_sweep_fitted.png"
-# plt.savefig(os.path.join(save_dir, fig2_name))
+save_dir = "C:/Users/Ivo/Documents/PhD Documents/Pulse Shapes"
+date = datetime.now()
+fig_name = pulse_type + "_" + date.strftime("%Y%m%d") + ".eps"
+plt.savefig(os.path.join(save_dir, fig_name), format="eps")
 plt.show()
