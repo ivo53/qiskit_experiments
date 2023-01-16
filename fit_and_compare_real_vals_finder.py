@@ -44,6 +44,7 @@ SIGMA = {
     "sech2": (44 + 4/9) * 1e-9
 }
 
+ALPHA = 0.4494679707017059
 
 times = {
     "gauss": "174431",
@@ -59,7 +60,7 @@ times = {
 
 date = "2022-06-16"
 area = "pi"
-pulse_type = "gauss"
+pulse_type = "sech2"
 fit_func = pulse_type
 baseline_fit_func = "sinc2" if pulse_type in ["rabi", "constant"] else "lorentzian"
 
@@ -111,7 +112,7 @@ def demkov(x, q_freq, delta, eps):
     P2 = (s_inf / 4) ** 2 * np.abs(2 * np.real(bessel11 * bessel21)) ** 2 / np.cosh(al * np.pi / 2) ** 2
     return post_process(P2, eps, delta)
 
-def sech_sq(x, q_freq, delta, eps, alpha):
+def sech_sq(x, q_freq, delta, eps):
     T = Tt["sech2"]
     sigma = SIGMA["sech2"]
     omega_0 = RABI_FREQ["sech2"]
@@ -124,7 +125,7 @@ def sech_sq(x, q_freq, delta, eps, alpha):
         return f_(t) * g_(t)
     tau = quad(f_, -1e-4, 1e-4, epsabs=1e-13, epsrel=1e-5)[0]
     G = quad_vec(fg_, -1e-4, 1e-4, epsabs=1e-13, epsrel=1e-5)[0]
-    P2 = np.sin(0.5 * tau * np.sqrt(omega_0 ** 2 + alpha * D ** 2)) ** 2 * np.abs(G / tau) ** 2
+    P2 = np.sin(0.5 * tau * np.sqrt(omega_0 ** 2 + ALPHA * D ** 2)) ** 2 * np.abs(G / tau) ** 2
     return post_process(P2, eps, delta)
 
 def gauss_sech2(x, q_freq, delta, eps):
@@ -214,11 +215,15 @@ extended_freq = np.linspace(detuning[0], detuning[-1], 5000)
 
 def fit_once(
     detuning, vals, fit_func,
-    args, args_min, args_max
+    args, args_min, args_max,
+    ef=None
 ):
-    initial = [0, 0.4, 0.4, 0.4] if fit_func in ["sech2"] else [0.1, 0, 0]
-    initial_min = [-3, 0.3, 0.3, 0] if fit_func in ["sech2"] else [-3, 0, 0]
-    initial_max = [3, 0.5, 0.6, 1] if fit_func in ["sech2"] else [3, 0.5, 0.6]
+    # initial = [0, 0.4, 0.4, 0.4] if fit_func in ["sech2"] else [0.1, 0, 0]
+    # initial_min = [-3, 0.3, 0.3, 0] if fit_func in ["sech2"] else [-3, 0, 0]
+    # initial_max = [3, 0.5, 0.6, 1] if fit_func in ["sech2"] else [3, 0.5, 0.6]
+    initial = [0.1, 0, 0]
+    initial_min = [-3, 0, 0]
+    initial_max = [3, 0.5, 0.6]
     fit_params, y_fit, err = fit_function(
         detuning,#[int(len(detuning) / 4):int(3 * len(detuning) / 4)],
         vals,#[int(len(detuning) / 4):int(3 * len(detuning) / 4)], 
@@ -227,7 +232,7 @@ def fit_once(
     )
     y_fit = FIT_FUNCTIONS[fit_func](detuning, *fit_params)
     ##
-    ## sech^2 fit
+    ##
     baseline_fit_params, baseline_y_fit, baseline_err = fit_function(
         detuning,
         vals, 
@@ -242,8 +247,12 @@ def fit_once(
     )
     ##
     # print(fit_params, "\n", baseline_fit_params)
-    extended_y_fit = FIT_FUNCTIONS[fit_func](extended_freq, *fit_params)
-    baseline_extended_y_fit = FIT_FUNCTIONS[baseline_fit_func](extended_freq, *baseline_fit_params)
+    if ef is not None: 
+        ef = sech2_extended_freq
+    else:
+        ef = extended_freq
+    extended_y_fit = FIT_FUNCTIONS[fit_func](ef, *fit_params)
+    baseline_extended_y_fit = FIT_FUNCTIONS[baseline_fit_func](ef, *baseline_fit_params)
 
     similarity_idx = np.sum(np.abs(y_fit - vals))
     baseline_similarity_idx = np.sum(np.abs(baseline_y_fit - vals))
