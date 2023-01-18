@@ -60,7 +60,7 @@ times = {
 
 date = "2022-06-16"
 area = "pi"
-pulse_type = "sech2"
+pulse_type = "rabi"
 fit_func = pulse_type
 baseline_fit_func = "sinc2" if pulse_type in ["rabi", "constant"] else "lorentzian"
 
@@ -307,7 +307,18 @@ ax0.scatter(detuning, vals, color='black', marker="P")
 ax0.plot(extended_freq, baseline_extended_y_fit, color='blue')
 ax0.plot(extended_freq, extended_y_fit, color='red')
 ax0.set_xlim(extended_freq[0], -extended_freq[0])
-
+model_name_dict = {
+    "rabi": ["Rabi", "Sinc$^2$"], 
+    "rz": ["Rosen-Zener", "Lorentzian"], 
+    "gauss": ["Gaussian", "Lorentzian"], 
+    "demkov": ["Demkov", "Lorentzian"], 
+    "sech2": ["Sech$^2$", "Lorentzian"]
+}
+ax0.legend([
+    "Experimental data", 
+    f"{model_name_dict[pulse_type][1]} fit", 
+    f"{model_name_dict[pulse_type][0]} model analytical fit"
+])
 # major_xticks = np.round(np.arange(extended_freq[0], -extended_freq[0] + 1e-1, 5*2*np.pi),1)
 x_limit = np.floor(np.abs(extended_freq[0]) / 5) * 5
 x_interval = np.round(x_limit / 5) if pulse_type == "rabi" else np.round(x_limit / 6)
@@ -329,10 +340,10 @@ ax0.set_yticks(minor_yticks, minor="True")
 ax0.grid(which='minor', alpha=0.3)
 ax0.grid(which='major', alpha=0.6)
 
-ax0.set_title(f"{pulse_type.capitalize()} Model Frequency Curve" \
-# - SI = {np.round(similarity_idx, 2)} vs BSI = \
-# {np.round(baseline_similarity_idx, 2)}"
-, fontsize=22)
+# ax0.set_title(f"{pulse_type.capitalize()} Model Frequency Curve" \
+# # - SI = {np.round(similarity_idx, 2)} vs BSI = \
+# # {np.round(baseline_similarity_idx, 2)}"
+# , fontsize=22)
 ax0.set_ylabel("Transition Probability", fontsize=20)
 
 ax = fig.add_subplot(gs[5:, :])
@@ -388,6 +399,6 @@ plt.xlabel("Detuning [$\\times 10^6$ rad/s]", fontsize=20)
 #     date.strftime("%H%M%S") + f"_{pulse_type}_cutoff_{cutoff}_{ctrl_param}_{c_p}_area_{area}_frequency_sweep_fitted.png"
 save_dir = "C:/Users/Ivo/Documents/PhD Documents/Pulse Shapes"
 date = datetime.now()
-fig_name = pulse_type + "_" + date.strftime("%Y%m%d") + ".eps"
-plt.savefig(os.path.join(save_dir, fig_name), format="eps")
+fig_name = pulse_type + "_" + date.strftime("%Y%m%d") + ".pdf"
+plt.savefig(os.path.join(save_dir, fig_name), format="pdf")
 plt.show()
