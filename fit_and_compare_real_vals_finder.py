@@ -51,9 +51,9 @@ SIGMA = {
 
 ALPHA = {
     "sech2": 0.4494679707017059,
-    "sine": 0.4494679707017059,
-    "sine2": 0.4494679707017059,
-    "sine3": 0.4494679707017059,
+    "sine": 0.840753969701287,
+    "sine2": 0.8022417161585951,
+    "sine3": 0.7776880847006185,
 }
 
 times = {
@@ -70,7 +70,7 @@ times = {
 
 date = "2022-06-16"
 area = "pi"
-pulse_type = "sine"
+pulse_type = "sine3"
 fit_func = pulse_type
 baseline_fit_func = "sinc2" if pulse_type in ["rabi", "constant"] else "lorentzian"
 
