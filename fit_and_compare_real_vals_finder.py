@@ -4,11 +4,11 @@ from datetime import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-from scipy.optimize import curve_fit
-from scipy.optimize import root
+import scipy.special as sp
+from scipy.optimize import curve_fit, root
 from scipy.integrate import quad, quad_vec
 from scipy.misc import derivative
-from scipy.special import ellipk
+import mpmath as mp
 
 AREA_VALUES = {
     "half": 0.5 * np.pi,
@@ -70,7 +70,7 @@ times = {
 
 date = "2022-06-16"
 area = "pi"
-pulse_type = "sine3"
+pulse_type = "sine"
 fit_func = pulse_type
 baseline_fit_func = "sinc2" if pulse_type in ["rabi", "constant"] else "lorentzian"
 
@@ -104,18 +104,7 @@ def demkov(x, q_freq, delta, eps):
     T = Tt["demkov"]
     sigma = SIGMA["demkov"]
     omega_0 = RABI_FREQ["demkov"]
-    alpha = 0.5 * (x - q_freq) * 1e6 * sigma 
-    if not (isinstance(alpha, np.ndarray) or isinstance(alpha, list)):
-        alpha = [alpha]
     s_inf = np.pi * omega_0 * sigma
-    bessel1 = np.array([complex(mp.besselj(1/2 + 1j * a, s_inf)) for a in alpha])
-    bessel2 = np.array([complex(mp.besselj(-1/2 - 1j * a, s_inf)) for a in alpha])
-    bessel3 = np.array([complex(mp.besselj(1/2 - 1j * a, s_inf)) for a in alpha])
-    bessel4 = np.array([complex(mp.besselj(-1/2 + 1j * a, s_inf)) for a in alpha])
-    if len(alpha) == 1:
-        alpha = alpha[0]
-    # P2 = (np.pi * s_inf / 2) ** 2 * np.abs(bessel1 * bessel2 \
-    #      + bessel3 * bessel4) ** 2 / np.cosh(alpha * np.pi) ** 2
     al = (x - q_freq) * 1e6 * sigma
     bessel11 = np.array([complex(mp.besselj(1/2 + 1j * a / 2, s_inf / (2 * np.pi))) for a in al])
     bessel21 = np.array([complex(mp.besselj(-1/2 - 1j * a / 2, s_inf / (2 * np.pi))) for a in al])
@@ -152,6 +141,56 @@ def sine(x, q_freq, delta, eps):
     tau = quad(f_, -1e-5, 1e-5, epsabs=1e-13, epsrel=1e-5)[0]
     G = quad_vec(fg_, -1e-5, 1e-5, epsabs=1e-13, epsrel=1e-5)[0]
     P2 = np.sin(0.5 * tau * np.sqrt(omega_0 ** 2 + ALPHA["sine"] * D ** 2)) ** 2 * np.abs(G / tau) ** 2
+    return post_process(P2, eps, delta)
+    
+def sine_alt(x, q_freq, delta, eps):
+    T = Tt["sine"]
+    sigma = 1 / np.pi
+    omega_0 = RABI_FREQ["sine"] * T
+    D = (x - q_freq) * 1e6 * T
+    beta = np.sqrt(np.pi * omega_0 * np.sin(np.pi * sigma))
+    d = (D / (2 * beta))
+    alpha = beta * sigma
+
+    def ParabolicCylinderD(v, z, precision=30):
+        m = np.arange(precision)
+        Dv = 2**(-(v/2 + 1)) * np.exp(-z**2/4) / sp.gamma(-v) * np.sum((-1)**m[:, None] / sp.gamma(m[:, None] + 1) * \
+            sp.gamma((m[:, None]-v[None])/2) * (np.sqrt(2) * z)**m[:, None], axis=0)
+        return Dv
+
+    def eta_(D, omega_0, sigma):
+        return (np.sqrt(D**2) * sp.ellipeinc(np.pi * (1 - sigma), -(omega_0**2 / D**2))) / np.pi - \
+            (np.sqrt(D**2) * sp.ellipeinc(np.pi * sigma, -(omega_0**2 / D**2))) / np.pi
+
+    def Uad(D, omega_0, sigma):
+        eta = eta_(D, omega_0, sigma)
+        return np.array([[np.cos(eta/2) + (1j * D * np.sin(eta/2))/np.sqrt(D**2 + omega_0**2 * np.sin(np.pi * sigma)**2),
+                        -((1j * omega_0 * np.sin(eta/2) * np.sin(np.pi * sigma))/np.sqrt(D**2 + omega_0**2 * np.sin(np.pi * sigma)**2))],
+                        [-((1j * omega_0 * np.sin(eta/2) * np.sin(np.pi * sigma))/np.sqrt(D**2 + omega_0**2 * np.sin(np.pi * sigma)**2)),
+                        np.cos(eta/2) - (1j * D * np.sin(eta/2))/np.sqrt(D**2 + omega_0**2 * np.sin(np.pi * sigma)**2)]])
+
+    def a(d, alpha):
+        return (2**(1j * np.power(d,2)/2))/(2 * np.sqrt(np.pi)) * (sp.gamma(1/2 + (1j * d**2)/2)) * ((1 + np.exp(-np.pi * d**2)) * \
+            ParabolicCylinderD(-1j * d**2, alpha * np.exp(1j * np.pi/4)) - (1j * np.sqrt(2 * np.pi))/(sp.gamma(1j * d**2)) * \
+                np.exp(-np.pi * d**2/2) * ParabolicCylinderD(-1 + 1j * d**2, alpha * np.exp(-1j * np.pi/4)))
+
+    def b(d, alpha):
+        return (2**(1j * d**2/2) * np.exp(-1j * np.pi/4))/(d * np.sqrt(2 * np.pi)) * (sp.gamma(1 + (1j * d**2)/2)) * \
+            ((1 - np.exp(-np.pi * d**2)) * ParabolicCylinderD(-1j * d**2, alpha * np.exp(1j * np.pi/4)) + \
+                (1j * np.sqrt(2 * np.pi))/(sp.gamma(1j * d**2)) * np.exp(-np.pi * d**2/2) * \
+                    ParabolicCylinderD(-1 + 1j * d**2, alpha * np.exp(-1j * np.pi/4)))
+    
+    def Ulin(a, b):
+        return np.array(
+            [
+                [np.real(a) - 1j * np.imag(b), np.real(b) + 1j * np.imag(a)], 
+                [-np.real(b) + 1j * np.imag(a), np.real(a) + 1j * np.imag(b)]
+            ]
+        )
+    Ul = np.array(Ulin(a(d, alpha), b(d, alpha)).tolist(), dtype=complex)
+    Ua = Uad(D, omega_0, sigma)
+    Usine = np.einsum('jiz, jkz, klz -> ilz', Ul, Ua, Ul)
+    P2 = np.abs(Usine[0, 1]) ** 2
     return post_process(P2, eps, delta)
 
 def sine2(x, q_freq, delta, eps):
@@ -252,7 +291,7 @@ FIT_FUNCTIONS = {
     "demkov": demkov,
     "sech2": sech_sq,
     "sinc2": sinc2,
-    "sine": sine,
+    "sine": sine_alt,
     "sine2": sine2,
     "sine3": sine3
 }
