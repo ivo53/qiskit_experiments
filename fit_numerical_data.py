@@ -8,7 +8,7 @@ RABI_FREQ = {
     "rabi": 6266474.70796,
     "rz": 42874911.4203,
     "gauss": 25179780.7441,
-    "demkov": 31739880.846,
+    "demkov": 28438933.238,
     "sech2": 35460561.388,
     "sine": 23131885.3151,
     "sine2": 25244940.9663,
@@ -26,10 +26,15 @@ Tt = {
     "sine2": (248 + 8/9) * 1e-9,
     "sine3": (284 + 4/9) * 1e-9
 }
-
-pulse_type = "sine"
-csv_file_address = f'C:/Users/Ivo/Documents/PhD Documents/Sine \
-Pulses/numerical_data/{pulse_type}.csv'
+SIGMA = {
+    "rz": 23.39181 * 1e-9,
+    "gauss": (49 + 7/9) * 1e-9,
+    "demkov": (55 + 5/9) * 1e-9,
+    "sech2": (44 + 4/9) * 1e-9
+}
+pulse_type = "demkov"
+folder_name = "Pulse Shapes" if pulse_type == "sech2" else "Sine Pulses"
+csv_file_address = f'C:/Users/Ivo/Documents/PhD Documents/{folder_name}/numerical_data/{pulse_type}.csv'
 sim_data = np.genfromtxt(csv_file_address, delimiter=',')
 sim_data[:,0] /= 1e6
 sim_extended_freq = np.linspace(sim_data[0, 0], sim_data[-1, 0], 5000)
@@ -53,10 +58,10 @@ def with_dephasing(P2, egamma):
 def lorentzian(x, s, A, q_freq, c):
     return A / (((x - q_freq) / s) ** 2 + 1) + c
 
-def sech_sq(x, q_freq, delta, eps):
-    T = Tt["sim"]
-    sigma = SIGMA["sim"]
-    omega_0 = RABI_FREQ["sim"]
+def sech_sq(x, q_freq, delta, eps, alpha):
+    T = Tt["sech2"]
+    sigma = SIGMA["sech2"]
+    omega_0 = RABI_FREQ["sech2"]
     D = (x - q_freq) * 1e6
     def f_(t):
         return 1 / np.cosh((t) / sigma) ** 2 
@@ -66,7 +71,23 @@ def sech_sq(x, q_freq, delta, eps):
         return f_(t) * g_(t)
     tau = quad(f_, -1e-4, 1e-4, epsabs=1e-13, epsrel=1e-5)[0]
     G = quad_vec(fg_, -1e-4, 1e-4, epsabs=1e-13, epsrel=1e-5)[0]
-    P2 = np.sin(0.5 * tau * np.sqrt(omega_0 ** 2 + ALPHA * D ** 2)) ** 2 * np.abs(G / tau) ** 2
+    P2 = np.sin(0.5 * tau * np.sqrt(omega_0 ** 2 + alpha * D ** 2)) ** 2 * np.abs(G / tau) ** 2
+    return post_process(P2, eps, delta)
+
+def gauss_rzconj(x, q_freq, delta, eps, alpha):
+    T = Tt["gauss"]
+    sigma = SIGMA["gauss"]
+    omega_0 = RABI_FREQ["gauss"]
+    D = (x - q_freq) * 1e6
+    def f_(t):
+        return np.exp(-0.5 * (t / sigma)**2)
+    def g_(t):
+        return np.exp(1j * D * t)
+    def fg_(t):
+        return f_(t) * g_(t)
+    tau = quad(f_, -1e-5, 1e-5, epsabs=1e-13, epsrel=1e-5)[0]
+    G = quad_vec(fg_, -1e-5, 1e-5, epsabs=1e-13, epsrel=1e-5)[0]
+    P2 = np.sin(0.5 * tau * np.sqrt(omega_0 ** 2 + alpha * D ** 2)) ** 2 * np.abs(G / tau) ** 2
     return post_process(P2, eps, delta)
 
 def sine(x, q_freq, delta, eps, alpha):
@@ -117,12 +138,30 @@ def sine3(x, q_freq, delta, eps, alpha):
     P2 = np.sin(0.5 * tau * np.sqrt(omega_0 ** 2 + alpha * D ** 2)) ** 2 * np.abs(G / tau) ** 2
     return post_process(P2, eps, delta)
 
+def demkov_rzconj(x, q_freq, delta, eps, alpha):
+    T = Tt["demkov"]
+    sigma = SIGMA["demkov"]
+    omega_0 = RABI_FREQ["demkov"]
+    D = (x - q_freq) * 1e6
+    def f_(t):
+        return np.exp(-np.abs(t / sigma))
+    def g_(t):
+        return np.exp(1j * D * t)
+    def fg_(t):
+        return f_(t) * g_(t)
+    tau = quad(f_, -1e-5, 1e-5, epsabs=1e-13, epsrel=1e-5)[0]
+    G = quad_vec(fg_, -1e-5, 1e-5, epsabs=1e-13, epsrel=1e-5)[0]
+    P2 = np.sin(0.5 * tau * np.sqrt(omega_0 ** 2 + alpha * D ** 2)) ** 2 * np.abs(G / tau) ** 2
+    return post_process(P2, eps, delta)
+
 FIT_FUNCTIONS = {
     "lorentzian": lorentzian,
     "sech2": sech_sq,
     "sine": sine,
     "sine2": sine2,
-    "sine3": sine3
+    "sine3": sine3,
+    "gauss":gauss_rzconj,
+    "demkov":demkov_rzconj
 }
 
 baseline_fit_func = "lorentzian"
