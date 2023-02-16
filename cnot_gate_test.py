@@ -106,7 +106,7 @@ print(results.get_counts(0))
 transition_probability = [[] for _ in range(num_qubits ** 2)]
 for i in range(num_circuits):
     transition_probability[0].append(
-        results.get_counts(i)["00 00"] / num_shots
+        results.get_counts(i )["00 00"] / num_shots
     )
     transition_probability[1].append(
         results.get_counts(i)["01 00"] / num_shots

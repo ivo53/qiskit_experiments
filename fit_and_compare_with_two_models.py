@@ -279,7 +279,7 @@ model_name_dict = {
     "gauss2": ["Gaussian RZ Conjecture", "Lorentzian"], 
     "demkov1": ["Demkov Bessel Functions", "Lorentzian"], 
     "demkov2": ["Demkov RZ Conjecture", "Lorentzian"], 
-    "sine1": ["Sine Double Approx", "Lorentzian"],
+    "sine1": ["Sine RZ Conjecture", "Lorentzian"],
     "sine2": ["Sine rLZSM", "Lorentzian"],
 }
 

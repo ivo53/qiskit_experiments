@@ -73,7 +73,7 @@ times = {
 
 date = "2022-06-16"
 area = "pi"
-pulse_type = "sine2"
+pulse_type = "sine3"
 fit_func = pulse_type
 baseline_fit_func = "sinc2" if pulse_type in ["rabi", "constant"] else "lorentzian"
 
@@ -93,7 +93,8 @@ def with_dephasing(P2, egamma):
 
 def lorentzian(x, s, A, q_freq, c):
     return A / (((x - q_freq) / s) ** 2 + 1) + c
-
+    # return A / np.cosh(((x - q_freq) / s))**2 + c
+    
 def rz(x, q_freq, delta, eps):
     T = Tt["rz"]
     O = RABI_FREQ["rz"]
