@@ -41,15 +41,22 @@ if __name__ == "__main__":
         help="Lorentz duration parameter")
     parser.add_argument("-c", "--cutoff", default=0.5, type=float,
         help="Cutoff parameter in PERCENT of maximum amplitude of Lorentzian")
+    parser.add_argument("-rb", "--remove_bg", default=0, type=int,
+        help="Whether to drop the background (tail) of the pulse (0 or 1).")
     parser.add_argument("-cp", "--control_param", default="width", type=str,
         help="States whether width or duration is the controlled parameter")
     parser.add_argument("-ne", "--max_experiments_per_job", default=100, type=int,
         help="Maximum experiments per job")
+    parser.add_argument("-b", "--backend", default="ibmq_armonk", type=str,
+        help="The name of the backend to use in the experiment.")
     args = parser.parse_args()
     cutoff = args.cutoff
     lor_G = args.lorentz_G
     lor_T = get_closest_multiple_of_16(args.lorentz_T)
     ctrl_param = args.control_param
+    backend = args.backend
+    remove_bg = bool(args.remove_bg)
+    backend_short_name = backend.split("_")[1]
     assert 100. > cutoff > 0., "Cutoff percentage MUST be between 0 and 100."
     ## create folder where plots are saved
     file_dir = os.path.dirname(__file__)
@@ -57,7 +64,7 @@ if __name__ == "__main__":
     current_date = date.strftime("%Y-%m-%d")
     calib_dir = os.path.join(file_dir, "calibrations")
     save_dir = os.path.join(calib_dir, current_date)
-    data_folder = os.path.join(file_dir, "data", "armonk", "calibration", current_date).replace("\\", "/")
+    data_folder = os.path.join(file_dir, "data", backend_short_name, "calibration", current_date).replace("\\", "/")
     make_all_dirs(save_dir)
     make_all_dirs(data_folder)
 
@@ -73,7 +80,7 @@ if __name__ == "__main__":
     acq_chan = pulse.AcquireChannel(qubit)
 
     provider = IBMQ.load_account()
-    backend = provider.get_backend("ibmq_armonk")
+    backend = provider.get_backend(backend)
     # backend = provider.get_backend("ibmq_qasm_simulator")
     backend_name = str(backend)
     print(f"Using {backend_name} backend.")
@@ -116,6 +123,8 @@ if __name__ == "__main__":
         gauss_t_dt = np.arange(gauss_dur)
         gauss_mu = gauss_dur / 2
         gauss_amps = amp * np.exp(-(gauss_t_dt - gauss_mu) ** 2 / (2 * gauss_sigma ** 2))
+        if remove_bg:
+            gauss_amps -= gauss_amps[0]
         gauss = pulse_lib.Waveform(samples=gauss_amps, name="gauss pulse")
         # gauss = pulse_lib.gaussian(
         #     duration=gauss_dur,
@@ -167,6 +176,8 @@ if __name__ == "__main__":
         # lor_dur_dt = 2576
         lor_t_dt = np.arange(lor_dur_dt)
         lor_amps = amp / (((lor_t_dt - lor_dur_dt / 2) / G) ** 2 + 1)
+        if remove_bg:
+            lor_amps -= lor_amps[0]
         lor = pulse_lib.Waveform(samples=lor_amps, name="lorentzian pulse")
         
         ## Lorentzian^2
@@ -181,6 +192,8 @@ if __name__ == "__main__":
         # G2 = 350
         lor2_t_dt = np.arange(lor2_dur_dt)
         lor2_amps = amp / (((lor2_t_dt - lor2_dur_dt / 2) / G2) ** 2 + 1) ** 2 
+        if remove_bg:
+            lor2_amps -= lor2_amps[0]
         lor2 = pulse_lib.Waveform(samples=lor2_amps, name="lorentzian^2 pulse")
         
         ## Sech
@@ -190,6 +203,8 @@ if __name__ == "__main__":
         sech_B = 0
         sech_t_dt = np.arange(sech_dur_dt)
         sech_amps = amp / np.cosh(sech_w * (sech_t_dt - sech_dur_dt / 2)) + sech_B
+        if remove_bg:
+            sech_amps -= sech_amps[0]
         sech = pulse_lib.Waveform(samples=sech_amps, name="sech pulse")
         
         ## Sech^2
@@ -198,6 +213,8 @@ if __name__ == "__main__":
         sech2_B = 0
         sech2_t_dt = np.arange(sech2_dur_dt)
         sech2_amps = 1 * amp / (np.cosh(sech2_w * (sech2_t_dt - sech2_dur_dt / 2))) ** 2 + sech2_B
+        if remove_bg:
+            sech2_amps -= sech2_amps[0]
         sech2 = pulse_lib.Waveform(samples=sech2_amps, name="sech^2 pulse")
 
         ## Demkov
@@ -205,6 +222,8 @@ if __name__ == "__main__":
         demkov_t_dt = np.arange(demkov_dur_dt)
         demkov_B = 250
         demkov_amps = amp * np.exp(-np.abs(demkov_t_dt - demkov_dur_dt / 2) / demkov_B)
+        if remove_bg:
+            demkov_amps -= demkov_amps[0]
         demkov = pulse_lib.Waveform(samples=demkov_amps, name="demkov pulse")
         ##
         pulses = {
@@ -338,6 +357,7 @@ if __name__ == "__main__":
         "date": date.strftime("%Y-%m-%d"),
         "time": date.strftime("%H:%M:%S"),
         "pulse_type": pulse_type,
+        "remove_bg": remove_bg,
         "A": A,
         "l": l,
         "p": p,
@@ -345,7 +365,8 @@ if __name__ == "__main__":
         "drive_freq": rough_qubit_frequency,
         "pi_duration": pulses[pulse_type].duration,
         "pi_amp": pi_amp,
-        "half_amp": half_amp
+        "half_amp": half_amp,
+        "backend": backend_name
     }
     print(param_dict)
     param_series = pd.Series(param_dict)
