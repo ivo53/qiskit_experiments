@@ -49,12 +49,13 @@ if __name__ == "__main__":
     parser.add_argument("-ne", "--max_experiments_per_job", default=100, type=int,
         help="Maximum experiments per job")
     parser.add_argument("-b", "--backend", default="manila", type=str,
-        help="The name of the backend to use in the experiment.")
+        help="The name of the backend to use in the experiment (one of nairobi, \
+        oslo, manila, quito, belem, lima).")
     args = parser.parse_args()
     cutoff = args.cutoff
     lor_G = args.lorentz_G
     duration = get_closest_multiple_of_16(args.duration)
-    sigma = args.sigma
+    sigma = get_closest_multiple_of_16(args.sigma)
     ctrl_param = args.control_param
     backend = args.backend
     max_experiments_per_job = args.max_experiments_per_job
