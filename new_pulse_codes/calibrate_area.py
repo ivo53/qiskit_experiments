@@ -9,7 +9,7 @@ import pandas as pd
 from scipy.optimize import curve_fit
 from scipy.special import lambertw
 from qiskit import pulse, IBMQ, QuantumCircuit, QuantumRegister, ClassicalRegister
-from qiskit.circuit import Parameter
+from qiskit.circuit import Parameter, Gate
 # This Pulse module helps us build sampled pulses for common pulse shapes
 from qiskit.pulse import library as pulse_lib
 from qiskit.tools.monitor import job_monitor
@@ -30,10 +30,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-pt", "--pulse_type", default="gauss", type=str,
         help="Pulse type (e.g. sq, gauss, sine, sech etc.)")
-    parser.add_argument("-l", "--l", default=10, type=float,
-        help="Parameter l in Rabi oscillations fit")
-    parser.add_argument("-p", "--p", default=0.5, type=float,
-        help="Parameter p in Rabi oscillations fit")
     parser.add_argument("-G", "--lorentz_G", default=180, type=float,
         help="Lorentz width (gamma) parameter")    
     parser.add_argument("-s", "--sigma", default=180, type=float,
@@ -46,23 +42,37 @@ if __name__ == "__main__":
         help="Whether to drop the background (tail) of the pulse (0 or 1).")
     parser.add_argument("-cp", "--control_param", default="width", type=str,
         help="States whether width or duration is the controlled parameter")
-    parser.add_argument("-ne", "--max_experiments_per_job", default=100, type=int,
+    parser.add_argument("-epj", "--max_experiments_per_job", default=100, type=int,
         help="Maximum experiments per job")
+    parser.add_argument("-ns", "--num_shots", default=2048, type=int,
+        help="Number of shots per experiment (datapoint).")
     parser.add_argument("-b", "--backend", default="manila", type=str,
         help="The name of the backend to use in the experiment (one of nairobi, \
         oslo, manila, quito, belem, lima).")
+    parser.add_argument("-ia", "--initial_amp", default=0.001, type=float,
+        help="The initial amplitude of the area sweep.")
+    parser.add_argument("-fa", "--final_amp", default=0.2, type=float,
+        help="The final amplitude of the area sweep.")
+    parser.add_argument("-ne", "--num_experiments", default=100, type=int,
+        help="The number of amplitude datapoints to evaluate.")
     args = parser.parse_args()
     cutoff = args.cutoff
-    lor_G = args.lorentz_G
+    lor_G = args.sigma
     duration = get_closest_multiple_of_16(args.duration)
-    sigma = get_closest_multiple_of_16(args.sigma)
+    sigma = args.sigma
+    initial_amp = args.initial_amp
+    final_amp = args.final_amp
+    num_shots_per_exp = args.num_shots
+    num_exp = args.num_experiments
     ctrl_param = args.control_param
     backend = args.backend
     max_experiments_per_job = args.max_experiments_per_job
     remove_bg = bool(args.remove_bg)
     pulse_type = args.pulse_type
     backend_name = backend
-    backend = "ibm_" + backend if backend in ["nairobi", "oslo"] else "ibmq_" + backend
+    backend = "ibm_" + backend \
+        if backend in ["perth", "lagos", "nairobi", "oslo"] \
+            else "ibmq_" + backend
     pulse_dict = {
         "gauss": pulse_lib.Gaussian,
         "lor": pulse_lib.Lorentzian,
@@ -74,6 +84,7 @@ if __name__ == "__main__":
     ## create folder where plots are saved
     file_dir = os.path.dirname(__file__)
     file_dir = os.path.split(file_dir)[0]
+    print(file_dir)
     date = datetime.now()
     current_date = date.strftime("%Y-%m-%d")
     calib_dir = os.path.join(file_dir, "calibrations")
@@ -113,30 +124,21 @@ if __name__ == "__main__":
     
     ## set params
     fit_crop = 1#.8
-    min_amplitude, max_amplitude = 0.001, .999#0.55#.65
-    num_exp = 100
     amplitudes = np.linspace(
-        min_amplitude, 
-        max_amplitude, 
+        initial_amp, 
+        final_amp, 
         num_exp
     )
     fit_crop_parameter = int(fit_crop * len(amplitudes))
 
     print(f"The resonant frequency is assumed to be {np.round(rough_qubit_frequency / GHz, 5)} GHz.")
     print(f"The area calibration will start from amp {amplitudes[0]} "
-    f"and end at {amplitudes[-1]} with approx step {(max_amplitude - min_amplitude)/num_exp}.")
+    f"and end at {amplitudes[-1]} with approx step {(final_amp - initial_amp)/num_exp}.")
 
-    # Create base circuit
-    q = QuantumRegister(1)
-    c = ClassicalRegister(1)
-    base_circ = QuantumCircuit(q, c)
-    base_circ.x(qubit)
-
-    circs = []
     amp = Parameter('amp')
     with pulse.build(backend=backend, default_alignment='sequential', name="calibrate_area") as sched:
-        pulse.set_frequency(rough_qubit_frequency, drive_chan)
         dur_dt = duration
+        pulse.set_frequency(rough_qubit_frequency, drive_chan)
         if pulse_type == "sq":
             pulse_played = pulse_dict[pulse_type](
                 duration=dur_dt,
@@ -148,7 +150,7 @@ if __name__ == "__main__":
                 duration=dur_dt,
                 amp=amp,
                 name=pulse_type,
-                gamma=lor_G,
+                gamma=sigma,
                 zero_ends=remove_bg
             )
         else:
@@ -160,21 +162,22 @@ if __name__ == "__main__":
                 zero_ends=remove_bg
             )
         pulse.play(pulse_played, drive_chan)
-        pulse.measure(
-            qubits=[qubit], 
-            registers=[pulse.MemorySlot(mem_slot)]
-        )
-    for a in amplitudes:
-        current_sched = sched.assign_parameters(
+
+    # Create gate holder and append to base circuit
+    pi_gate = Gate("rabi", 1, [amp])
+    base_circ = QuantumCircuit(1, 1)
+    base_circ.append(pi_gate, [0])
+    base_circ.measure(0, 0)
+    base_circ.add_calibration(pi_gate, (qubit,), sched, [amp])
+    circs = [
+        base_circ.assign_parameters(
                 {amp: a},
                 inplace=False
-        )
-        circ_copy = deepcopy(base_circ)
-        circ_copy.add_calibration("x", [qubit], current_sched)
-        circs.append(circ_copy)
+        ) for a in amplitudes]
 
-    num_shots_per_exp = 1024
-
+    # rabi_schedule = qiskit.schedule(circs[-1], backend)
+    # rabi_schedule.draw(backend=backend)
+    
     job_manager = IBMQJobManager()
     pi_job = job_manager.run(
         circs,
@@ -194,7 +197,7 @@ if __name__ == "__main__":
             counts = 0
         pi_sweep_values.append(counts / num_shots_per_exp)
 
-    print(amplitudes, np.real(pi_sweep_values))
+    # print(amplitudes, np.real(pi_sweep_values))
     plt.figure(3)
     plt.scatter(amplitudes, np.real(pi_sweep_values), color='black') # plot real part of sweep values
     plt.title("Rabi Calibration Curve")

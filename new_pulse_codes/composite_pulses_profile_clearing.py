@@ -47,13 +47,25 @@ pulse_dict = {
     # "sin4": pulse_lib.SineFourthPower,
     # "sin5": pulse_lib.SineFifthPower,
     }
+pulse_sequence_dict = {
+    3: np.array([0, 1, 0]) * np.pi / 2,
+    5: np.array([0, 5, 2, 5, 0]) * np.pi / 6,
+    7: np.array([0, 11, 10, 17, 10, 11, 0]) * np.pi / 12,
+    9: np.array([0, 0.366, 0.638, 0.435, 1.697, 0.435, 0.638, 0.366, 0]) * np.pi,
+    11: np.array([0, 11, 10, 23, 1, 19, 1, 23, 10, 11, 0]) * np.pi / 12,
+    13: np.array([0, 9, 42, 11, 8, 37, 2, 37, 8, 11, 42, 9, 0]) * np.pi / 24,
+    25: np.array([0, 5, 2, 5, 0, 11, 4, 1, 4, 11, 2, 7, 4, 7, 2, 11, 4, 1, 4, 11,\
+                    0, 5, 2, 5, 0]) * np.pi / 6,
+}
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-pt", "--pulse_type", default="gauss", type=str,
+    parser.add_argument("-pt", "--pulse_type", default="sq", type=str,
         help="Pulse type (e.g. sq, gauss, sine, sech etc.)")
     parser.add_argument("-q", "--qubit", default=0, type=int,
         help="The number of the qubit to be used.")
+    parser.add_argument("-np", "--num_pulses", default=5, type=int,
+        help="Number of composite pulses to apply.")
     parser.add_argument("-l", "--l", default=10, type=float,
         help="Parameter l in Rabi oscillations fit")
     parser.add_argument("-p", "--p", default=0.5, type=float,
@@ -84,6 +96,7 @@ if __name__ == "__main__":
     pulse_type = args.pulse_type
     l = args.l
     p = args.p
+    num_pulses = args.num_pulses
     sigma = args.sigma
     duration = get_closest_multiple_of_16(args.duration)
     cutoff = args.cutoff
@@ -126,7 +139,8 @@ if __name__ == "__main__":
     meas_chan = pulse.MeasureChannel(qubit)
     acq_chan = pulse.AcquireChannel(qubit)
 
-    provider = IBMQ.load_account()
+    IBMQ.load_account()
+    provider = IBMQ.get_provider(hub='ibm-q')
     backend = provider.get_backend(backend)
     # backend = provider.get_backend("ibmq_qasm_simulator")
     print(f"Using {backend_name} backend.")
@@ -140,37 +154,44 @@ if __name__ == "__main__":
     frequencies = np.arange(center_frequency_Hz - span / 2, 
                             center_frequency_Hz + span / 2,
                             span / num_experiments)
+    print(f"The sweep will go from {np.round((center_frequency_Hz - span / 2) / GHz, 4)}"
+        f" GHz to {np.round((center_frequency_Hz + span / 2) / GHz, 4)} GHz"
+        f" in steps of {np.round((span / num_experiments) / MHz, 3)} MHz."
+        f" This results in {num_experiments} datapoints.")
     dt = backend_config.dt
-    print(dt)
+    print(f"Sampling time: {dt*1e9} ns") 
     amp = -np.log(1 - np.pi / l) / p
-
+    pulse_phases = pulse_sequence_dict[num_pulses]
     freq = Parameter('freq')
     with pulse.build(backend=backend, default_alignment='sequential', name="calibrate_freq") as sched:
         dur_dt = duration
         pulse.set_frequency(freq, drive_chan)
-        if pulse_type == "sq":
-            pulse_played = pulse_dict[pulse_type](
-                duration=dur_dt,
-                amp=amp,
-                name=pulse_type
-            )
-        elif pulse_type == "lor":
-            pulse_played = pulse_dict[pulse_type](
-                duration=dur_dt,
-                amp=amp,
-                name=pulse_type,
-                gamma=sigma,
-                zero_ends=remove_bg
-            )
-        else:
-            pulse_played = pulse_dict[pulse_type](
-                duration=dur_dt,
-                amp=amp,
-                name=pulse_type,
-                sigma=sigma,
-                zero_ends=remove_bg
-            )
-        pulse.play(pulse_played, drive_chan)
+
+        for n, p in enumerate(pulse_phases):
+            if pulse_type == "sq":
+                pulse_played = pulse_dict[pulse_type](
+                    duration=dur_dt,
+                    amp=amp * np.exp(1j * p),
+                    name=pulse_type
+                )
+            elif pulse_type == "lor":
+                pulse_played = pulse_dict[pulse_type](
+                    duration=dur_dt,
+                    amp=amp * np.exp(1j * p),
+                    name=pulse_type,
+                    gamma=sigma,
+                    zero_ends=remove_bg
+                )
+            else:
+                pulse_played = pulse_dict[pulse_type](
+                    duration=dur_dt,
+                    amp=amp * np.exp(1j * p),
+                    name=pulse_type,
+                    sigma=sigma,
+                    zero_ends=remove_bg
+                )
+            # pulse.set_phase(p, drive_chan)
+            pulse.play(pulse_played, drive_chan)
 
     # Create gate holder and append to base circuit
     custom_gate = Gate("pi_pulse", 1, [freq])
