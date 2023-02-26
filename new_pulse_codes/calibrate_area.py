@@ -30,14 +30,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-pt", "--pulse_type", default="gauss", type=str,
         help="Pulse type (e.g. sq, gauss, sine, sech etc.)")
-    parser.add_argument("-G", "--lorentz_G", default=180, type=float,
-        help="Lorentz width (gamma) parameter")    
+    # parser.add_argument("-G", "--lorentz_G", default=180, type=float,
+    #     help="Lorentz width (gamma) parameter")    
     parser.add_argument("-s", "--sigma", default=180, type=float,
         help="Pulse width (sigma) parameter")    
     parser.add_argument("-T", "--duration", default=2256, type=int,
         help="Lorentz duration parameter")
-    parser.add_argument("-c", "--cutoff", default=0.5, type=float,
-        help="Cutoff parameter in PERCENT of maximum amplitude of Lorentzian")
+    # parser.add_argument("-c", "--cutoff", default=0.5, type=float,
+    #     help="Cutoff parameter in PERCENT of maximum amplitude of Lorentzian")
     parser.add_argument("-rb", "--remove_bg", default=0, type=int,
         help="Whether to drop the background (tail) of the pulse (0 or 1).")
     parser.add_argument("-cp", "--control_param", default="width", type=str,
@@ -56,7 +56,7 @@ if __name__ == "__main__":
     parser.add_argument("-ne", "--num_experiments", default=100, type=int,
         help="The number of amplitude datapoints to evaluate.")
     args = parser.parse_args()
-    cutoff = args.cutoff
+    # cutoff = args.cutoff
     lor_G = args.sigma
     duration = get_closest_multiple_of_16(args.duration)
     sigma = args.sigma
@@ -79,12 +79,12 @@ if __name__ == "__main__":
         "lor2": pulse_lib.LorentzianSquare,
         "lor3": pulse_lib.LorentzianCube,
         "sq": pulse_lib.Constant,
-        "sech": pulse_lib.Sech
+        "sech": pulse_lib.Sech,
+        "sech2": pulse_lib.SechSquare
     }
     ## create folder where plots are saved
     file_dir = os.path.dirname(__file__)
     file_dir = os.path.split(file_dir)[0]
-    print(file_dir)
     date = datetime.now()
     current_date = date.strftime("%Y-%m-%d")
     calib_dir = os.path.join(file_dir, "calibrations")
@@ -145,7 +145,7 @@ if __name__ == "__main__":
                 amp=amp,
                 name=pulse_type
             )
-        elif pulse_type == "lor":
+        elif pulse_type in ["lor", "lor2", "lor3"]:
             pulse_played = pulse_dict[pulse_type](
                 duration=dur_dt,
                 amp=amp,
@@ -226,8 +226,8 @@ if __name__ == "__main__":
     rabi_fit_params, _ = fit_function(
         amplitudes[: fit_crop_parameter],
         np.real(pi_sweep_values[: fit_crop_parameter]), 
-        lambda x, A, k, l, p, B: A * (np.cos(k * (x) + l * (1 - np.exp(- p * x)))) + B,
-        [-0.47273362, 70.14552555, 99.99999999, 1.41088158, 0.47747625]
+        lambda x, A, k, l, p, x0, B: A * (np.cos(l * (1 - np.exp(- p * (x - x0))))) + B,
+        [-0.47273362, 70.14552555, 10, 0.5, 0, 0.47747625]
         # lambda x, A, k, B: A * (np.cos(k * x)) + B,
         # [-0.5, 50, 0.5]
     )
@@ -252,6 +252,7 @@ if __name__ == "__main__":
         "B": B,
         "drive_freq": rough_qubit_frequency,
         "pi_duration": dur_dt,
+        "sigma": sigma,
         "pi_amp": pi_amp,
         "half_amp": half_amp
     }

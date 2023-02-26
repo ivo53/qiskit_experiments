@@ -12,10 +12,10 @@ def get_closest_multiple_of_16(num):
 
 rough_qubit_frequency = 4.97173 * 1.e9
 backend_name = "armonk"
-pulse_type = "lorentz"
+pulse_type = "lor"
 dur_dt = 2256
 
-lorentz = ["lorentz", "lorentz2"]
+lorentz = ["lor", "lor2", "lor3"]
 if isinstance(dur_dt, float) and dur_dt < 3:
     dur_dt = get_closest_multiple_of_16(dur_dt * 1.e-6 / (1.e-9 * 2/9))
 

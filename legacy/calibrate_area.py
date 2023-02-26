@@ -337,8 +337,8 @@ if __name__ == "__main__":
     rabi_fit_params, _ = fit_function(
         amplitudes[: fit_crop_parameter],
         np.real(pi_sweep_values[: fit_crop_parameter]), 
-        lambda x, A, l, p, B: A * (np.cos(l * (1 - np.exp(- p * x)))) + B,
-        [-.5, args.l, args.p, 0.5]
+        lambda x, A, l, p, x0, B: A * (np.cos(l * (1 - np.exp(- p * (x - x0))))) + B,
+        [-.5, args.l, args.p, 0, 0.5]
         # lambda x, A, k, B: A * (np.cos(k * x)) + B,
         # [-0.5, 50, 0.5]
     )
