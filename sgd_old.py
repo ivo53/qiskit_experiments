@@ -10,8 +10,8 @@ from scipy.optimize import curve_fit
 def get_closest_multiple_of_16(num):
     return int(num + 8) - (int(num + 8) % 16)
 
-rough_qubit_frequency = 4.97173 * 1.e9
-backend_name = "armonk"
+rough_qubit_frequency = 4962284031.287086 # 4.97173 * 1.e9
+backend_name = "manila"
 pulse_type = "lor"
 dur_dt = 2256
 
@@ -35,7 +35,7 @@ if pulse_type in lorentz:
 
 
 date_of_cal = None
-# date_of_cal = "2022-06-11"
+date_of_cal = "2023-02-26"
 date = datetime.now()
 current_date = date_of_cal if date_of_cal is not None else date.strftime("%Y-%m-%d")
 
@@ -98,8 +98,8 @@ def fit_function(x_values, y_values, function, init_params):
 fitparams, _ = fit_function(
     x, y, 
     # lambda x, A, k, l, p, B: A * (np.cos(k*x + l * (1 - np.exp(-p*x)))) + B,
-    lambda x, A, l, p, B: A * (np.cos(l * (1 - np.exp(-p*x)))) + B,
-    [-.5, 25, .4, 0.5]
+    lambda x, A, l, p, x0, B: A * (np.cos(l * (1 - np.exp(-p*(x-x0))))) + B,
+    [-.5, 25, .4, 0, 0.5]
 )
 print(fitparams)
 A,l,p,B = fitparams

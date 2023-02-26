@@ -1,13 +1,12 @@
 import os
+import pickle
 import argparse
 from datetime import datetime
-from copy import deepcopy
 
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from scipy.optimize import curve_fit
-from scipy.special import lambertw
 from qiskit import pulse, IBMQ, QuantumCircuit, QuantumRegister, ClassicalRegister
 from qiskit.circuit import Parameter, Gate
 # This Pulse module helps us build sampled pulses for common pulse shapes
@@ -120,8 +119,8 @@ if __name__ == "__main__":
     dt = backend_config.dt
 
 
-    rough_qubit_frequency = center_frequency_Hz #4.97173 * GHz
-    
+    rough_qubit_frequency = center_frequency_Hz # 4962284031.287086 Hz
+
     ## set params
     fit_crop = 1#.8
     amplitudes = np.linspace(
@@ -204,7 +203,9 @@ if __name__ == "__main__":
     plt.xlabel("Amplitude [a.u.]")
     plt.ylabel("Transition Probability")
     plt.savefig(os.path.join(save_dir, date.strftime("%H%M%S") + f"_{pulse_type}_pi_amp_sweep.png"))
-
+    datapoints = np.vstack((amplitudes, np.real(pi_sweep_values)))
+    with open(os.path.join(data_folder, f"area_calibration_{date.strftime('%H%M%S')}.pkl"), "wb") as f:
+        pickle.dump(datapoints, f)
     ## fit curve
     def fit_function(x_values, y_values, function, init_params):
         fitparams, conv = curve_fit(
