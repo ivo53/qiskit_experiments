@@ -88,19 +88,20 @@ if __name__ == "__main__":
             init_params, 
             maxfev=100000, 
             bounds=(
-                [-0.51, 0, 0, -100, 0.45], 
-                [-.45, 1000, 1000, 100, 0.55]
+                [-0.51, 0, 0, -0.01, 0.45], 
+                [-.45, 1e6, .5, 0.01, 0.55]
             )
         )
         y_fit = function(x_values, *fitparams)
         
         return fitparams, y_fit
+
     fit_crop_parameter = int(1 * len(amps))
     rabi_fit_params, _ = fit_function(
         amps[: fit_crop_parameter],
         tr_probs[: fit_crop_parameter], 
         lambda x, A, l, p, x0, B: A * (np.cos(l * (1 - np.exp(- p * (x - x0))))) + B,
-        [-0.48273362, 100, 1, 0, 0.47747625]
+        [-0.48273362, 20, 0.3, 0.005, 0.47747625]
         # lambda x, A, k, B: A * (np.cos(k * x)) + B,
         # [-0.5, 50, 0.5]
     )

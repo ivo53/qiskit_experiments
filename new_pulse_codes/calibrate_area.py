@@ -144,6 +144,14 @@ if __name__ == "__main__":
                 amp=amp,
                 name=pulse_type
             )
+        elif pulse_type == "gauss":
+            pulse_played = pulse_dict[pulse_type](
+                duration=dur_dt,
+                amp=amp,
+                name=pulse_type,
+                sigma=sigma / np.sqrt(2),
+                zero_ends=remove_bg
+            )
         elif pulse_type in ["lor", "lor2", "lor3"]:
             pulse_played = pulse_dict[pulse_type](
                 duration=dur_dt,

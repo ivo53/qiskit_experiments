@@ -1,11 +1,11 @@
-import re
 import os
+import json
+import time
 import argparse
 import requests
-import json
-import urllib.request
-import time
 from datetime import datetime
+
+import numpy as np
 
 backends = [
     "ibmq_lima", 
@@ -70,7 +70,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-at", "--access_token", 
-        # the access token can be found in the cookies after logging into the IBM Q website
+        # turns out the access token is not needed
         default="", 
         type=str, help="Access token for the IBM Quantum website."
     )

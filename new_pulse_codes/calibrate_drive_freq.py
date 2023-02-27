@@ -58,6 +58,8 @@ if __name__ == "__main__":
         help="Parameter l in Rabi oscillations fit")
     parser.add_argument("-p", "--p", default=0.5, type=float,
         help="Parameter p in Rabi oscillations fit")
+    parser.add_argument("-x0", "--x0", default=0.005, type=float,
+        help="Parameter x0 in Rabi oscillations fit")
     parser.add_argument("-s", "--sigma", default=180, type=float,
         help="Pulse width (sigma) parameter")    
     parser.add_argument("-T", "--duration", default=2256, type=int,
@@ -84,6 +86,7 @@ if __name__ == "__main__":
     pulse_type = args.pulse_type
     l = args.l
     p = args.p
+    x0 = args.x0
     sigma = args.sigma
     duration = get_closest_multiple_of_16(args.duration)
     cutoff = args.cutoff
@@ -141,8 +144,8 @@ if __name__ == "__main__":
                             center_frequency_Hz + span / 2,
                             span / num_experiments)
     dt = backend_config.dt
-    print(dt)
-    amp = -np.log(1 - np.pi / l) / p
+    # print(dt)
+    amp = -np.log(1 - np.pi / l) / p + x0
 
     freq = Parameter('freq')
     with pulse.build(backend=backend, default_alignment='sequential', name="calibrate_freq") as sched:
@@ -154,7 +157,15 @@ if __name__ == "__main__":
                 amp=amp,
                 name=pulse_type
             )
-        elif pulse_type == "lor":
+        elif pulse_type == "gauss":
+            pulse_played = pulse_dict[pulse_type](
+                duration=dur_dt,
+                amp=amp,
+                name=pulse_type,
+                sigma=sigma / np.sqrt(2),
+                zero_ends=remove_bg
+            )
+        elif pulse_type in ["lor", "lor2", "lor3"]:
             pulse_played = pulse_dict[pulse_type](
                 duration=dur_dt,
                 amp=amp,
