@@ -79,7 +79,12 @@ if __name__ == "__main__":
         "lor3": pulse_lib.LorentzianCube,
         "sq": pulse_lib.Constant,
         "sech": pulse_lib.Sech,
-        "sech2": pulse_lib.SechSquare
+        "sech2": pulse_lib.SechSquare,
+        "sin": pulse_lib.Sine,
+        "sin2": pulse_lib.SineSquare,
+        "sin3": pulse_lib.SineCube,
+        "sin4": pulse_lib.SineFourthPower,
+        "sin5": pulse_lib.SineFifthPower,
     }
     ## create folder where plots are saved
     file_dir = os.path.dirname(__file__)
@@ -138,7 +143,7 @@ if __name__ == "__main__":
     with pulse.build(backend=backend, default_alignment='sequential', name="calibrate_area") as sched:
         dur_dt = duration
         pulse.set_frequency(rough_qubit_frequency, drive_chan)
-        if pulse_type == "sq":
+        if pulse_type == "sq" or "sin" in pulse_type:
             pulse_played = pulse_dict[pulse_type](
                 duration=dur_dt,
                 amp=amp,
@@ -210,7 +215,7 @@ if __name__ == "__main__":
     plt.title("Rabi Calibration Curve")
     plt.xlabel("Amplitude [a.u.]")
     plt.ylabel("Transition Probability")
-    plt.savefig(os.path.join(save_dir, date.strftime("%H%M%S") + f"_{pulse_type}_pi_amp_sweep.png"))
+    plt.savefig(os.path.join(save_dir, date.strftime("%H%M%S") + f"_{pulse_type}_dur_{duration}_s_{int(sigma)}_areacal.png"))
     datapoints = np.vstack((amplitudes, np.real(pi_sweep_values)))
     with open(os.path.join(data_folder, f"area_calibration_{date.strftime('%H%M%S')}.pkl"), "wb") as f:
         pickle.dump(datapoints, f)

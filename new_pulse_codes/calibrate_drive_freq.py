@@ -41,11 +41,11 @@ pulse_dict = {
     "sq": pulse_lib.Constant,
     "sech": pulse_lib.Sech,
     "sech2": pulse_lib.SechSquare,
-    # "sin": pulse_lib.Sine,
-    # "sin2": pulse_lib.SineSquare,
-    # "sin3": pulse_lib.SineCube,
-    # "sin4": pulse_lib.SineFourthPower,
-    # "sin5": pulse_lib.SineFifthPower,
+    "sin": pulse_lib.Sine,
+    "sin2": pulse_lib.SineSquare,
+    "sin3": pulse_lib.SineCube,
+    "sin4": pulse_lib.SineFourthPower,
+    "sin5": pulse_lib.SineFifthPower,
     }
 
 if __name__ == "__main__":
@@ -54,12 +54,12 @@ if __name__ == "__main__":
         help="Pulse type (e.g. sq, gauss, sine, sech etc.)")
     parser.add_argument("-q", "--qubit", default=0, type=int,
         help="The number of the qubit to be used.")
-    parser.add_argument("-l", "--l", default=10, type=float,
-        help="Parameter l in Rabi oscillations fit")
-    parser.add_argument("-p", "--p", default=0.5, type=float,
-        help="Parameter p in Rabi oscillations fit")
-    parser.add_argument("-x0", "--x0", default=0.005, type=float,
-        help="Parameter x0 in Rabi oscillations fit")
+    # parser.add_argument("-l", "--l", default=10, type=float,
+    #     help="Parameter l in Rabi oscillations fit")
+    # parser.add_argument("-p", "--p", default=0.5, type=float,
+    #     help="Parameter p in Rabi oscillations fit")
+    # parser.add_argument("-x0", "--x0", default=0.005, type=float,
+    #     help="Parameter x0 in Rabi oscillations fit")
     parser.add_argument("-s", "--sigma", default=180, type=float,
         help="Pulse width (sigma) parameter")    
     parser.add_argument("-T", "--duration", default=2256, type=int,
@@ -84,13 +84,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     pulse_type = args.pulse_type
-    l = args.l
-    p = args.p
-    x0 = args.x0
+    # l = args.l
+    # p = args.p
+    # x0 = args.x0
     sigma = args.sigma
     duration = get_closest_multiple_of_16(args.duration)
     cutoff = args.cutoff
-    remove_bg = args.remove_bg
+    rb = args.remove_bg
     control_param = args.control_param
     max_experiments_per_job = args.max_experiments_per_job
     num_shots = args.num_shots
@@ -102,7 +102,7 @@ if __name__ == "__main__":
     backend = "ibm_" + backend \
         if backend in ["perth", "lagos", "nairobi", "oslo"] \
             else "ibmq_" + backend
-
+    
     ## create folder where plots are saved
     file_dir = os.path.dirname(__file__)
     file_dir = os.path.split(file_dir)[0]
@@ -118,6 +118,22 @@ if __name__ == "__main__":
     make_all_dirs(save_dir)
     make_all_dirs(data_folder)
 
+    params_file = os.path.join(calib_dir, "actual_params.csv")
+    if os.path.isfile(params_file):
+        param_df = pd.read_csv(params_file)
+    df = param_df[param_df.apply(
+            lambda row: row["pulse_type"] == pulse_type and \
+                row["duration"] == duration and \
+                row["sigma"] == sigma and \
+                row["rb"] == rb, axis=1)]
+    print(df)
+    if df.shape[0] != 1:
+        raise ValueError("More than one identical entry found!")
+    ser = df.iloc[0]
+    l = ser.at["l"]
+    p = ser.at["p"]
+    x0 = ser.at["x0"]
+    print(l, p, x0)
     # unit conversion factors -> all backend properties returned in SI (Hz, sec, etc)
     GHz = 1.0e9 # Gigahertz
     MHz = 1.0e6 # Megahertz
@@ -151,7 +167,7 @@ if __name__ == "__main__":
     with pulse.build(backend=backend, default_alignment='sequential', name="calibrate_freq") as sched:
         dur_dt = duration
         pulse.set_frequency(freq, drive_chan)
-        if pulse_type == "sq":
+        if pulse_type == "sq" or "sin" in pulse_type:
             pulse_played = pulse_dict[pulse_type](
                 duration=dur_dt,
                 amp=amp,
@@ -163,7 +179,7 @@ if __name__ == "__main__":
                 amp=amp,
                 name=pulse_type,
                 sigma=sigma / np.sqrt(2),
-                zero_ends=remove_bg
+                zero_ends=rb
             )
         elif pulse_type in ["lor", "lor2", "lor3"]:
             pulse_played = pulse_dict[pulse_type](
@@ -171,7 +187,7 @@ if __name__ == "__main__":
                 amp=amp,
                 name=pulse_type,
                 gamma=sigma,
-                zero_ends=remove_bg
+                zero_ends=rb
             )
         else:
             pulse_played = pulse_dict[pulse_type](
@@ -179,7 +195,7 @@ if __name__ == "__main__":
                 amp=amp,
                 name=pulse_type,
                 sigma=sigma,
-                zero_ends=remove_bg
+                zero_ends=rb
             )
         pulse.play(pulse_played, drive_chan)
 
@@ -227,7 +243,7 @@ if __name__ == "__main__":
     plt.title("Drive Frequency Calibration Curve")
     plt.xlabel("Frequency [GHz]")
     plt.ylabel("Transition Probability")
-    plt.savefig(os.path.join(save_dir, date.strftime("%H%M%S") + f"_frequency_sweep.png"))
+    plt.savefig(os.path.join(save_dir, date.strftime("%H%M%S") + f"_{pulse_type}_dur_{duration}_s_{int(sigma)}_frequency_sweep.png"))
     # plt.show()
 
     ## fit curve

@@ -22,6 +22,26 @@ def make_all_dirs(path):
 def get_closest_multiple_of_16(num):
     return int(num + 8) - (int(num + 8) % 16)
 
+def add_entry_and_remove_duplicates(df, new_entry, cols_to_check=["pulse_type", "duration", "sigma", "rb"]):
+    # Define a function to check if two rows have the same values in the specified columns
+    def rows_match(row1, row2, cols):
+        for col in cols:
+            if row1[col] != row2.at[0, col]:
+                return False
+        return True
+    
+    # Find rows in the DataFrame that have the same values in the specified columns as the new entry
+    matching_rows = df.apply(lambda row: rows_match(row, new_entry, cols_to_check), axis=1)
+    
+    if matching_rows.any():
+        # Remove old entries that have the same values in the specified columns as the new entry
+        df = df[~matching_rows]
+        
+    # Add the new entry to the DataFrame
+    df = pd.concat([df, new_entry], ignore_index=True)
+    
+    return df
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -41,13 +61,25 @@ if __name__ == "__main__":
         help="Pulse width parameter"
     )
     parser.add_argument(
+        "-rb", "--remove_bg", default=1, type=int,
+        help="Whether background was removed."
+    )
+    parser.add_argument(
         "-d", "--date", default="2023-02-26", type=str,
         help="Date on which pulse area was calibrated."
     )
     parser.add_argument(
-        "-t", "--time", default="180032", type=str,
-        help="Date on which pulse area was calibrated."
+        "-l", "--l_init", default=100, type=float,
+        help="Initial value for l."
     )
+    parser.add_argument(
+        "-p", "--p_init", default=0.2, type=float,
+        help="Initial value for p."
+    )
+    # parser.add_argument(
+    #     "-t", "--time", default="180032", type=str,
+    #     help="Date on which pulse area was calibrated."
+    # )
     parser.add_argument(
         "-sv", "--save", default=0, type=int,
         help="Whether to save the result (0 or 1)."
@@ -57,8 +89,11 @@ if __name__ == "__main__":
     pulse_type = args.pulse_type
     duration = args.duration
     sigma = args.sigma
+    rb = args.remove_bg
+    l_init = args.l_init
+    p_init = args.p_init
     date = args.date
-    time = args.time
+    # time = args.time
     save = bool(args.save)
     
     backend_name = backend
@@ -74,6 +109,15 @@ if __name__ == "__main__":
     calib_dir = os.path.join(file_dir, "calibrations")
     save_dir = os.path.join(calib_dir, date)
 
+    for calib_file in os.listdir(os.path.join(calib_dir, date)):
+        split_calib_file = calib_file.split("_")
+        if split_calib_file[-1] == "areacal.png":
+            if pulse_type == split_calib_file[1] and \
+                duration == int(split_calib_file[3]) and \
+                    int(sigma) == int(float(split_calib_file[5])):
+                time = split_calib_file[0]
+                break
+    print(time)
     with open(os.path.join(load_dir, f"area_calibration_{time}.pkl"), "rb") as f:
         rabi_data = pickle.load(f)
     
@@ -101,7 +145,7 @@ if __name__ == "__main__":
         amps[: fit_crop_parameter],
         tr_probs[: fit_crop_parameter], 
         lambda x, A, l, p, x0, B: A * (np.cos(l * (1 - np.exp(- p * (x - x0))))) + B,
-        [-0.48273362, 20, 0.3, 0.005, 0.47747625]
+        [-0.48273362, l_init, p_init, 0.005, 0.47747625]
         # lambda x, A, k, B: A * (np.cos(k * x)) + B,
         # [-0.5, 50, 0.5]
     )
@@ -116,19 +160,20 @@ if __name__ == "__main__":
 
     ## create pandas series to keep calibration info
     param_dict = {
-        "date": date,
-        "time": time,
-        "pulse_type": pulse_type,
-        "A": A,
-        "l": l,
-        "p": p,
-        "x0": x0,
-        "B": B,
-        "drive_freq": resonant_frequencies[backend_name],
-        "pi_duration": duration,
-        "sigma": sigma,
-        "pi_amp": pi_amp,
-        "half_amp": half_amp
+        "date": [date],
+        "time": [time],
+        "pulse_type": [pulse_type],
+        "A": [A],
+        "l": [l],
+        "p": [p],
+        "x0": [x0],
+        "B": [B],
+        "pi_amp": [pi_amp],
+        "half_amp": [half_amp],
+        "drive_freq": [resonant_frequencies[backend_name]],
+        "duration": [duration],
+        "sigma": [sigma],
+        "rb": [rb]
     }
     print(param_dict)
 
@@ -145,11 +190,12 @@ if __name__ == "__main__":
     plt.show()
     # exit()
     if save:
-        param_series = pd.Series(param_dict)
-        params_file = os.path.join(calib_dir, "params.csv")
+        new_entry = pd.DataFrame(param_dict)
+        params_file = os.path.join(calib_dir, "actual_params.csv")
         if os.path.isfile(params_file):
             param_df = pd.read_csv(params_file)
-            param_df = pd.concat([param_df, param_series.to_frame().T], ignore_index=True)
+            param_df = add_entry_and_remove_duplicates(param_df, new_entry)
+            # param_df = pd.concat([param_df, param_series.to_frame().T], ignore_index=True)
             param_df.to_csv(params_file, index=False)
         else:
-            param_series.to_frame().T.to_csv(params_file, index=False)
+            new_entry.to_csv(params_file, index=False)
