@@ -10,6 +10,8 @@ from scipy.integrate import quad, quad_vec
 from scipy.misc import derivative
 import mpmath as mp
 
+from pulse_shapes import pulse_shape_in_rabi_units, rabi_freq, find_rabi_amp
+
 AREA_VALUES = {
     "half": 0.5 * np.pi,
     "pi": np.pi,
@@ -26,9 +28,9 @@ RABI_FREQ = {
     # "demkov": 31739880.846,
     "demkov": 28438933.238,
     "sech2": 35460561.388,
-    "sine": 23131885.3151,
-    "sine2": 25244940.9663,
-    "sine3": 26023370.9794
+    "sin": 23131885.3151,
+    "sin2": 25244940.9663,
+    "sin3": 26023370.9794
 }
 
 Tt = {
@@ -38,9 +40,10 @@ Tt = {
     "gauss": (398 + 2/9) * 1e-9,
     "demkov": (572 + 4/9) * 1e-9,
     "sech2": (284 + 4/9) * 1e-9,
-    "sine": (213 + 1/3) * 1e-9,
-    "sine2": (248 + 8/9) * 1e-9,
-    "sine3": (284 + 4/9) * 1e-9
+    "sin": (213 + 1/3) * 1e-9,
+    "sin2": (248 + 8/9) * 1e-9,
+    "sin3": (284 + 4/9) * 1e-9,
+
 }
 
 SIGMA = {
@@ -52,29 +55,55 @@ SIGMA = {
 
 ALPHA = {
     "sech2": 0.4494679707017059,
-    "sine": 0.840753969701287,
-    "sine2": 0.8022417161585951,
-    "sine3": 0.7776880847006185,
+    "sin": 0.840753969701287,
+    "sin2": 0.8022417161585951,
+    "sin3": 0.7776880847006185,
     "gauss": 0.6758103186913479,
     "demkov": 0.15786564335245298
 }
 
 times = {
-    "gauss": "174431",
-    "constant": "174532",
-    "rabi": "174532",
-    "sine": "174541",
-    "sine2": "174543",
-    "sine3": "174546",
-    "rz": "174403",
-    "sech2": "174406",
-    "demkov": "174352"
+    "gauss": [["2022-06-16", "174431"]],
+    "constant": [["2022-06-16", "174532"]],
+    "rabi": [["2022-06-16", "174532"]],
+    "sine": [["2022-06-16", "174541"]],
+    "sine2": [["2022-06-16", "174543"]],
+    "sine3": [["2022-06-16", "174546"]],
+    "rz": [["2022-06-16", "174403"]],
+    "sech2": [["2022-06-16", "174406"]],
+    "demkov": [["2022-06-16", "174352"]],
+    "lor_192": [["2023-02-28", "015053"],["2023-02-28", "015100"],["2023-02-28", "020906"],["2023-02-28", "020911"],["2023-02-28", "020917"],["2023-02-28", "020925"]],
+    "lor2_192": [["2023-02-28", "021904"],["2023-02-28", "021910"],["2023-02-28", "021915"],["2023-02-28", "021921"],["2023-02-28", "021925"],["2023-02-28", "021933"]],
+    "lor3_192": [["2023-02-28", "021942"],["2023-02-28", "021954"],["2023-02-28", "022002"],["2023-02-28", "022009"],["2023-02-28", "022017"],["2023-02-28", "022026"]],
+    "sech_192": [["2023-02-28", "025719"],["2023-02-28", "025724"],["2023-02-28", "012715"],["2023-02-28", "012720"],["2023-02-28", "012726"],["2023-02-28", "012733"]],
+    "sech2_192": [["2023-02-28", "012752"],["2023-02-28", "012756"],["2023-02-28", "012801"],["2023-02-28", "012806"],["2023-02-28", "012810"],["2023-02-28", "012818"]],
+    "gauss_192": [["2023-02-28", "012829"],["2023-02-28", "012834"],["2023-02-28", "012839"],["2023-02-28", "012843"],["2023-02-28", "012848"],["2023-02-28", "012857"]],
+    "sin1_192": [["2023-02-28", "025352"]],
+    "sin2_192": [["2023-02-28", "025357"]],
+    "sin3_192": [["2023-02-28", "025401"]],
+    "sin4_192": [["2023-02-28", "025405"]],
+    "sin5_192": [["2023-02-28", "025410"]],
 }
 
-date = "2022-06-16"
+durations = {
+    192: 0,
+    384: 1,
+    768: 2,
+    1152: 3,
+    1920: 4,
+    3840: 5
+}
+# date = "2022-06-16"
 area = "pi"
-pulse_type = "sine3"
-fit_func = pulse_type
+backend_name = "manila"
+s = 192
+dur = 10*s
+pulse_type = "sech"
+pulse_type = pulse_type if s is None else "_".join([pulse_type, str(s)])
+dur_idx = durations [dur] if dur is not None else 0
+date = times[pulse_type][dur_idx][0]
+time = times[pulse_type][dur_idx][1]
+fit_func = pulse_type if "_" not in pulse_type else pulse_type.split("_")[0]
 baseline_fit_func = "sinc2" if pulse_type in ["rabi", "constant"] else "lorentzian"
 
 def fit_function(x_values, y_values, function, init_params, lower, higher):
@@ -95,19 +124,31 @@ def lorentzian(x, s, A, q_freq, c):
     return A / (((x - q_freq) / s) ** 2 + 1) + c
     # return A / np.cosh(((x - q_freq) / s))**2 + c
     
-def rz(x, q_freq, delta, eps):
-    T = Tt["rz"]
-    O = RABI_FREQ["rz"]
-    sigma = SIGMA["rz"]
+def rz(x, q_freq, delta, eps, s=None, dur=None):
+    if dur is None:
+        T = Tt["rz"]
+        O = RABI_FREQ["rz"]
+        sigma = SIGMA["rz"]
+    else:
+        sigma = s * 2e-9 / 9
+        T = dur * 2e-9 / 9
+        O = find_rabi_amp(t, pulse_type, T, sigma)
+
     D = (x - q_freq) * 1e6
     P2 = np.sin(0.5 * np.pi * O * sigma) ** 2 \
         / np.cosh(0.5 * np.pi * D * sigma) ** 2
     return post_process(P2, eps, delta)
 
-def demkov(x, q_freq, delta, eps):
-    T = Tt["demkov"]
-    sigma = SIGMA["demkov"]
-    omega_0 = RABI_FREQ["demkov"]
+def demkov(x, q_freq, delta, eps, s=None, dur=None):
+    if dur is None:
+        T = Tt["demkov"]
+        sigma = SIGMA["demkov"]
+        omega_0 = RABI_FREQ["demkov"]
+    else:
+        sigma = s * 2e-9 / 9
+        T = dur * 2e-9 / 9
+        omega_0 = find_rabi_amp(t, pulse_type, T, sigma)
+
     s_inf = np.pi * omega_0 * sigma
     al = (x - q_freq) * 1e6 * sigma
     bessel11 = np.array([complex(mp.besselj(1/2 + 1j * a / 2, s_inf / (2 * np.pi))) for a in al])
@@ -115,10 +156,16 @@ def demkov(x, q_freq, delta, eps):
     P2 = (s_inf / 4) ** 2 * np.abs(2 * np.real(bessel11 * bessel21)) ** 2 / np.cosh(al * np.pi / 2) ** 2
     return post_process(P2, eps, delta)
 
-def sech_sq(x, q_freq, delta, eps):
-    T = Tt["sech2"]
-    sigma = SIGMA["sech2"]
-    omega_0 = RABI_FREQ["sech2"]
+def sech_sq(x, q_freq, delta, eps, s=None, dur=None):
+    if dur is None:
+        T = Tt["sech2"]
+        sigma = SIGMA["sech2"]
+        omega_0 = RABI_FREQ["sech2"]
+    else:
+        sigma = s * 2e-9 / 9
+        T = dur * 2e-9 / 9
+        omega_0 = find_rabi_amp(t, pulse_type, T, sigma)
+
     D = (x - q_freq) * 1e6
     def f_(t):
         return 1 / np.cosh((t) / sigma) ** 2 
@@ -131,10 +178,16 @@ def sech_sq(x, q_freq, delta, eps):
     P2 = np.sin(0.5 * tau * np.sqrt(omega_0 ** 2 + ALPHA["sech2"] * D ** 2)) ** 2 * np.abs(G / tau) ** 2
     return post_process(P2, eps, delta)
 
-def sine(x, q_freq, delta, eps):
-    T = Tt["sine"]
-    sigma = T / np.pi
-    omega_0 = RABI_FREQ["sine"]
+def sin(x, q_freq, delta, eps, s=None, dur=None):
+    if dur is None:
+        T = Tt["sin"]
+        sigma = T / np.pi
+        omega_0 = RABI_FREQ["sin"]
+    else:
+        sigma = s * 2e-9 / 9
+        T = dur * 2e-9 / 9
+        omega_0 = find_rabi_amp(t, pulse_type, T, sigma)
+
     D = (x - q_freq) * 1e6
     def f_(t):
         return np.heaviside(t + T/2, 1) * np.heaviside(T/2 - t, 1) * np.cos(t / sigma) 
@@ -144,13 +197,19 @@ def sine(x, q_freq, delta, eps):
         return f_(t) * g_(t)
     tau = quad(f_, -1e-5, 1e-5, epsabs=1e-13, epsrel=1e-5)[0]
     G = quad_vec(fg_, -1e-5, 1e-5, epsabs=1e-13, epsrel=1e-5)[0]
-    P2 = np.sin(0.5 * tau * np.sqrt(omega_0 ** 2 + ALPHA["sine"] * D ** 2)) ** 2 * np.abs(G / tau) ** 2
+    P2 = np.sin(0.5 * tau * np.sqrt(omega_0 ** 2 + ALPHA["sin"] * D ** 2)) ** 2 * np.abs(G / tau) ** 2
     return post_process(P2, eps, delta)
     
-def sine_alt(x, q_freq, delta, eps):
-    T = Tt["sine"]
-    sigma = 1 / np.pi
-    omega_0 = RABI_FREQ["sine"] * T
+def sin_alt(x, q_freq, delta, eps, s=None, dur=None):
+    if dur is None:
+        T = Tt["sin"]
+        sigma = 1 / np.pi
+        omega_0 = RABI_FREQ["sin"] * T
+    else:
+        sigma = s * 2e-9 / 9
+        T = dur * 2e-9 / 9
+        omega_0 = find_rabi_amp(t, pulse_type, T, sigma)
+
     D = (x - q_freq) * 1e6 * T
     beta = np.sqrt(np.pi * omega_0 * np.sin(np.pi * sigma))
     d = (D / (2 * beta))
@@ -197,10 +256,16 @@ def sine_alt(x, q_freq, delta, eps):
     P2 = np.abs(Usine[0, 1]) ** 2
     return post_process(P2, eps, delta)
 
-def sine2(x, q_freq, delta, eps):
-    T = Tt["sine2"]
-    sigma = T / np.pi
-    omega_0 = RABI_FREQ["sine2"]
+def sin2(x, q_freq, delta, eps, s=None, dur=None):
+    if dur is None:
+        T = Tt["sin2"]
+        sigma = T / np.pi
+        omega_0 = RABI_FREQ["sin2"]
+    else:
+        sigma = s * 2e-9 / 9
+        T = dur * 2e-9 / 9
+        omega_0 = find_rabi_amp(t, pulse_type, T, sigma)
+
     D = (x - q_freq) * 1e6
     def f_(t):
         return np.heaviside(t + T/2, 1) * np.heaviside(T/2 - t, 1) * np.cos((t) / sigma) ** 2 
@@ -210,13 +275,19 @@ def sine2(x, q_freq, delta, eps):
         return f_(t) * g_(t)
     tau = quad(f_, -1e-5, 1e-5, epsabs=1e-13, epsrel=1e-5)[0]
     G = quad_vec(fg_, -1e-5, 1e-5, epsabs=1e-13, epsrel=1e-5)[0]
-    P2 = np.sin(0.5 * tau * np.sqrt(omega_0 ** 2 + ALPHA["sine2"] * D ** 2)) ** 2 * np.abs(G / tau) ** 2
+    P2 = np.sin(0.5 * tau * np.sqrt(omega_0 ** 2 + ALPHA["sin2"] * D ** 2)) ** 2 * np.abs(G / tau) ** 2
     return post_process(P2, eps, delta)
 
-def sine3(x, q_freq, delta, eps):
-    T = Tt["sine3"]
-    sigma = T / np.pi
-    omega_0 = RABI_FREQ["sine3"]
+def sin3(x, q_freq, delta, eps, s=None, dur=None):
+    if dur is None:
+        T = Tt["sin3"]
+        sigma = T / np.pi
+        omega_0 = RABI_FREQ["sin3"]
+    else:
+        sigma = s * 2e-9 / 9
+        T = dur * 2e-9 / 9
+        omega_0 = find_rabi_amp(t, pulse_type, T, sigma)
+
     D = (x - q_freq) * 1e6
     def f_(t):
         return np.heaviside(t + T/2, 1) * np.heaviside(T/2 - t, 1) * np.cos((t) / sigma) ** 3
@@ -226,7 +297,7 @@ def sine3(x, q_freq, delta, eps):
         return f_(t) * g_(t)
     tau = quad(f_, -1e-5, 1e-5, epsabs=1e-13, epsrel=1e-8)[0]
     G = quad_vec(fg_, -1e-5, 1e-5, epsabs=1e-13, epsrel=1e-8)[0]
-    P2 = np.sin(0.5 * tau * np.sqrt(omega_0 ** 2 + ALPHA["sine3"] * D ** 2)) ** 2 * np.abs(G / tau) ** 2
+    P2 = np.sin(0.5 * tau * np.sqrt(omega_0 ** 2 + ALPHA["sin3"] * D ** 2)) ** 2 * np.abs(G / tau) ** 2
     return post_process(P2, eps, delta)
 
 # def gauss_sech2(x, q_freq, delta, eps):
@@ -242,10 +313,16 @@ def sine3(x, q_freq, delta, eps):
 #     P2 = numerator / denomenator
 #     return post_process(P2, eps, delta)
 
-def gauss(x, q_freq, delta, eps):
-    O = RABI_FREQ["gauss"]
-    T = Tt["gauss"]
-    sigma = SIGMA["gauss"]
+def gauss(x, q_freq, delta, eps, s=None, dur=None):
+    if dur is None:
+        O = RABI_FREQ["gauss"]
+        T = Tt["gauss"]
+        sigma = SIGMA["gauss"]
+    else:
+        sigma = s * 2e-9 / 9
+        T = dur * 2e-9 / 9
+        omega_0 = find_rabi_amp(t, pulse_type, T, sigma)
+
     D = (x - q_freq) * 1e6
     alpha = np.abs(O / D)
     alpha[np.isnan(alpha)] = 10000000
@@ -274,10 +351,16 @@ def gauss(x, q_freq, delta, eps):
     P2 = np.sin(ReD) ** 2 / np.cosh(ImD) ** 2
     return post_process(P2, eps, delta)
 
-def gauss_rzconj(x, q_freq, delta, eps):
-    T = Tt["gauss"]
-    sigma = SIGMA["gauss"]
-    omega_0 = RABI_FREQ["gauss"]
+def gauss_rzconj(x, q_freq, delta, eps, s=None, dur=None):
+    if dur is None:
+        T = Tt["gauss"]
+        sigma = SIGMA["gauss"]
+        omega_0 = RABI_FREQ["gauss"]
+    else:
+        sigma = s * 2e-9 / 9
+        T = dur * 2e-9 / 9
+        omega_0 = find_rabi_amp(t, pulse_type, T, sigma)
+
     D = (x - q_freq) * 1e6
     def f_(t):
         return np.exp(-0.5 * (t / sigma)**2)
@@ -294,10 +377,16 @@ def gauss_rzconj(x, q_freq, delta, eps):
 def sinc2(x, s, A, q_freq, c):
     return A * (np.sinc((x - q_freq) / s)) ** 2 + c
 
-def rabi(x, q_freq, delta, eps):
-    T = Tt["rabi"]
-    O = RABI_FREQ["rabi"]
-    T = np.pi/O
+def rabi(x, q_freq, delta, eps, s=None, dur=None):
+    if dur is None:
+        T = Tt["rabi"]
+        O = RABI_FREQ["rabi"]
+        T = np.pi / O
+    else:
+        sigma = s * 2e-9 / 9
+        T = dur * 2e-9 / 9
+        omega_0 = find_rabi_amp(t, pulse_type, T, sigma)
+
     D = (x - q_freq) * 1e6
     P2 = (O ** 2 / (O**2 + (D) ** 2)) * \
         np.sin(0.5 * T * np.sqrt(O**2 + (D) ** 2)) ** 2
@@ -309,19 +398,20 @@ FIT_FUNCTIONS = {
     "rabi": rabi,
     "gauss": gauss_rzconj,
     "rz": rz,
+    "sech": rz,
     "demkov": demkov,
     "sech2": sech_sq,
     "sinc2": sinc2,
-    "sine": sine_alt,
-    "sine2": sine2,
-    "sine3": sine3
+    "sin": sin_alt,
+    "sin2": sin2,
+    "sin3": sin3
 }
 file_dir = os.path.dirname(__file__)
-data_folder = os.path.join(file_dir, "data", "armonk", "calibration", date)
+data_folder = os.path.join(file_dir, "data", backend_name, "calibration", date)
 data_files = os.listdir(data_folder)
 center_freq = 4.97169 * 1.e3
 for d in data_files:
-    if d.startswith(times[pulse_type]):
+    if d.startswith(times[pulse_type][dur_idx][1]):
         csv_file = d
         break
 
@@ -332,6 +422,7 @@ pulse_type = "rz" if pulse_type in ["sech", "rosenzener"] else pulse_type
 model_name_dict = {
     "rabi": ["Rabi", "Sinc$^2$"], 
     "rz": ["Rosen-Zener", "Lorentzian"], 
+    "sech": ["Rosen-Zener", "Lorentzian"], 
     "gauss": ["Gaussian", "Lorentzian"], 
     "demkov": ["Demkov", "Lorentzian"], 
     "sech2": ["Sech$^2$", "Lorentzian"],
@@ -423,7 +514,7 @@ baseline_similarity_idx, baseline_y_fit, \
 # print(err)
 # print(baseline_err)
 
-print(model_name_dict[pulse_type][0])
+print(model_name_dict[fit_func][0])
 print("Model SI:", similarity_idx)
 print("Baseline SI:", baseline_similarity_idx)
 q_freq_model = fit_params[0] / (2 * np.pi)
@@ -453,8 +544,8 @@ ax0.plot(scaled_ef, extended_y_fit, color='red')
 ax0.set_xlim(scaled_ef[0], -scaled_ef[0])
 ax0.legend([
     "Measured values", 
-    f"{model_name_dict[pulse_type][1]} fit", 
-    f"{model_name_dict[pulse_type][0]} model analytical fit"
+    f"{model_name_dict[fit_func][1]} fit", 
+    f"{model_name_dict[fit_func][0]} model analytical fit"
 ])
 
 major_interval = 2.5 if pulse_type=="rabi" else 5.
