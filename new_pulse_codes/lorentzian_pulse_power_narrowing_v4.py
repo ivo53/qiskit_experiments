@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 # from qiskit.tools.jupyter import *
 from qiskit import IBMQ, QuantumCircuit, QuantumRegister, ClassicalRegister
 from qiskit import pulse                  # This is where we access all of our Pulse features!
-from qiskit.circuit import Parameter      # This is Parameter Class for variable parameters.
+from qiskit.circuit import Parameter, Gate # This is Parameter Class for variable parameters.
 from qiskit.pulse import library as pulse_lib
 from qiskit.scheduler import measure
 from qiskit import assemble
@@ -59,8 +59,6 @@ provider = IBMQ.load_account()
 backend = provider.get_backend(f"ibmq_{backend_name}")
 backend_config = backend.configuration()
 print(f"Using backend ibmq_{backend_name}")
-if not backend_config.open_pulse:
-    print(f"Backend {backend_name} doesn't support Pulse")
 
 dt = backend_config.dt
 print(f"Sampling time: {dt*1e9} ns")
@@ -95,22 +93,22 @@ print(f"Qubit {qubit} has an estimated frequency of {center_frequency_Hz / GHz} 
 # Drive pulse parameters (us = microseconds)
 dur_dt = 300 * 16#1117 * 16 #525 * 16 #644 * 16 #483 * 16 #5152
 
-resolution = (30, 30)#(5, 10)
+resolution = (60,60)#(5, 10)
 
-cut_param = 0.2
+cut_param = 0.5
 G = dur_dt / (2 * np.sqrt((100 / cut_param) - 1)) # 400
 G_02 = dur_dt / (2 * np.sqrt((100 / 0.2) - 1)) # gamma factor at cut param 0.2
 
 a_02 = 0.901 # max amp at cut param 0.2
 a_max = a_02 * (G_02 * np.arctan(dur_dt / G_02)) / (G * np.arctan(dur_dt / G))
 
-# a_max = 0.5
+a_max = 0.42 
 a_step = np.round(a_max / resolution[0], 3)
 
 frequency_span_Hz = 10 * MHz #5 * MHz #if cut_param < 1 els e 1.25 * MHz
 frequency_step_Hz = np.round(frequency_span_Hz / resolution[1], 3) #(1/4) * MHz
 
-max_experiments_per_job = 100
+max_experiments_per_job = 50
 
 # We will sweep 20 MHz above and 20 MHz below the estimated frequency
 frequency_min = center_frequency_Hz - frequency_span_Hz / 2
@@ -131,22 +129,18 @@ print(f"The amplitude will go from {amplitudes[0]} to {amplitudes[-1]} in steps 
 frequencies_Hz = frequencies_GHz * GHz
 
 # Create base circuit
-q = QuantumRegister(1)
-c = ClassicalRegister(1)
-base_circ = QuantumCircuit(q, c)
-base_circ.x(0)
 # base_circ.measure(0, 0)
 # base_circ.draw(output='mpl')
+drive_chan = pulse.DriveChannel(qubit)
 
 # Create the base schedule
 # Start with drive pulse acting on the drive channel
 circs = []
 freq_off = Parameter('freq_off')
 amp = Parameter('amp')
-with pulse.build(backend=backend, default_alignment='sequential', name="sq_2d") as sched:
+with pulse.build(backend=backend, default_alignment='sequential', name="lorentz_2d") as sched:
     
-    drive_chan = pulse.drive_channel(qubit)
-    pulse.frequency_offset(freq_off, drive_chan)
+    pulse.set_frequency(freq_off, drive_chan)
     pulse.play(
         pulse_lib.Lorentzian(
             duration=dur_dt,
@@ -157,22 +151,29 @@ with pulse.build(backend=backend, default_alignment='sequential', name="sq_2d") 
         ),
         drive_chan
     )
-    pulse.measure(
-        qubits=[qubit], 
-        registers=[pulse.MemorySlot(mem_slot)]
-    )
     # Create the frequency settings for the sweep (MUST BE IN HZ)
 frequencies_Hz = frequencies_GHz*GHz
 
-for a in amplitudes:
-    for f in frequencies_Hz - center_frequency_Hz:
-        current_sched = sched.assign_parameters(
-                {freq_off: f, amp: a},
-                inplace=False
-        )
-        circ_copy = deepcopy(base_circ)
-        circ_copy.add_calibration("x", [qubit], current_sched)
-        circs.append(circ_copy)
+lorentz = Gate("lorentz", 1, [amp, freq_off])
+base_circ = QuantumCircuit(5, 1)
+base_circ.append(lorentz, [qubit])
+base_circ.measure(qubit, 0)
+base_circ.add_calibration(lorentz, (qubit,), sched, [amp, freq_off])
+circs = [
+    base_circ.assign_parameters(
+            {amp: a, freq_off: f},
+            inplace=False
+    ) for a in amplitudes for f in frequencies_Hz]
+
+# for a in amplitudes:
+#     for f in frequencies_Hz - center_frequency_Hz:
+#         current_sched = sched.assign_parameters(
+#                 {freq_off: f, amp: a},
+#                 inplace=False
+#         )
+#         circ_copy = deepcopy(base_circ)
+#         circ_copy.add_calibration("x", [qubit], current_sched)
+#         circs.append(circ_copy)
 
 
 # schedules = [
@@ -233,7 +234,7 @@ for i, am in enumerate(amplitudes):
 
 fig, ax = plt.subplots(figsize=(5,4))
 
-c = ax.pcolormesh(x, y, transition_probability, vmin=0, vmax=1)
+c = ax.pcolormesh(x, y, transition_probability.T, vmin=0, vmax=1)
 # set the limits of the plot to the limits of the data
 ax.axis([x.min(), x.max(), y.min(), y.max()])
 fig.colorbar(c, ax=ax)

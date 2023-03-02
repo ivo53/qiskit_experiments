@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 shape = "lorentz"
+backend_name = "armonk"
 # load_date = "2022-04-23"
 # load_time = "094423"
 # load_date = "2022-06-13"
@@ -14,7 +15,7 @@ file_dir = file_dir = os.path.dirname(__file__)
 data_folder = os.path.join(
     file_dir,
     "data",
-    "armonk",
+    backend_name,
     "power_broadening (narrowing)",
     f"{shape}_pulses", 
     load_date,
@@ -60,9 +61,9 @@ major_yticks = np.arange(0,1.001,0.2).round(1)
 minor_yticks = np.arange(0,1.001,0.05).round(1)
 fig = plt.figure(1, tight_layout=True, figsize=(12,8))
 ax = fig.add_subplot(111)
-ax.plot(detunings[65:135], transition_probabilities[65:135, peaks[0]], "rx")
-ax.plot(detunings[65:135], transition_probabilities[65:135, peaks[1]], "bx")
-ax.plot(detunings[65:135], transition_probabilities[65:135, peaks[2]], "gx")
+ax.plot(detunings[65:135], transition_probabilities[65:135, peaks[0]], "ro")
+ax.plot(detunings[65:135], transition_probabilities[65:135, peaks[1]], "bo")
+ax.plot(detunings[65:135], transition_probabilities[65:135, peaks[2]], "go")
 ax.set_xlim(detunings[65], -detunings[65])
 ax.set_xticks(major_xticks)
 ax.set_xticklabels(major_xticks, fontsize=15)

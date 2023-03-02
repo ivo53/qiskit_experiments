@@ -4,7 +4,6 @@ from datetime import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-import scipy.special as sp
 from scipy.optimize import curve_fit, root
 from scipy.integrate import quad, quad_vec
 from scipy.misc import derivative
@@ -44,13 +43,13 @@ durations = {
     1920: 4,
     3840: 5
 }
-
+ 
 # date = "2022-06-16"
 area = "pi"
 backend_name = "manila"
 s = 192
 dur = 192
-pulse_type = "sech2"
+pulse_type = "sech"
 pulse_type = pulse_type if s is None else "_".join([pulse_type, str(s)])
 dur_idx = durations [dur] if dur is not None else 0
 date = times[pulse_type][dur_idx][0]
