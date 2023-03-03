@@ -130,17 +130,22 @@ def sin(x, q_freq, delta, eps):
     P2 = np.sin(0.5 * tau * np.sqrt(omega_0 ** 2 + ALPHA["sin"] * D ** 2)) ** 2 * np.abs(G / tau) ** 2
     return post_process(P2, eps, delta)
     
-def sin_alt(x, q_freq, delta, eps):
+def rlzsm_approx(x, q_freq, delta, eps, tau, pulse_type):
     T = dur * 2e-9 / 9
-    sigma = T / np.pi
-    omega_0 = pulse_shapes.find_rabi_amp("sin", T, sigma)
-
+    sigma = s * 2e-9 / 9
+    # sigma = T / np.pi
+    omega_0 = pulse_shapes.find_rabi_amp(pulse_type, T, sigma)
+    
+    # sigma /= T
     sigma /= T
     omega_0 *= T
     D = (x - q_freq) * 1e6 * T
-    beta = np.sqrt(np.pi * omega_0 * np.sin(np.pi * sigma))
+    omega = lambda t: pulse_shapes.rabi_freq(t, omega_0, pulse_type, 1, sigma)
+
+    beta = np.sqrt(np.pi * omega(tau))
     d = (D / (2 * beta))
-    alpha = beta * sigma
+    alpha = beta * tau
+
 
     def ParabolicCylinderD(v, z, precision=30):
         m = np.arange(precision)
@@ -148,16 +153,16 @@ def sin_alt(x, q_freq, delta, eps):
             sp.gamma((m[:, None]-v[None])/2) * (np.sqrt(2) * z)**m[:, None], axis=0)
         return Dv
 
-    def eta_(D, omega_0, sigma):
-        return (np.sqrt(D**2) * sp.ellipeinc(np.pi * (1 - sigma), -(omega_0**2 / D**2))) / np.pi - \
-            (np.sqrt(D**2) * sp.ellipeinc(np.pi * sigma, -(omega_0**2 / D**2))) / np.pi
+    def eta_(D, omega_0, tau):
+        return (np.sqrt(D**2) * sp.ellipeinc(np.pi * (1 - tau), -(omega_0**2 / D**2))) / np.pi - \
+            (np.sqrt(D**2) * sp.ellipeinc(np.pi * tau, -(omega_0**2 / D**2))) / np.pi
 
-    def Uad(D, omega_0, sigma):
-        eta = eta_(D, omega_0, sigma)
-        return np.array([[np.cos(eta/2) + (1j * D * np.sin(eta/2))/np.sqrt(D**2 + omega_0**2 * np.sin(np.pi * sigma)**2),
-                        -((1j * omega_0 * np.sin(eta/2) * np.sin(np.pi * sigma))/np.sqrt(D**2 + omega_0**2 * np.sin(np.pi * sigma)**2))],
-                        [-((1j * omega_0 * np.sin(eta/2) * np.sin(np.pi * sigma))/np.sqrt(D**2 + omega_0**2 * np.sin(np.pi * sigma)**2)),
-                        np.cos(eta/2) - (1j * D * np.sin(eta/2))/np.sqrt(D**2 + omega_0**2 * np.sin(np.pi * sigma)**2)]])
+    def Uad(D, omega_0, tau):
+        eta = eta_(D, omega_0, tau)
+        return np.array([[np.cos(eta/2) + (1j * D * np.sin(eta/2))/np.sqrt(D**2 + omega(tau)**2),
+                        -((1j * np.sin(eta/2) * omega(tau))/np.sqrt(D**2 + omega(tau)**2))],
+                        [-((1j * np.sin(eta/2) * omega(tau))/np.sqrt(D**2 + omega(tau)**2)),
+                        np.cos(eta/2) - (1j * D * np.sin(eta/2))/np.sqrt(D**2 + omega(tau)**2)]])
 
     def a(d, alpha):
         return (2**(1j * np.power(d,2)/2))/(2 * np.sqrt(np.pi)) * (sp.gamma(1/2 + (1j * d**2)/2)) * ((1 + np.exp(-np.pi * d**2)) * \
@@ -178,10 +183,78 @@ def sin_alt(x, q_freq, delta, eps):
             ]
         )
     Ul = np.array(Ulin(a(d, alpha), b(d, alpha)).tolist(), dtype=complex)
-    Ua = Uad(D, omega_0, sigma)
-    Usine = np.einsum('jiz, jkz, klz -> ilz', Ul, Ua, Ul)
-    P2 = np.abs(Usine[0, 1]) ** 2
+    Ua = Uad(D, omega_0, tau)
+    U = np.einsum('jiz, jkz, klz -> ilz', Ul, Ua, Ul)
+    P2 = np.abs(U[0, 1]) ** 2
     return post_process(P2, eps, delta)
+
+def sin_rlzsm(x, q_freq, delta, eps, tau):
+    return rlzsm_approx(x, q_freq, delta, eps, tau, "sin")
+def sech_rlzsm(x, q_freq, delta, eps, tau):
+    return rlzsm_approx(x, q_freq, delta, eps, tau, "sech")
+def sech2_rlzsm(x, q_freq, delta, eps, tau):
+    return rlzsm_approx(x, q_freq, delta, eps, tau, "sech2")
+def gauss_rlzsm(x, q_freq, delta, eps, tau):
+    return rlzsm_approx(x, q_freq, delta, eps, tau, "gauss")
+def lor_rlzsm(x, q_freq, delta, eps, tau):
+    return rlzsm_approx(x, q_freq, delta, eps, tau, "lor")
+def lor2_rlzsm(x, q_freq, delta, eps, tau):
+    return rlzsm_approx(x, q_freq, delta, eps, tau, "lor2")
+def lor3_rlzsm(x, q_freq, delta, eps, tau):
+    return rlzsm_approx(x, q_freq, delta, eps, tau, "lor3")
+
+# def sin_alt(x, q_freq, delta, eps):
+#     T = dur * 2e-9 / 9
+#     sigma = T / np.pi
+#     omega_0 = pulse_shapes.find_rabi_amp("sin", T, sigma)
+    
+#     sigma /= T
+#     omega_0 *= T
+#     D = (x - q_freq) * 1e6 * T
+#     beta = np.sqrt(np.pi * omega_0 * np.sin(np.pi * sigma))
+#     d = (D / (2 * beta))
+#     alpha = beta * sigma
+
+#     def ParabolicCylinderD(v, z, precision=30):
+#         m = np.arange(precision)
+#         Dv = 2**(-(v/2 + 1)) * np.exp(-z**2/4) / sp.gamma(-v) * np.sum((-1)**m[:, None] / sp.gamma(m[:, None] + 1) * \
+#             sp.gamma((m[:, None]-v[None])/2) * (np.sqrt(2) * z)**m[:, None], axis=0)
+#         return Dv
+
+#     def eta_(D, omega_0, sigma):
+#         return (np.sqrt(D**2) * sp.ellipeinc(np.pi * (1 - sigma), -(omega_0**2 / D**2))) / np.pi - \
+#             (np.sqrt(D**2) * sp.ellipeinc(np.pi * sigma, -(omega_0**2 / D**2))) / np.pi
+
+#     def Uad(D, omega_0, sigma):
+#         eta = eta_(D, omega_0, sigma)
+#         return np.array([[np.cos(eta/2) + (1j * D * np.sin(eta/2))/np.sqrt(D**2 + omega_0**2 * np.sin(np.pi * sigma)**2),
+#                         -((1j * omega_0 * np.sin(eta/2) * np.sin(np.pi * sigma))/np.sqrt(D**2 + omega_0**2 * np.sin(np.pi * sigma)**2))],
+#                         [-((1j * omega_0 * np.sin(eta/2) * np.sin(np.pi * sigma))/np.sqrt(D**2 + omega_0**2 * np.sin(np.pi * sigma)**2)),
+#                         np.cos(eta/2) - (1j * D * np.sin(eta/2))/np.sqrt(D**2 + omega_0**2 * np.sin(np.pi * sigma)**2)]])
+
+#     def a(d, alpha):
+#         return (2**(1j * np.power(d,2)/2))/(2 * np.sqrt(np.pi)) * (sp.gamma(1/2 + (1j * d**2)/2)) * ((1 + np.exp(-np.pi * d**2)) * \
+#             ParabolicCylinderD(-1j * d**2, alpha * np.exp(1j * np.pi/4)) - (1j * np.sqrt(2 * np.pi))/(sp.gamma(1j * d**2)) * \
+#                 np.exp(-np.pi * d**2/2) * ParabolicCylinderD(-1 + 1j * d**2, alpha * np.exp(-1j * np.pi/4)))
+
+#     def b(d, alpha):
+#         return (2**(1j * d**2/2) * np.exp(-1j * np.pi/4))/(d * np.sqrt(2 * np.pi)) * (sp.gamma(1 + (1j * d**2)/2)) * \
+#             ((1 - np.exp(-np.pi * d**2)) * ParabolicCylinderD(-1j * d**2, alpha * np.exp(1j * np.pi/4)) + \
+#                 (1j * np.sqrt(2 * np.pi))/(sp.gamma(1j * d**2)) * np.exp(-np.pi * d**2/2) * \
+#                     ParabolicCylinderD(-1 + 1j * d**2, alpha * np.exp(-1j * np.pi/4)))
+    
+#     def Ulin(a, b):
+#         return np.array(
+#             [
+#                 [np.real(a) - 1j * np.imag(b), np.real(b) + 1j * np.imag(a)], 
+#                 [-np.real(b) + 1j * np.imag(a), np.real(a) + 1j * np.imag(b)]
+#             ]
+#         )
+#     Ul = np.array(Ulin(a(d, alpha), b(d, alpha)).tolist(), dtype=complex)
+#     Ua = Uad(D, omega_0, sigma)
+#     Usine = np.einsum('jiz, jkz, klz -> ilz', Ul, Ua, Ul)
+#     P2 = np.abs(Usine[0, 1]) ** 2
+#     return post_process(P2, eps, delta)
 
 def sin2(x, q_freq, delta, eps):
     T = dur * 2e-9 / 9

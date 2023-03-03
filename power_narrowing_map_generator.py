@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 exp_date = "2023-03-02"
-exp_time = "090904"
+exp_time = "100403" #"090904"
 backend_name = "manila"
 
 file_dir = os.path.dirname(__file__)
@@ -40,6 +40,28 @@ dur_dt = 4800
 cut_param = 0.5
 G = dur_dt / (2 * np.sqrt((100 / cut_param) - 1))
 
+GHz = 1.0e9 # Gigahertz
+MHz = 1.0e6 # Megahertz
+us = 1.0e-6 # Microseconds
+ns = 1.0e-9 # Nanoseconds
+
+center_frequency_Hz = 4962284031.287086
+resolution = (60,60)
+a_max = 0.38
+# a_step = np.round(a_max / resolution[0], 7)
+amplitudes = np.linspace(0., a_max + 1e-3, resolution[0]).round(3)
+frequency_span_Hz = 10 * MHz #5 * MHz #if cut_param < 1 els e 1.25 * MHz
+frequency_step_Hz = np.round(frequency_span_Hz / resolution[1], 3) #(1/4) * MHz
+
+# We will sweep 20 MHz above and 20 MHz below the estimated frequency
+frequency_min = center_frequency_Hz - frequency_span_Hz / 2
+frequency_max = center_frequency_Hz + frequency_span_Hz / 2
+# Construct an np array of the frequencies for our experiment
+frequencies_GHz = np.arange(frequency_min / GHz, 
+                            frequency_max / GHz, 
+                            frequency_step_Hz / GHz)
+
+print(amplitudes.shape, frequencies_GHz.shape)
 with open(os.path.join(data_folder, f"{dur_dt}dt_cutparam-{cut_param}_tr_prob.pkl").replace("\\","/"), 'rb') as f1:
     transition_probability = pickle.load(f1)
 with open(os.path.join(data_folder, f"{dur_dt}dt_cutparam-{cut_param}_areas.pkl").replace("\\","/"), 'rb') as f2:
@@ -60,7 +82,10 @@ for i, am in enumerate(amplitudes):
 
 fig, ax = plt.subplots(figsize=(5,4))
 
-c = ax.pcolormesh(x, y, transition_probability.T, vmin=0, vmax=1)
+# print(transition_probability.shape)
+# print(x.shape)
+# print(y.shape)
+c = ax.pcolormesh(x.T, y.T, transition_probability.T, vmin=0, vmax=1)
 # set the limits of the plot to the limits of the data
 ax.axis([x.min(), x.max(), y.min(), y.max()])
 fig.colorbar(c, ax=ax)

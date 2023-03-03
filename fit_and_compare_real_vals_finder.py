@@ -10,7 +10,7 @@ from scipy.integrate import quad, quad_vec
 from scipy.misc import derivative
 import mpmath as mp
 
-from pulse_shapes import pulse_shape_in_rabi_units, rabi_freq, find_rabi_amp
+import pulse_shapes
 
 AREA_VALUES = {
     "half": 0.5 * np.pi,
@@ -95,10 +95,10 @@ durations = {
 }
 # date = "2022-06-16"
 area = "pi"
-backend_name = "manila"
-s = 192
-dur = 10*s
-pulse_type = "sech"
+backend_name = "armonk"
+s = None # 192
+dur = None # 10*s
+pulse_type = "sech2"
 pulse_type = pulse_type if s is None else "_".join([pulse_type, str(s)])
 dur_idx = durations [dur] if dur is not None else 0
 date = times[pulse_type][dur_idx][0]
@@ -132,7 +132,7 @@ def rz(x, q_freq, delta, eps, s=None, dur=None):
     else:
         sigma = s * 2e-9 / 9
         T = dur * 2e-9 / 9
-        O = find_rabi_amp(t, pulse_type, T, sigma)
+        O = pulse_shapes.find_rabi_amp(t, pulse_type, T, sigma)
 
     D = (x - q_freq) * 1e6
     P2 = np.sin(0.5 * np.pi * O * sigma) ** 2 \
@@ -147,7 +147,7 @@ def demkov(x, q_freq, delta, eps, s=None, dur=None):
     else:
         sigma = s * 2e-9 / 9
         T = dur * 2e-9 / 9
-        omega_0 = find_rabi_amp(t, pulse_type, T, sigma)
+        omega_0 = pulse_shapes.find_rabi_amp(t, pulse_type, T, sigma)
 
     s_inf = np.pi * omega_0 * sigma
     al = (x - q_freq) * 1e6 * sigma
@@ -164,7 +164,7 @@ def sech_sq(x, q_freq, delta, eps, s=None, dur=None):
     else:
         sigma = s * 2e-9 / 9
         T = dur * 2e-9 / 9
-        omega_0 = find_rabi_amp(t, pulse_type, T, sigma)
+        omega_0 = pulse_shapes.find_rabi_amp(t, pulse_type, T, sigma)
 
     D = (x - q_freq) * 1e6
     def f_(t):
@@ -186,7 +186,7 @@ def sin(x, q_freq, delta, eps, s=None, dur=None):
     else:
         sigma = s * 2e-9 / 9
         T = dur * 2e-9 / 9
-        omega_0 = find_rabi_amp(t, pulse_type, T, sigma)
+        omega_0 = pulse_shapes.find_rabi_amp(t, pulse_type, T, sigma)
 
     D = (x - q_freq) * 1e6
     def f_(t):
@@ -208,7 +208,7 @@ def sin_alt(x, q_freq, delta, eps, s=None, dur=None):
     else:
         sigma = s * 2e-9 / 9
         T = dur * 2e-9 / 9
-        omega_0 = find_rabi_amp(t, pulse_type, T, sigma)
+        omega_0 = pulse_shapes.find_rabi_amp(t, pulse_type, T, sigma)
 
     D = (x - q_freq) * 1e6 * T
     beta = np.sqrt(np.pi * omega_0 * np.sin(np.pi * sigma))
@@ -264,7 +264,7 @@ def sin2(x, q_freq, delta, eps, s=None, dur=None):
     else:
         sigma = s * 2e-9 / 9
         T = dur * 2e-9 / 9
-        omega_0 = find_rabi_amp(t, pulse_type, T, sigma)
+        omega_0 = pulse_shapes.find_rabi_amp(t, pulse_type, T, sigma)
 
     D = (x - q_freq) * 1e6
     def f_(t):
@@ -286,7 +286,7 @@ def sin3(x, q_freq, delta, eps, s=None, dur=None):
     else:
         sigma = s * 2e-9 / 9
         T = dur * 2e-9 / 9
-        omega_0 = find_rabi_amp(t, pulse_type, T, sigma)
+        omega_0 = pulse_shapes.find_rabi_amp(t, pulse_type, T, sigma)
 
     D = (x - q_freq) * 1e6
     def f_(t):
@@ -321,7 +321,7 @@ def gauss(x, q_freq, delta, eps, s=None, dur=None):
     else:
         sigma = s * 2e-9 / 9
         T = dur * 2e-9 / 9
-        omega_0 = find_rabi_amp(t, pulse_type, T, sigma)
+        omega_0 = pulse_shapes.find_rabi_amp(t, pulse_type, T, sigma)
 
     D = (x - q_freq) * 1e6
     alpha = np.abs(O / D)
@@ -359,7 +359,7 @@ def gauss_rzconj(x, q_freq, delta, eps, s=None, dur=None):
     else:
         sigma = s * 2e-9 / 9
         T = dur * 2e-9 / 9
-        omega_0 = find_rabi_amp(t, pulse_type, T, sigma)
+        omega_0 = pulse_shapes.find_rabi_amp(t, pulse_type, T, sigma)
 
     D = (x - q_freq) * 1e6
     def f_(t):
@@ -385,7 +385,7 @@ def rabi(x, q_freq, delta, eps, s=None, dur=None):
     else:
         sigma = s * 2e-9 / 9
         T = dur * 2e-9 / 9
-        omega_0 = find_rabi_amp(t, pulse_type, T, sigma)
+        omega_0 = pulse_shapes.find_rabi_amp(t, pulse_type, T, sigma)
 
     D = (x - q_freq) * 1e6
     P2 = (O ** 2 / (O**2 + (D) ** 2)) * \
@@ -513,6 +513,12 @@ baseline_similarity_idx, baseline_y_fit, \
 # print(baseline_fit_params)
 # print(err)
 # print(baseline_err)
+dof = len(vals) - len(fit_params)
+residuals = y_fit - vals
+err_res = np.sqrt(np.sum(residuals ** 2) / dof)
+baseline_dof = len(vals) - len(baseline_fit_params)
+baseline_residuals = baseline_y_fit - vals
+baseline_err_res = np.sqrt(np.sum(baseline_residuals ** 2) / baseline_dof)
 
 print(model_name_dict[fit_func][0])
 print("Model SI:", similarity_idx)
@@ -609,7 +615,7 @@ if limit_num > 0.1:
     ax1.grid(which='major', alpha=0.6)
 else:
     ax1.grid()
-ax1.errorbar(scaled_det, y_fit - vals, yerr=err * np.ones(scaled_det.shape), fmt="+", color="r")
+ax1.errorbar(scaled_det, y_fit - vals, yerr=err_res * np.ones(scaled_det.shape), fmt="+", color="r")
 # print(major_xticks)
 ax2 = fig.add_subplot(gs[6:, :], sharey=ax1)
 ax2.set_xlim(scaled_ef[0], -scaled_ef[0])
@@ -617,7 +623,7 @@ ax2.set_xticks(major_xticks)
 ax2.set_xticklabels(np.round(major_xticks, 1), fontsize=16)
 ax2.set_xticks(minor_xticks, minor="True")
 ax2.set_yticklabels(y_ticks_res, fontsize=13)
-ax2.errorbar(scaled_det, baseline_y_fit - vals, yerr=err * np.ones(scaled_det.shape), fmt="+", color="b")
+ax2.errorbar(scaled_det, baseline_y_fit - vals, yerr=baseline_err_res * np.ones(scaled_det.shape), fmt="+", color="b")
 if limit_num > 0.1:
     ax2.set_yticks(y_ticks_res_minor, minor=True)
     ax2.grid(which='minor', alpha=0.3)

@@ -102,8 +102,8 @@ G_02 = dur_dt / (2 * np.sqrt((100 / 0.2) - 1)) # gamma factor at cut param 0.2
 a_02 = 0.901 # max amp at cut param 0.2
 a_max = a_02 * (G_02 * np.arctan(dur_dt / G_02)) / (G * np.arctan(dur_dt / G))
 
-a_max = 0.42 
-a_step = np.round(a_max / resolution[0], 3)
+a_max = 0.38 
+# a_step = np.round(a_max / resolution[0], 3)
 
 frequency_span_Hz = 10 * MHz #5 * MHz #if cut_param < 1 els e 1.25 * MHz
 frequency_step_Hz = np.round(frequency_span_Hz / resolution[1], 3) #(1/4) * MHz
@@ -118,7 +118,7 @@ frequencies_GHz = np.arange(frequency_min / GHz,
                             frequency_max / GHz, 
                             frequency_step_Hz / GHz)
 
-amplitudes = np.arange(0., a_max + 1e-3, a_step).round(3)
+amplitudes = np.linspace(0., a_max + 1e-3, resolution[0]).round(3)
 
 print(f"The gamma factor is G = {G} and cut param is {cut_param}, \
 compared to G_02 = {G_02} at cut param 0.2.")
