@@ -93,22 +93,22 @@ print(f"Qubit {qubit} has an estimated frequency of {center_frequency_Hz / GHz} 
 # Drive pulse parameters (us = microseconds)
 dur_dt = 300 * 16#1117 * 16 #525 * 16 #644 * 16 #483 * 16 #5152
 
-resolution = (60,60)#(5, 10)
+resolution = (100,100)#(5, 10)
 
-cut_param = 0.5
+cut_param = 0.2
 G = dur_dt / (2 * np.sqrt((100 / cut_param) - 1)) # 400
 G_02 = dur_dt / (2 * np.sqrt((100 / 0.2) - 1)) # gamma factor at cut param 0.2
 
 a_02 = 0.901 # max amp at cut param 0.2
 a_max = a_02 * (G_02 * np.arctan(dur_dt / G_02)) / (G * np.arctan(dur_dt / G))
 
-a_max = 0.38 
+a_max = 0.5
 # a_step = np.round(a_max / resolution[0], 3)
 
-frequency_span_Hz = 10 * MHz #5 * MHz #if cut_param < 1 els e 1.25 * MHz
+frequency_span_Hz = 18 * MHz #5 * MHz #if cut_param < 1 els e 1.25 * MHz
 frequency_step_Hz = np.round(frequency_span_Hz / resolution[1], 3) #(1/4) * MHz
 
-max_experiments_per_job = 50
+max_experiments_per_job = 100
 
 # We will sweep 20 MHz above and 20 MHz below the estimated frequency
 frequency_min = center_frequency_Hz - frequency_span_Hz / 2
@@ -124,7 +124,7 @@ print(f"The gamma factor is G = {G} and cut param is {cut_param}, \
 compared to G_02 = {G_02} at cut param 0.2.")
 print(f"The sweep will go from {frequency_min / GHz} GHz to {frequency_max / GHz} GHz \
 in steps of {frequency_step_Hz / MHz} MHz.")
-print(f"The amplitude will go from {amplitudes[0]} to {amplitudes[-1]} in steps of {a_step}.")
+print(f"The amplitude will go from {amplitudes[0]} to {amplitudes[-1]} in steps of {np.round(a_max / resolution[0], 4)}.")
 
 frequencies_Hz = frequencies_GHz * GHz
 
@@ -207,7 +207,7 @@ for i in range(num_circs):
     except KeyError:
         transition_probability.append(1 - results.get_counts(i)["0"] / num_shots)
 
-transition_probability = np.array(transition_probability).reshape(len(frequencies_Hz), len(amplitudes))
+transition_probability = np.array(transition_probability).reshape(len(amplitudes), len(frequencies_GHz))
 job_set_id = jobs.job_set_id()
 print("JobsID:", job_set_id)
 

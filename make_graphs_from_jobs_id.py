@@ -106,14 +106,14 @@ make_all_dirs(data_folder)
 num_shots = 1024
 
 center_frequency_Hz = backend_defaults.qubit_freq_est[qubit]        # The default frequency is given in Hz
-a_max = 0.95 # a_5pi
+a_max = 0.2 # a_5pi
 # num_amps = 5
 
 # frequency_span_Hz = 50 * MHz #5 * MHz #if cut_param < 1 else 1.25 * MHz
 # frequency_step_Hz = np.round(frequency_span_Hz / 199, 3) #(1/4) * MHz
-resolution = (60, 60)
+resolution = (100,100)
 # max_experiments_per_job = 25
-frequency_span_Hz = 10 * MHz
+frequency_span_Hz = 50 * MHz
 frequency_step_Hz = np.round(frequency_span_Hz / resolution[1], 3) #(1/4) * MHz
 # We will sweep 20 MHz above and 20 MHz below the estimated frequency
 frequency_min = center_frequency_Hz - frequency_span_Hz / 2
@@ -125,10 +125,10 @@ frequencies_GHz = np.arange(
     frequency_step_Hz / GHz
 )
 frequencies_Hz = frequencies_GHz * GHz
-a_max = 0.95
+a_max = 0.2
 a_step = np.round(a_max / resolution[0], 3)
 
-amplitudes = np.arange(0., a_max + 1e-3, a_step).round(3)
+amplitudes = np.linspace(0., a_max + 1e-3, resolution[0]).round(3)
 num_schedules = len(frequencies_Hz) * len(amplitudes)
 # # amplitudes = np.linspace(0., a_max, num_amps).round(3)
 # amplitudes = [0, a_half, a_pi, a_3pi, a_5pi]
@@ -155,7 +155,9 @@ num_schedules = len(frequencies_Hz) * len(amplitudes)
 
 
 # jobs_id = "3232b979ca3d464cb209c3185d1d83cf-16559884561918826"
-jobs_id = "a7f790d72829445fb60c6f4e2d708dde-167766364068768"
+# jobs_id = "a7f790d72829445fb60c6f4e2d708dde-167766364068768"
+# jobs_id = "e53d1857834c4c36822b09c09f152f73-1678543917210038"
+jobs_id = "c5fb2a9a87ae4a4cb895961ead01773c-16785724157737763"
 job_manager = IBMQJobManager()
 jobs = job_manager.retrieve_job_set(jobs_id, provider=provider)
 
@@ -185,7 +187,7 @@ for i, am in enumerate(amplitudes):
     plt.plot(freq_offset, transition_probability[:, i], "bx")
     plt.xlabel("Detuning [MHz]")
     plt.ylabel("Transition Probability")
-    plt.title(f"Lorentzian Freq Offset - Amplitude {np.round(am, 3)}")
+    plt.title(f"Rabi Freq Offset - Amplitude {np.round(am, 3)}")
     if i == idx_half:
         plt.savefig(os.path.join(folder_name, f"lor_cutparam-{cutparam}_amp-{np.round(am, 3)}_half-pi.png").replace("\\","/"))
     elif i == idx_pi:
@@ -207,7 +209,7 @@ plt.axhline(y = 0.9, color = 'w', linestyle = '--')
 plt.savefig(
     os.path.join(
         save_dir, 
-        f"{date.strftime('%H%M%S')}_lorentz_pwr_nrw_duration-{dur_dt}dt_g-{G}_cutparam-{cutparam}.png"
+        f"{date.strftime('%H%M%S')}_sq_pwr_brd_duration-{dur_dt}dt.png"
     ).replace("\\","/")
 )
 plt.show()
