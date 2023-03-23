@@ -240,16 +240,16 @@ if __name__ == "__main__":
     rabi_fit_params, _ = fit_function(
         amplitudes[: fit_crop_parameter],
         np.real(pi_sweep_values[: fit_crop_parameter]), 
-        lambda x, A, k, l, p, x0, B: A * (np.cos(l * (1 - np.exp(- p * (x - x0))))) + B,
-        [-0.47273362, 70.14552555, 10, 0.5, 0, 0.47747625]
+        lambda x, A, l, p, x0, B: A * (np.cos(l * (1 - np.exp(- p * (x - x0))))) + B,
+        [-0.47273362, 10, 0.5, 0, 0.47747625]
         # lambda x, A, k, B: A * (np.cos(k * x)) + B,
         # [-0.5, 50, 0.5]
     )
 
     print(rabi_fit_params)
-    A, k, l, p, B = rabi_fit_params
-    pi_amp = ((l - np.sqrt(l ** 2 + 4 * k * np.pi)) / (2 * k)) ** 2 #np.pi / (k)
-    half_amp = ((l - np.sqrt(l ** 2 + 2 * k * np.pi)) / (2 * k)) ** 2 #np.pi / (k)
+    A, l, p, B = rabi_fit_params
+    pi_amp = -np.log(1 - np.pi / l) / p + x0 #np.pi / (k)
+    half_amp = -np.log(1 - np.pi / (2 * l)) / p + x0 #np.pi / (k)
 
     detailed_amps = np.arange(amplitudes[0], amplitudes[-1], amplitudes[-1] / 2000)
     extended_y_fit = A * (np.cos(k * (detailed_amps) + l * (1 - np.exp(- p * detailed_amps)))) + B
