@@ -34,13 +34,12 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--sigma", default=180, type=float,
         help="Pulse width (sigma) parameter")    
     parser.add_argument("-T", "--duration", default=2256, type=int,
-        help="Lorentz duration parameter")
+        help="Pulse duration parameter")
     # parser.add_argument("-c", "--cutoff", default=0.5, type=float,
     #     help="Cutoff parameter in PERCENT of maximum amplitude of Lorentzian")
     parser.add_argument("-rb", "--remove_bg", default=0, type=int,
-        help="Whether to drop the background (tail) of the pulse (0 or 1).")
-    parser.add_argument("-cp", "--control_param", default="width", type=str,
-        help="States whether width or duration is the controlled parameter")
+        help="Whether to drop the background (and thus discontinuities) "
+            "of the pulse (0 or 1).")
     parser.add_argument("-epj", "--max_experiments_per_job", default=100, type=int,
         help="Maximum experiments per job")
     parser.add_argument("-ns", "--num_shots", default=2048, type=int,
@@ -63,7 +62,6 @@ if __name__ == "__main__":
     final_amp = args.final_amp
     num_shots_per_exp = args.num_shots
     num_exp = args.num_experiments
-    ctrl_param = args.control_param
     backend = args.backend
     max_experiments_per_job = args.max_experiments_per_job
     remove_bg = bool(args.remove_bg)
@@ -271,6 +269,9 @@ if __name__ == "__main__":
         "half_amp": half_amp
     }
     print(param_dict)
+    with open(os.path.join(data_folder, f"fit_params_area_cal_{date.strftime('%H%M%S')}.pkl"), "wb") as f:
+        pickle.dump(param_dict, f)
+
     param_series = pd.Series(param_dict)
     params_file = os.path.join(calib_dir, "params.csv")
     if os.path.isfile(params_file):

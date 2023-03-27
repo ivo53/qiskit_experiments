@@ -54,6 +54,8 @@ data_folder = os.path.join(
 make_all_dirs(data_folder)
 make_all_dirs(folder_name)
 
+date_of_cal = datetime.now().strftime("%Y-%m-%d")
+data_folder_cal = os.path.join(file_dir, "data", backend_name, "calibration", date_of_cal)
 
 provider = IBMQ.load_account()
 backend = provider.get_backend(f"ibmq_{backend_name}")
@@ -92,7 +94,6 @@ print(f"Qubit {qubit} has an estimated frequency of {center_frequency_Hz / GHz} 
 
 # Drive pulse parameters (us = microseconds)
 dur_dt = 300 * 16#1117 * 16 #525 * 16 #644 * 16 #483 * 16 #5152
-
 resolution = (100,100)#(5, 10)
 
 cut_param = 0.2
@@ -104,6 +105,25 @@ a_max = a_02 * (G_02 * np.arctan(dur_dt / G_02)) / (G * np.arctan(dur_dt / G))
 
 a_max = 0.5
 # a_step = np.round(a_max / resolution[0], 3)
+
+files_in_cal = os.listdir(data_folder_cal)
+fit_params_files = []
+for file_in_cal in files_in_cal:
+    if file_in_cal.startswith("fit_params_area_cal_"):
+        fit_params_files.append(file_in_cal)
+fit_params_files.sort()
+fit_params_file = fit_params_files[-1]
+while param_dict["pulse_type"] != "lor" or \
+        np.round(param_dict["sigma"]) != np.round(G):
+    fit_params_file = fit_params_files[-1]
+    fit_params_files.pop(-1)
+    with open(os.path.join(data_folder_cal, fit_params_file), "rb") as f:
+        param_dict = pickle.load(f)
+    if not fit_params_files:
+        raise TypeError("The params file for the Lorentzian is missing.")
+else:
+    print("Found last Lorentzian area cal fit params.")
+l, p, x0 = param_dict["l"], param_dict["p"], param_dict["x0"]
 
 def get_amp_for(area):
     return -np.log(1 - area / l) / p + x0

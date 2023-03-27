@@ -121,20 +121,20 @@ def measure_T1(backend_name):
     # freqs = ParameterVector('freqs', length=num_qubits)
     sched = [None] * num_qubits
     for q in range(num_qubits):
-        with pulse.build(backend=backend, default_alignment='sequential', name="calibrate_area") as sched[q]:
+        with pulse.build(backend=backend, default_alignment='sequential', name=f"calibrate_area_q{q}") as sched[q]:
             dur_dt = duration
             pulse.set_frequency(q_freq[q], drive_chan)
             if pulse_type == "sq" or "sin" in pulse_type:
                 pulse_played = pulse_dict[pulse_type](
                     duration=dur_dt,
                     amp=amp,
-                    name=pulse_type
+                    name=pulse_type + str(q)
                 )
             elif pulse_type == "gauss":
                 pulse_played = pulse_dict[pulse_type](
                     duration=dur_dt,
                     amp=amp,
-                    name=pulse_type,
+                    name=pulse_type + str(q),
                     sigma=sigma / np.sqrt(2),
                     zero_ends=remove_bg
                 )
@@ -142,7 +142,7 @@ def measure_T1(backend_name):
                 pulse_played = pulse_dict[pulse_type](
                     duration=dur_dt,
                     amp=amp,
-                    name=pulse_type,
+                    name=pulse_type + str(q),
                     gamma=sigma,
                     zero_ends=remove_bg
                 )
@@ -150,7 +150,7 @@ def measure_T1(backend_name):
                 pulse_played = pulse_dict[pulse_type](
                     duration=dur_dt,
                     amp=amp,
-                    name=pulse_type,
+                    name=pulse_type + str(q),
                     sigma=sigma,
                     zero_ends=remove_bg
                 )
