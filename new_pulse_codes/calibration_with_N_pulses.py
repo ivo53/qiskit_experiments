@@ -37,6 +37,36 @@ pulse_dict = {
     "sin5": pulse_lib.SineFifthPower,
 }
 
+def get_calib_params(
+    backend, pulse_type, 
+    sigma, duration,
+    remove_bg
+):
+    file_dir = os.path.dirname(__file__)
+    file_dir = os.path.split(file_dir)[0]
+    calib_dir = os.path.join(file_dir, "calibrations", backend)
+    params_file = os.path.join(calib_dir, "actual_params.csv")
+    if os.path.isfile(params_file):
+        param_df = pd.read_csv(params_file)
+    df = param_df[param_df.apply(
+            lambda row: row["pulse_type"] == pulse_type and \
+                row["duration"] == duration and \
+                row["sigma"] == sigma and \
+                row["rb"] == rb, axis=1)]
+    # print(df)
+    idx = 0 
+    if df.shape[0] > 1:
+        idx = input("More than one identical calibrations found! "
+                    "Which do you want to use? ")
+    elif df.shape[0] < 1:
+        raise ValueError("No entry found!")
+    ser = df.iloc[idx]
+    l = ser.at["l"]
+    p = ser.at["p"]
+    x0 = ser.at["x0"]
+
+    return l, p, x0
+
 def initialize_backend(backend):
     backend_full_name = "ibm_" + backend \
         if backend in ["perth", "lagos", "nairobi", "oslo"] \
@@ -88,13 +118,12 @@ def linear_func(x, a, b):
     return a * x + b
 
 def run_check(
-    closest_amp, amp_span, 
+    closest_amp, amp_span,
     duration, sigma, pulse_type, remove_bg,
-    num_exp=10, N_max=100, N_interval=2,
-    max_exp_per_job=50,
-    num_shots=1024,
-    backend="manila", span=0.01,
-    l=100, p=0.5
+    num_exp=10, N_max=100,
+    N_interval=2, max_exp_per_job=50,
+    num_shots=1024, backend="manila",
+    span=0.01, l=100, p=0.5, x0=0
 ):
     amplitudes = np.linspace(
         closest_amp - amp_span / 2,
@@ -210,10 +239,6 @@ if __name__ == "__main__":
         oslo, jakarta, manila, quito, belem, lima).")
     parser.add_argument("-sp", "--span", default=0.01, type=float,
         help="The span of the amplitude sweep as a fraction of the amplitude value.")
-    parser.add_argument("-l", "--l", default=130, type=float,
-        help="The initial fit param l to use.")
-    parser.add_argument("-p", "--p", default=0.5, type=float,
-        help="The initial fit param p to use.")
     args = parser.parse_args()
 
     pulse_type = args.pulse_type
@@ -229,8 +254,12 @@ if __name__ == "__main__":
     num_exp = args.num_experiments
     backend = args.backend
     span = args.span
-    l = args.l
-    p = args.p
+
+    l, p, x0 = get_calib_params(
+        backend, pulse_type, 
+        sigma, duration,
+        remove_bg
+    )
     for i in range(3):
         x, ys = run_check(
             closest_amp, amp_span / (10**i), 
@@ -241,6 +270,6 @@ if __name__ == "__main__":
             max_exp_per_job=max_experiments_per_job,
             num_shots=num_shots, 
             backend=backend, span=span,
-            l=l, p=p)
+            l=l, p=p, x0=x0)
         index = find_least_variation(x, ys)
         closest_amp = x[index]
