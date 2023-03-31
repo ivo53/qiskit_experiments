@@ -37,28 +37,33 @@ pulse_dict = {
     "sin5": pulse_lib.SineFifthPower,
 }
 
-backend_full_name = "ibmq_manila"
-GHz = 1.0e9 # Gigahertz
-MHz = 1.0e6 # Megahertz
-us = 1.0e-6 # Microseconds
-ns = 1.0e-9 # Nanoseconds
-qubit = 0
-mem_slot = 0
+def initialize_backend(backend):
+    backend_full_name = "ibm_" + backend \
+        if backend in ["perth", "lagos", "nairobi", "oslo"] \
+            else "ibmq_" + backend
+    GHz = 1.0e9 # Gigahertz
+    MHz = 1.0e6 # Megahertz
+    us = 1.0e-6 # Microseconds
+    ns = 1.0e-9 # Nanoseconds
+    qubit = 0
+    mem_slot = 0
 
-drive_chan = pulse.DriveChannel(qubit)
-meas_chan = pulse.MeasureChannel(qubit)
-acq_chan = pulse.AcquireChannel(qubit)
+    drive_chan = pulse.DriveChannel(qubit)
+    meas_chan = pulse.MeasureChannel(qubit)
+    acq_chan = pulse.AcquireChannel(qubit)
+    
+    backend_name = backend
+    provider = IBMQ.load_account()
+    backend = provider.get_backend(backend_full_name)
+    print(f"Using {backend_name} backend.")
+    backend_defaults = backend.defaults()
+    backend_config = backend.configuration()
 
-provider = IBMQ.load_account()
-backend = provider.get_backend(backend_full_name)
-print(f"Using {backend_name} backend.")
-backend_defaults = backend.defaults()
-backend_config = backend.configuration()
-
-center_frequency_Hz = backend_defaults.qubit_freq_est[qubit]# 4962284031.287086 Hz
-q_freq = [backend_defaults.qubit_freq_est[q] for q in range(num_qubits)]
-dt = backend_config.dt
-num_qubits = backend_config.n_qubits
+    center_frequency_Hz = backend_defaults.qubit_freq_est[qubit]# 4962284031.287086 Hz
+    q_freq = [backend_defaults.qubit_freq_est[q] for q in range(num_qubits)]
+    dt = backend_config.dt
+    num_qubits = backend_config.n_qubits
+    return backend, num_qubits, q_freq
 
 def fit_function(
     x_values, 
@@ -85,7 +90,12 @@ def linear_func(x, a, b):
 def run_check(
     closest_amp, amp_span, 
     duration, sigma, pulse_type, remove_bg,
-    num_exp=10, N_max=100, N_interval=2):
+    num_exp=10, N_max=100, N_interval=2,
+    max_exp_per_job=50,
+    num_shots=1024,
+    backend="manila", span=0.01,
+    l=100, p=0.5
+):
     amplitudes = np.linspace(
         closest_amp - amp_span / 2,
         closest_amp + amp_span / 2,
@@ -171,23 +181,24 @@ def find_least_variation(x, ys, init_params=[1, 1], bounds=[[-100, -100],[100, 1
     closest_idx = np.argmin(diff)
     return closest_idx
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-pt", "--pulse_type", default="gauss", type=str,
         help="Pulse type (e.g. sq, gauss, sine, sech etc.)")
     parser.add_argument("-q", "--qubit", default=0, type=int,
         help="The number of the qubit to be used.")
+    parser.add_argument("-a", "--closest_amp", default=0.05, type=float,
+        help="First amp to use (should be close to PI area).")   
     parser.add_argument("-s", "--sigma", default=180, type=float,
         help="Pulse width (sigma) parameter")    
     parser.add_argument("-T", "--duration", default=2256, type=int,
-        help="Lorentz duration parameter")
-    parser.add_argument("-c", "--cutoff", default=0.5, type=float,
-        help="Cutoff parameter in PERCENT of maximum amplitude of Lorentzian")
+        help="Pulse duration parameter")
+    parser.add_argument("-N", "--N_max", default=100, type=int,
+        help="Maximum N number of pulses to use in the experiment.")
+    parser.add_argument("-Ni", "--N_interval", default=2, type=int,
+        help="Interval between N number of pulses.")
     parser.add_argument("-rb", "--remove_bg", default=1, type=int,
         help="Whether to drop the background (tail) of the pulse (0 or 1).")
-    parser.add_argument("-cp", "--control_param", default="width", type=str,
-        help="States whether width or duration is the controlled parameter")
     parser.add_argument("-epj", "--max_experiments_per_job", default=100, type=int,
         help="Maximum experiments per job")
     parser.add_argument("-ns", "--num_shots", default=2048, type=int,
@@ -197,6 +208,39 @@ if __name__ == "__main__":
     parser.add_argument("-b", "--backend", default="manila", type=str,
         help="The name of the backend to use in the experiment (one of perth, lagos, nairobi, \
         oslo, jakarta, manila, quito, belem, lima).")
-    parser.add_argument("-sp", "--span", default=0.005, type=float,
-        help="The span of the detuning sweep as a fraction of the driving frequency.")
+    parser.add_argument("-sp", "--span", default=0.01, type=float,
+        help="The span of the amplitude sweep as a fraction of the amplitude value.")
+    parser.add_argument("-l", "--l", default=130, type=float,
+        help="The initial fit param l to use.")
+    parser.add_argument("-p", "--p", default=0.5, type=float,
+        help="The initial fit param p to use.")
     args = parser.parse_args()
+
+    pulse_type = args.pulse_type
+    qubit = args.qubit
+    closest_amp = args.closest_amp
+    sigma = args.sigma
+    duration = args.duration
+    N_max = args.N_max
+    N_interval = args.N_interval
+    remove_bg = args.remove_bg
+    max_experiments_per_job = args.max_experiments_per_job
+    num_shots = args.num_shots
+    num_exp = args.num_experiments
+    backend = args.backend
+    span = args.span
+    l = args.l
+    p = args.p
+    for i in range(3):
+        x, ys = run_check(
+            closest_amp, amp_span / (10**i), 
+            duration, sigma, 
+            pulse_type, remove_bg,
+            num_exp=num_exp,
+            N_max=N_max, N_interval=N_interval,
+            max_exp_per_job=max_experiments_per_job,
+            num_shots=num_shots, 
+            backend=backend, span=span,
+            l=l, p=p)
+        index = find_least_variation(x, ys)
+        closest_amp = x[index]

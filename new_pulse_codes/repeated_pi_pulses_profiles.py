@@ -50,20 +50,14 @@ pulse_dict = {
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-pt", "--pulse_type", default="gauss", type=str,
-        help="Pulse type (e.g. sq, gauss, sine, sech etc.)")
+    parser.add_argument("-pt", "--pulse_type", default="sin", type=str,
+        help="Pulse type (e.g. sq, gauss, sin, sech etc.)")
     parser.add_argument("-q", "--qubit", default=0, type=int,
         help="The number of the qubit to be used.")
-    # parser.add_argument("-l", "--l", default=10, type=float,
-    #     help="Parameter l in Rabi oscillations fit")
-    # parser.add_argument("-p", "--p", default=0.5, type=float,
-    #     help="Parameter p in Rabi oscillations fit")
-    # parser.add_argument("-x0", "--x0", default=0.005, type=float,
-    #     help="Parameter x0 in Rabi oscillations fit")
     parser.add_argument("-s", "--sigma", default=180, type=float,
         help="Pulse width (sigma) parameter")    
     parser.add_argument("-T", "--duration", default=2256, type=int,
-        help="Lorentz duration parameter")
+        help="Pulse duration parameter")
     parser.add_argument("-c", "--cutoff", default=0.5, type=float,
         help="Cutoff parameter in PERCENT of maximum amplitude of Lorentzian")
     parser.add_argument("-rb", "--remove_bg", default=1, type=int,
@@ -114,11 +108,12 @@ if __name__ == "__main__":
     file_dir = os.path.split(file_dir)[0]
     date = datetime.now()
     current_date = date.strftime("%Y-%m-%d")
-    calib_dir = os.path.join(file_dir, "calibrations")
-    save_dir = os.path.join(calib_dir, current_date)
+    calib_dir = os.path.join(file_dir, "calibrations", backend_name)
+    project_dir = os.path.join(file_dir, "plots", backend_name, "repeated_pi_pulses_profiles")
+    save_dir = os.path.join(project_dir, current_date)
     # if not os.path.isdir(save_dir):
     #     os.mkdir(save_dir)
-    data_folder = os.path.join(file_dir, "data", backend_name, "calibration", current_date)
+    data_folder = os.path.join(file_dir, "data", backend_name, "repeated_pi_pulses_profiles", current_date)
     # if not os.path.isdir(data_folder):
     #     os.mkdir(data_folder)
     make_all_dirs(save_dir)
@@ -132,9 +127,11 @@ if __name__ == "__main__":
                 row["duration"] == duration and \
                 row["sigma"] == sigma and \
                 row["rb"] == rb, axis=1)]
-    print(df)
-    if df.shape[0] != 1:
+    # print(df)
+    if df.shape[0] > 1:
         raise ValueError("More than one identical entry found!")
+    elif df.shape[0] < 1:
+        raise ValueError("No entry found!")
     ser = df.iloc[0]
     l = ser.at["l"]
     p = ser.at["p"]
@@ -257,28 +254,28 @@ if __name__ == "__main__":
     ## fit curve
 
 
-    def fit_function(x_values, y_values, function, init_params):
-        fitparams, conv = curve_fit(function, x_values, y_values, init_params)#, maxfev=100000)
-        y_fit = function(x_values, *fitparams)
+    # def fit_function(x_values, y_values, function, init_params):
+    #     fitparams, conv = curve_fit(function, x_values, y_values, init_params)#, maxfev=100000)
+    #     y_fit = function(x_values, *fitparams)
         
-        return fitparams, y_fit
+    #     return fitparams, y_fit
 
-    fit_params, y_fit = fit_function(frequencies_GHz,
-                                    np.real(sweep_values), 
-                                    lambda x, A, q_freq, B, C: (A / np.pi) * (B / ((x - q_freq)**2 + B**2)) + C,
-                                    [0.3, 4.975, 0.2, 0] # initial parameters for curve_fit
-                                    )
-    plt.figure(2)
-    plt.scatter(frequencies_GHz, np.real(sweep_values), color='black')
-    plt.plot(frequencies_GHz, y_fit, color='red')
-    plt.xlim([min(frequencies_GHz), max(frequencies_GHz)])
-    plt.title("Fitted Drive Frequency Calibration Curve")
-    plt.xlabel("Frequency [GHz]")
-    plt.ylabel("Measured Signal [a.u.]")
-    plt.savefig(os.path.join(save_dir, date.strftime("%H%M%S") + f"_frequency_sweep_fitted.png"))
+    # fit_params, y_fit = fit_function(frequencies_GHz,
+    #                                 np.real(sweep_values), 
+    #                                 lambda x, A, q_freq, B, C: (A / np.pi) * (B / ((x - q_freq)**2 + B**2)) + C,
+    #                                 [0.3, 4.975, 0.2, 0] # initial parameters for curve_fit
+    #                                 )
+    # plt.figure(2)
+    # plt.scatter(frequencies_GHz, np.real(sweep_values), color='black')
+    # plt.plot(frequencies_GHz, y_fit, color='red')
+    # plt.xlim([min(frequencies_GHz), max(frequencies_GHz)])
+    # plt.title("Fitted Drive Frequency Calibration Curve")
+    # plt.xlabel("Frequency [GHz]")
+    # plt.ylabel("Measured Signal [a.u.]")
+    # plt.savefig(os.path.join(save_dir, date.strftime("%H%M%S") + f"_frequency_sweep_fitted.png"))
     plt.show()
 
-    A, rough_qubit_frequency, B, C = fit_params
-    rough_qubit_frequency = rough_qubit_frequency*GHz # make sure qubit freq is in Hz
-    print(f"We've updated our qubit frequency estimate from "
-        f"{round(backend_defaults.qubit_freq_est[qubit] / GHz, 5)} GHz to {round(rough_qubit_frequency/GHz, 5)} GHz.")
+    # A, rough_qubit_frequency, B, C = fit_params
+    # rough_qubit_frequency = rough_qubit_frequency*GHz # make sure qubit freq is in Hz
+    # print(f"We've updated our qubit frequency estimate from "
+    #     f"{round(backend_defaults.qubit_freq_est[qubit] / GHz, 5)} GHz to {round(rough_qubit_frequency/GHz, 5)} GHz.")

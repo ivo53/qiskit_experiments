@@ -113,6 +113,9 @@ for file_in_cal in files_in_cal:
         fit_params_files.append(file_in_cal)
 fit_params_files.sort()
 fit_params_file = fit_params_files[-1]
+with open(os.path.join(data_folder_cal, fit_params_file), "rb") as f:
+    param_dict = pickle.load(f)
+
 while param_dict["pulse_type"] != "lor" or \
         np.round(param_dict["sigma"]) != np.round(G):
     fit_params_file = fit_params_files[-1]
@@ -128,7 +131,7 @@ l, p, x0 = param_dict["l"], param_dict["p"], param_dict["x0"]
 def get_amp_for(area):
     return -np.log(1 - area / l) / p + x0
 
-frequency_span_Hz = 18 * MHz #5 * MHz #if cut_param < 1 els e 1.25 * MHz
+frequency_span_Hz = 25 * MHz #5 * MHz #if cut_param < 1 els e 1.25 * MHz
 frequency_step_Hz = np.round(frequency_span_Hz / resolution[1], 3) #(1/4) * MHz
 
 max_experiments_per_job = 100
@@ -141,7 +144,7 @@ frequencies_GHz = np.arange(frequency_min / GHz,
                             frequency_max / GHz, 
                             frequency_step_Hz / GHz)
 
-amplitudes = np.array([get_amp_for(a * np.pi) for a in [0.5 + m, 1 + m] for a in range(0, 9.5, 2)])
+amplitudes = np.array([[get_amp_for(a * np.pi) for a in [0.5 + m, 1 + m]] for m in np.arange(0, 9.5, 2)]).flatten()
 # amplitudes = np.linspace(0., a_max + 1e-3, resolution[0]).round(3)
 
 print(f"The gamma factor is G = {G} and cut param is {cut_param}, \
@@ -249,7 +252,7 @@ with open(os.path.join(data_folder, f"{dur_dt}dt_cutparam-{cut_param}_detunings.
 
 for i, am in enumerate(amplitudes):
     plt.figure(i)
-    plt.plot(freq_offset, transition_probability[:, i], "bx")
+    plt.plot(freq_offset, transition_probability[i], "bx")
     plt.xlabel("Detuning [MHz]")
     plt.ylabel("Transition Probability")
     plt.title(f"Lorentzian Freq Offset - Amplitude {am.round(3)}")

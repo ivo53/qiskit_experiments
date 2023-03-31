@@ -1,6 +1,7 @@
 import os
 import pickle
 import argparse
+import itertools
 from datetime import datetime
 
 import numpy as np
@@ -31,10 +32,14 @@ if __name__ == "__main__":
         help="Pulse type (e.g. sq, gauss, sine, sech etc.)")
     # parser.add_argument("-G", "--lorentz_G", default=180, type=float,
     #     help="Lorentz width (gamma) parameter")    
-    parser.add_argument("-s", "--sigma", default=180, type=float,
+    parser.add_argument("-is", "--initial_sigma", default=32, type=float,
         help="Pulse width (sigma) parameter")    
-    parser.add_argument("-T", "--duration", default=2256, type=int,
-        help="Pulse duration parameter")
+    parser.add_argument("-fs", "--final_sigma", default=32000, type=float,
+        help="Pulse width (sigma) parameter")    
+    parser.add_argument("-nsig", "--num_sigma", default=100, type=int,
+        help="Pulse width (sigma) parameter")
+    # parser.add_argument("-T", "--duration", default=2256, type=int,
+    #     help="Pulse duration parameter")
     # parser.add_argument("-c", "--cutoff", default=0.5, type=float,
     #     help="Cutoff parameter in PERCENT of maximum amplitude of Lorentzian")
     parser.add_argument("-rb", "--remove_bg", default=0, type=int,
@@ -58,10 +63,9 @@ if __name__ == "__main__":
     parser.add_argument("-p", "--p", default=0.5, type=float,
         help="The initial value of the p fit param.")
     args = parser.parse_args()
-    # cutoff = args.cutoff
-    lor_G = args.sigma
-    duration = get_closest_multiple_of_16(args.duration)
-    sigma = args.sigma
+    initial_sigma = args.initial_sigma
+    final_sigma = args.final_sigma
+    num_sigma = args.num_sigma
     initial_amp = args.initial_amp
     final_amp = args.final_amp
     num_shots_per_exp = args.num_shots
@@ -94,9 +98,8 @@ if __name__ == "__main__":
     file_dir = os.path.dirname(__file__)
     file_dir = os.path.split(file_dir)[0]
     date = datetime.now()
-    time = date.strftime("%H%M%S")
     current_date = date.strftime("%Y-%m-%d")
-    calib_dir = os.path.join(file_dir, "calibrations", backend_name)
+    calib_dir = os.path.join(file_dir, "calibrations")
     save_dir = os.path.join(calib_dir, current_date)
     # if not os.path.isdir(save_dir):
     #     os.mkdir(save_dir)
@@ -127,7 +130,7 @@ if __name__ == "__main__":
 
     center_frequency_Hz = backend_defaults.qubit_freq_est[qubit]
     dt = backend_config.dt
-
+    num_qubits = backend_config.n_qubits
 
     rough_qubit_frequency = center_frequency_Hz # 4962284031.287086 Hz
 
@@ -140,23 +143,31 @@ if __name__ == "__main__":
     )
     fit_crop_parameter = int(fit_crop * len(amplitudes))
 
+    sigmas = np.linspace(initial_sigma, final_sigma, num_sigma)
+    durations = sigmas.astype("int") if "sin" in pulse_type else sigmas.astype("int") * 8
+
     print(f"The resonant frequency is assumed to be {np.round(rough_qubit_frequency / GHz, 5)} GHz.")
-    print(f"The area calibration will start from amp {amplitudes[0]} "
-    f"and end at {amplitudes[-1]} with approx step {(final_amp - initial_amp)/num_exp}.")
+    print(f"The dephasing experiment will start from amp {amplitudes[0]} "
+    f"and end at {amplitudes[-1]} with approx step {np.round((final_amp - initial_amp)/num_exp,3)},"
+    f"from sigma {sigmas[0]} "
+    f"and till {sigmas[-1]} with approx step {np.round((final_sigma - initial_sigma)/num_sigma,0)},"
+    f"from duration {durations[0]} "
+    f"and till {durations[-1]} with approx step {np.round(8 * (final_sigma - initial_sigma)/num_sigma,0)}.")
 
     amp = Parameter('amp')
-    with pulse.build(backend=backend, default_alignment='sequential', name="calibrate_area") as sched:
-        dur_dt = duration
+    duration = Parameter('duration')
+    sigma = Parameter('sigma')
+    with pulse.build(backend=backend, default_alignment='sequential', name="dephasing_inducing_gate") as sched:
         pulse.set_frequency(rough_qubit_frequency, drive_chan)
         if pulse_type == "sq" or "sin" in pulse_type:
             pulse_played = pulse_dict[pulse_type](
-                duration=dur_dt,
+                duration=duration,
                 amp=amp,
                 name=pulse_type
             )
         elif pulse_type == "gauss":
             pulse_played = pulse_dict[pulse_type](
-                duration=dur_dt,
+                duration=duration,
                 amp=amp,
                 name=pulse_type,
                 sigma=sigma / np.sqrt(2),
@@ -164,7 +175,7 @@ if __name__ == "__main__":
             )
         elif pulse_type in ["lor", "lor2", "lor3"]:
             pulse_played = pulse_dict[pulse_type](
-                duration=dur_dt,
+                duration=duration,
                 amp=amp,
                 name=pulse_type,
                 gamma=sigma,
@@ -172,132 +183,75 @@ if __name__ == "__main__":
             )
         else:
             pulse_played = pulse_dict[pulse_type](
-                duration=dur_dt,
+                duration=duration,
                 amp=amp,
                 name=pulse_type,
                 sigma=sigma,
                 zero_ends=remove_bg
             )
         pulse.play(pulse_played, drive_chan)
-
-    # Create gate holder and append to base circuit
-    pi_gate = Gate("rabi", 1, [amp])
-    base_circ = QuantumCircuit(1, 1)
-    base_circ.append(pi_gate, [0])
-    base_circ.measure(0, 0)
-    base_circ.add_calibration(pi_gate, (qubit,), sched, [amp])
-    circs = [
-        base_circ.assign_parameters(
-                {amp: a},
-                inplace=False
-        ) for a in amplitudes]
-
-    # rabi_schedule = qiskit.schedule(circs[-1], backend)
-    # rabi_schedule.draw(backend=backend)
     
+    long_gate = Gate("long_gate", 1, params=[sigma, duration, amp])
+    base_circ = QuantumCircuit(num_qubits, 1)    
+    base_circ.append(long_gate, [qubit])
+    base_circ.measure(qubit, 0)
+    base_circ.add_calibration(long_gate, (qubit,), sched, [sigma, duration, amp])
+    circs = [
+        [
+            base_circ.assign_parameters(
+                {sigma: s, duration: d, amp: a},
+                inplace=False
+            ) for s, d in zip(sigmas, durations)
+        ] for a in amplitudes
+    ]
+    circs = list(itertools.chain.from_iterable(circs))
+
     job_manager = IBMQJobManager()
-    pi_job = job_manager.run(
+    long_job = job_manager.run(
         circs,
         backend=backend,
         shots=num_shots_per_exp,
         max_experiments_per_job=max_experiments_per_job
     )
+    long_results = long_job.results()
 
-    pi_sweep_results = pi_job.results()
-
-    pi_sweep_values = []
+    long_values = []
 
     for i in range(len(circs)):
         try:
-            counts = pi_sweep_results.get_counts(i)["1"]
+            counts = long_results.get_counts(i)["1"]
         except KeyError:
             counts = 0
-        pi_sweep_values.append(counts / num_shots_per_exp)
-
-    # print(amplitudes, np.real(pi_sweep_values))
-    plt.figure(3)
-    plt.scatter(amplitudes, np.real(pi_sweep_values), color='black') # plot real part of sweep values
-    plt.title("Rabi Calibration Curve")
-    plt.xlabel("Amplitude [a.u.]")
-    plt.ylabel("Transition Probability")
-    plt.savefig(os.path.join(save_dir, date.strftime("%H%M%S") + f"_{pulse_type}_dur_{duration}_s_{int(sigma)}_areacal.png"))
-    datapoints = np.vstack((amplitudes, np.real(pi_sweep_values)))
-    with open(os.path.join(data_folder, f"area_calibration_{date.strftime('%H%M%S')}.pkl"), "wb") as f:
-        pickle.dump(datapoints, f)
-    ## fit curve
-    def fit_function(x_values, y_values, function, init_params):
-        fitparams, conv = curve_fit(
-            function, 
-            x_values, 
-            y_values, 
-            init_params, 
-            maxfev=100000, 
-            bounds=(
-                [-0.53, 0, 0, -10, 0.45], 
-                [-.47, 1e4, 100, 10, 0.55]
-            )
-        )
-        y_fit = function(x_values, *fitparams)
-        
-        return fitparams, y_fit
+        long_values.append(counts / num_shots_per_exp)
 
 
-    rabi_fit_params, _ = fit_function(
-        amplitudes[: fit_crop_parameter],
-        np.real(pi_sweep_values[: fit_crop_parameter]), 
-        lambda x, A, l, p, x0, B: A * (np.cos(l * (1 - np.exp(- p * (x - x0))))) + B,
-        [-0.47273362, l, p, 0, 0.47747625]
-        # lambda x, A, k, B: A * (np.cos(k * x)) + B,
-        # [-0.5, 50, 0.5]
-    )
+    ## create folder where plots are saved
+    file_dir = os.path.dirname(__file__)
+    file_dir = os.path.split(file_dir)[0]
+    date = datetime.now()
+    current_date = date.strftime("%Y-%m-%d")
+    project_dir = os.path.join(file_dir, "plots", backend_name, "dephasing_induced_shift")
+    save_dir = os.path.join(project_dir, current_date)
+    # if not os.path.isdir(save_dir):
+    #     os.mkdir(save_dir)
+    data_folder = os.path.join(file_dir, "data", backend_name, "dephasing_induced_shift", current_date)
+    # if not os.path.isdir(data_folder):
+    #     os.mkdir(data_folder)
+    make_all_dirs(save_dir)
+    make_all_dirs(data_folder)
 
-    print(rabi_fit_params)
-    A, l, p, x0, B = rabi_fit_params
-    pi_amp = -np.log(1 - np.pi / l) / p + x0 #np.pi / (k)
-    half_amp = -np.log(1 - np.pi / (2 * l)) / p + x0 #np.pi / (k)
+    long_values = np.array(long_values).reshape(len(amplitudes), len(sigmas))
+    amps = np.tile(amplitudes, (len(sigmas)))
+    ss = np.tile(amplitudes, (len(amplitudes)))
+    results_df = pd.DataFrame({"amps": amps, "sigmas": ss, "probs": long_values})
 
-    detailed_amps = np.arange(amplitudes[0], amplitudes[-1], amplitudes[-1] / 2000)
-    extended_y_fit = A * (np.cos(l * (1 - np.exp(- p * (detailed_amps - x0))))) + B
+    results_df.to_pickle(os.path.join(data_folder, f"deph_induced_shift_amp-{date.strftime('%H%M%S')}.pkl"))
 
-    ## create pandas series to keep calibration info
-    param_dict = {
-        "date": [current_date],
-        "time": [time],
-        "pulse_type": [pulse_type],
-        "A": [A],
-        "l": [l],
-        "p": [p],
-        "x0": [x0],
-        "B": [B],
-        "pi_amp": [pi_amp],
-        "half_amp": [half_amp],
-        "drive_freq": [center_frequency_Hz],
-        "duration": [duration],
-        "sigma": [sigma],
-        "rb": [int(remove_bg)]
-    }
-    print(param_dict)
-    with open(os.path.join(data_folder, f"fit_params_area_cal_{date.strftime('%H%M%S')}.pkl"), "wb") as f:
-        pickle.dump(param_dict, f)
-
-    new_entry = pd.DataFrame(param_dict)
-    params_file = os.path.join(calib_dir, "actual_params.csv")
-    if os.path.isfile(params_file):
-        param_df = pd.read_csv(params_file)
-        param_df = add_entry_and_remove_duplicates(param_df, new_entry)
-        # param_df = pd.concat([param_df, param_series.to_frame().T], ignore_index=True)
-        param_df.to_csv(params_file, index=False)
-    else:
-        new_entry.to_csv(params_file, index=False)
-
-    plt.figure(4)
-    plt.scatter(amplitudes, np.real(pi_sweep_values), color='black')
-    plt.plot(detailed_amps, extended_y_fit, color='red')
-    plt.xlim([min(amplitudes), max(amplitudes)])
-    plt.title("Fitted Rabi Calibration Curve")
-    plt.xlabel("Amplitude [a.u.]")
-    plt.ylabel("Transition Probability")
-    # plt.ylabel("Measured Signal [a.u.]")
-    plt.savefig(os.path.join(save_dir, date.strftime("%H%M%S") + f"_{pulse_type}_pi_amp_sweep_fitted.png"))
-
-    plt.show()
+    for i, am in enumerate(amplitudes):
+        plt.figure(i)
+        plt.plot(sigmas, long_values[i], "bx")
+        plt.xlabel("Pulse width $\sigma$ [dt]")
+        plt.ylabel("Transition Probability")
+        plt.title(f"Dephasing-induced decoherence for amplitude {am.round(3)}")
+        plt.savefig(os.path.join(folder_name, f"deph_induced_shift_amp-{am.round(3)}.png").replace("\\","/"))
+        plt.close()

@@ -74,12 +74,9 @@ def measure_T1(backend_name):
     MHz = 1.0e6 # Megahertz
     us = 1.0e-6 # Microseconds
     ns = 1.0e-9 # Nanoseconds
-    qubit = 0
-    mem_slot = 0
 
-    drive_chan = pulse.DriveChannel(qubit)
-    meas_chan = pulse.MeasureChannel(qubit)
-    acq_chan = pulse.AcquireChannel(qubit)
+    drive_chan = pulse.DriveChannel
+    dc = [drive_chan(q) for q in range(num_qubits)]
 
     provider = IBMQ.load_account()
     backend = provider.get_backend(backend_full_name)
@@ -87,12 +84,8 @@ def measure_T1(backend_name):
     backend_defaults = backend.defaults()
     backend_config = backend.configuration()
 
-    center_frequency_Hz = backend_defaults.qubit_freq_est[qubit]
     q_freq = [backend_defaults.qubit_freq_est[q] for q in range(num_qubits)]
     dt = backend_config.dt
-
-
-    rough_qubit_frequency = center_frequency_Hz # 4962284031.287086 Hz
 
     pulse_type = "gauss"
     max_experiments_per_job = 100
@@ -123,7 +116,7 @@ def measure_T1(backend_name):
     for q in range(num_qubits):
         with pulse.build(backend=backend, default_alignment='sequential', name=f"calibrate_area_q{q}") as sched[q]:
             dur_dt = duration
-            pulse.set_frequency(q_freq[q], drive_chan)
+            pulse.set_frequency(q_freq[q], dc[q])
             if pulse_type == "sq" or "sin" in pulse_type:
                 pulse_played = pulse_dict[pulse_type](
                     duration=dur_dt,
@@ -154,7 +147,7 @@ def measure_T1(backend_name):
                     sigma=sigma,
                     zero_ends=remove_bg
                 )
-            pulse.play(pulse_played, drive_chan)
+            pulse.play(pulse_played, dc[q])
 
         pi_gates[q] = Gate(f"rabi{q}", 1, [amp])
         base_circ.append(pi_gates[q], [q])
@@ -162,7 +155,7 @@ def measure_T1(backend_name):
     for q in range(num_qubits):
         base_circ.add_calibration(
             pi_gates[q], 
-            (qubit,), 
+            (q,), 
             sched[q], 
             [amp]
         )
@@ -286,4 +279,4 @@ def measure_T1(backend_name):
     plt.ylabel('Signal [a.u.]', fontsize=15)
     plt.legend()
     plt.show()
-measure_T1("manila")
+measure_T1("nairobi")
