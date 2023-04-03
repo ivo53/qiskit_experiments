@@ -25,6 +25,26 @@ def make_all_dirs(path):
 def get_closest_multiple_of_16(num):
     return int(num + 8) - (int(num + 8) % 16)
 
+def add_entry_and_remove_duplicates(df, new_entry, cols_to_check=["pulse_type", "duration", "sigma", "rb"]):
+    # Define a function to check if two rows have the same values in the specified columns
+    def rows_match(row1, row2, cols):
+        for col in cols:
+            if row1[col] != row2.at[0, col]:
+                return False
+        return True
+    
+    # Find rows in the DataFrame that have the same values in the specified columns as the new entry
+    matching_rows = df.apply(lambda row: rows_match(row, new_entry, cols_to_check), axis=1)
+    
+    if matching_rows.any():
+        # Remove old entries that have the same values in the specified columns as the new entry
+        df = df[~matching_rows]
+        
+    # Add the new entry to the DataFrame
+    df = pd.concat([df, new_entry], ignore_index=True)
+    
+    return df
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-pt", "--pulse_type", default="gauss", type=str,

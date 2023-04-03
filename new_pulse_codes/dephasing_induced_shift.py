@@ -24,7 +24,8 @@ def make_all_dirs(path):
             os.mkdir(folder)
 
 def get_closest_multiple_of_16(num):
-    return int(num + 8) - (int(num + 8) % 16)
+    numplus8 = (num + 8).astype(int)
+    return numplus8 - (numplus8 % 16)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -144,7 +145,7 @@ if __name__ == "__main__":
     fit_crop_parameter = int(fit_crop * len(amplitudes))
 
     sigmas = np.linspace(initial_sigma, final_sigma, num_sigma)
-    durations = sigmas.astype("int") if "sin" in pulse_type else sigmas.astype("int") * 8
+    durations = get_closest_multiple_of_16(sigmas.astype("int")) if "sin" in pulse_type else get_closest_multiple_of_16(sigmas.astype("int") * 8)
 
     print(f"The resonant frequency is assumed to be {np.round(rough_qubit_frequency / GHz, 5)} GHz.")
     print(f"The dephasing experiment will start from amp {amplitudes[0]} "

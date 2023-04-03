@@ -52,7 +52,7 @@ def get_calib_params(
             lambda row: row["pulse_type"] == pulse_type and \
                 row["duration"] == duration and \
                 row["sigma"] == sigma and \
-                row["rb"] == rb, axis=1)]
+                row["rb"] == remove_bg, axis=1)]
     # print(df)
     idx = 0 
     if df.shape[0] > 1:
@@ -79,8 +79,8 @@ def initialize_backend(backend):
     mem_slot = 0
 
     drive_chan = pulse.DriveChannel(qubit)
-    meas_chan = pulse.MeasureChannel(qubit)
-    acq_chan = pulse.AcquireChannel(qubit)
+    # meas_chan = pulse.MeasureChannel(qubit)
+    # acq_chan = pulse.AcquireChannel(qubit)
     
     backend_name = backend
     provider = IBMQ.load_account()
@@ -90,10 +90,12 @@ def initialize_backend(backend):
     backend_config = backend.configuration()
 
     center_frequency_Hz = backend_defaults.qubit_freq_est[qubit]# 4962284031.287086 Hz
+    num_qubits = backend_config.n_qubits
+
     q_freq = [backend_defaults.qubit_freq_est[q] for q in range(num_qubits)]
     dt = backend_config.dt
-    num_qubits = backend_config.n_qubits
-    return backend, num_qubits, q_freq
+
+    return backend, drive_chan, num_qubits, q_freq
 
 def fit_function(
     x_values, 
@@ -118,21 +120,26 @@ def linear_func(x, a, b):
     return a * x + b
 
 def run_check(
-    closest_amp, amp_span,
+    amp_span,
     duration, sigma, pulse_type, remove_bg,
     num_exp=10, N_max=100,
     N_interval=2, max_exp_per_job=50,
     num_shots=1024, backend="manila",
-    span=0.01, l=100, p=0.5, x0=0
+    l=100, p=0.5, x0=0,
+    closest_amp=None
 ):
+    backend, drive_chan, num_qubits, q_freq = initialize_backend(backend)
+    if closest_amp is None:
+        closest_amp = -np.log(1 - np.pi / l) / p + x0
     amplitudes = np.linspace(
         closest_amp - amp_span / 2,
         closest_amp + amp_span / 2,
         num_exp
     )
-    base_circ = QuantumCircuit(num_qubits, 1)
+    Ns = np.arange(0, N_max + N_interval / 2, N_interval, dtype="int64")
+    base_circ = QuantumCircuit(num_qubits, len(Ns))
     amp = Parameter("amp")
-    N = Parameter("N")
+    # N = Parameter("N")
     with pulse.build(backend=backend, default_alignment='sequential', name=f"calibration_with_N_pulses") as sched:
         pulse.set_frequency(q_freq[qubit], drive_chan)
         if pulse_type == "sq" or "sin" in pulse_type:
@@ -165,18 +172,21 @@ def run_check(
                 sigma=sigma,
                 zero_ends=remove_bg
             )
-        for _ in range(N):
-            pulse.play(pulse_played, drive_chan)
+        pulse.play(pulse_played, drive_chan)
 
-    custom_gate = Gate("N_pulses", 1, [amp, N])
-    base_circ.append(custom_gate, [qubit])
-    base_circ.measure(qubit, 0)
-    base_circ.add_calibration(custom_gate, (qubit,), sched, [amp, N])
+    custom_gate = Gate("N_pulses", 1, [amp])
+    for i, N in enumerate(Ns):
+        for _ in range(N):
+            base_circ.append(custom_gate, [qubit])
+        base_circ.measure(qubit, i)
+        base_circ.reset(qubit)
+    
+    base_circ.add_calibration(custom_gate, (qubit,), sched, [amp])
     circs = [
         base_circ.assign_parameters(
-            {amp: a, N: n},
+            {amp: a},
             inplace=False
-        ) for a in amplitudes for n in range(0, N_max + 1, N_interval)
+        ) for a in amplitudes
     ]
 
     max_experiments_per_job = 100
@@ -190,14 +200,19 @@ def run_check(
         max_experiments_per_job=max_experiments_per_job,
         shots=num_shots
     )
-    frequency_sweep_results = job.results()
+    N_pulse_cal_results = job.results()
 
     sweep_values = []
     for i in range(len(circs)):
-        counts = frequency_sweep_results.get_counts(i)["1"]
-        sweep_values.append(counts / num_shots)
+        counts = N_pulse_cal_results.get_counts(i)
+        exp_values = np.zeros((len(Ns)), dtype="int64")
+        for k in counts.keys():
+            for i, meas in enumerate(k):
+                if int(meas) == 0:
+                    exp_values[i] += counts[k]
+        sweep_values.extend(exp_values / num_shots)
     print(N, np.array(sweep_values).reshape(np.round(N_max / N_interval + 1).astype(np.int64), len(amplitudes)))
-    return N, np.array(sweep_values).reshape(np.round(N_max / N_interval + 1).astype(np.int64), len(amplitudes))
+    return Ns, np.array(sweep_values).reshape(np.round(N_max / N_interval + 1).astype(np.int64), len(amplitudes))
 
 
 def find_least_variation(x, ys, init_params=[1, 1], bounds=[[-100, -100],[100, 100]]):
@@ -206,7 +221,7 @@ def find_least_variation(x, ys, init_params=[1, 1], bounds=[[-100, -100],[100, 1
         par, y_fit = fit_function(x, y, linear_func, init_params, bounds)
         y_fits.append(y_fit)
     y_fits = np.array(y_fits)
-    diff = np.mean(np.abs(ys - y_fits), axis=1)
+    diff = np.mean(np.abs(ys - y_fits[:, None]), axis=1)
     closest_idx = np.argmin(diff)
     return closest_idx
 
@@ -216,7 +231,7 @@ if __name__ == "__main__":
         help="Pulse type (e.g. sq, gauss, sine, sech etc.)")
     parser.add_argument("-q", "--qubit", default=0, type=int,
         help="The number of the qubit to be used.")
-    parser.add_argument("-a", "--closest_amp", default=0.05, type=float,
+    parser.add_argument("-a", "--closest_amp", default=None, type=float,
         help="First amp to use (should be close to PI area).")   
     parser.add_argument("-s", "--sigma", default=180, type=float,
         help="Pulse width (sigma) parameter")    
@@ -253,7 +268,7 @@ if __name__ == "__main__":
     num_shots = args.num_shots
     num_exp = args.num_experiments
     backend = args.backend
-    span = args.span
+    amp_span = args.span
 
     l, p, x0 = get_calib_params(
         backend, pulse_type, 
@@ -262,14 +277,15 @@ if __name__ == "__main__":
     )
     for i in range(3):
         x, ys = run_check(
-            closest_amp, amp_span / (10**i), 
+            amp_span / (10**i), 
             duration, sigma, 
             pulse_type, remove_bg,
             num_exp=num_exp,
             N_max=N_max, N_interval=N_interval,
             max_exp_per_job=max_experiments_per_job,
             num_shots=num_shots, 
-            backend=backend, span=span,
-            l=l, p=p, x0=x0)
+            backend=backend,
+            l=l, p=p, x0=x0,
+            closest_amp=closest_amp)
         index = find_least_variation(x, ys)
         closest_amp = x[index]
