@@ -1,0 +1,5 @@
+from qiskit_ibm_provider import IBMProvider
+
+token = "8101a614f30c5e4c81fe66c0b0112c248822142820637f4115be226081d8414ce0b0631d6af9ca131162e07259b9a4217ce0d63d13b9f68e05c272eb6b5ffa95"
+
+IBMProvider.save_account(token)
