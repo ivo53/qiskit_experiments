@@ -7,15 +7,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from scipy.optimize import curve_fit
-from qiskit import pulse, IBMQ, QuantumCircuit
+from qiskit import pulse, IBMQ, QuantumCircuit, QuantumRegister, ClassicalRegister
 from qiskit.circuit import Parameter, Gate
 # This Pulse module helps us build sampled pulses for common pulse shapes
 from qiskit.pulse import library as pulse_lib
 from qiskit.tools.monitor import job_monitor
 from qiskit.providers.ibmq.managed import IBMQJobManager
-from qiskit_ibm_provider import IBMProvider
-
-from ..pulse_types import *
 
 def make_all_dirs(path):
     path = path.replace("\\", "/")
@@ -100,18 +97,18 @@ if __name__ == "__main__":
         if backend in ["perth", "lagos", "nairobi", "oslo"] \
             else "ibmq_" + backend
     pulse_dict = {
-        "gauss": [Gaussian, LiftedGaussian],
-        "lor": [Lorentzian, LiftedLorentzian],
-        "lor2": [Lorentzian2, LiftedLorentzian2],
-        "lor3": [Lorentzian3, LiftedLorentzian3],
-        "sq": [Constant, Constant],
-        "sech": [Sech, LiftedSech],
-        "sech2": [Sech2, LiftedSech2],
-        "sin": [Sine, Sine],
-        "sin2": [Sine2, Sine2],
-        "sin3": [Sine3, Sine3],
-        "sin4": [Sine4, Sine4],
-        "sin5": [Sine5, Sine5],
+        "gauss": pulse_lib.Gaussian,
+        "lor": pulse_lib.Lorentzian,
+        "lor2": pulse_lib.LorentzianSquare,
+        "lor3": pulse_lib.LorentzianCube,
+        "sq": pulse_lib.Constant,
+        "sech": pulse_lib.Sech,
+        "sech2": pulse_lib.SechSquare,
+        "sin": pulse_lib.Sine,
+        "sin2": pulse_lib.SineSquare,
+        "sin3": pulse_lib.SineCube,
+        "sin4": pulse_lib.SineFourthPower,
+        "sin5": pulse_lib.SineFifthPower,
     }
     ## create folder where plots are saved
     file_dir = os.path.dirname(__file__)
@@ -141,7 +138,7 @@ if __name__ == "__main__":
     meas_chan = pulse.MeasureChannel(qubit)
     acq_chan = pulse.AcquireChannel(qubit)
 
-    provider = IBMProvider.load_account()
+    provider = IBMQ.load_account()
     backend = provider.get_backend(backend)
     # backend_name = str(backend)
     print(f"Using {backend_name} backend.")
@@ -172,31 +169,34 @@ if __name__ == "__main__":
         dur_dt = duration
         pulse.set_frequency(rough_qubit_frequency, drive_chan)
         if pulse_type == "sq" or "sin" in pulse_type:
-            pulse_played = pulse_dict[pulse_type][remove_bg](
+            pulse_played = pulse_dict[pulse_type](
                 duration=dur_dt,
                 amp=amp,
                 name=pulse_type
             )
         elif pulse_type == "gauss":
-            pulse_played = pulse_dict[pulse_type][remove_bg](
+            pulse_played = pulse_dict[pulse_type](
                 duration=dur_dt,
                 amp=amp,
                 name=pulse_type,
-                sigma=sigma / np.sqrt(2)
+                sigma=sigma / np.sqrt(2),
+                zero_ends=remove_bg
             )
         elif pulse_type in ["lor", "lor2", "lor3"]:
-            pulse_played = pulse_dict[pulse_type][remove_bg](
+            pulse_played = pulse_dict[pulse_type](
                 duration=dur_dt,
                 amp=amp,
                 name=pulse_type,
-                sigma=sigma,
+                gamma=sigma,
+                zero_ends=remove_bg
             )
         else:
-            pulse_played = pulse_dict[pulse_type][remove_bg](
+            pulse_played = pulse_dict[pulse_type](
                 duration=dur_dt,
                 amp=amp,
                 name=pulse_type,
                 sigma=sigma,
+                zero_ends=remove_bg
             )
         pulse.play(pulse_played, drive_chan)
 
