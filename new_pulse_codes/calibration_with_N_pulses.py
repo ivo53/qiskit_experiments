@@ -1,4 +1,5 @@
 import os
+import sys
 import argparse
 from copy import deepcopy
 from datetime import datetime
@@ -21,20 +22,28 @@ from qiskit.pulse import Delay,Play
 # This Pulse module helps us build sampled pulses for common pulse shapes
 from qiskit.pulse import library as pulse_lib
 from qiskit.providers.ibmq.managed import IBMQJobManager
+from qiskit_ibm_provider import IBMProvider
+
+current_dir = os.path.dirname(__file__)
+package_path = os.path.abspath(os.path.split(current_dir)[0])
+sys.path.insert(0, package_path)
+
+from pulse_types import *
+
 
 pulse_dict = {
-    "gauss": pulse_lib.Gaussian,
-    "lor": pulse_lib.Lorentzian,
-    "lor2": pulse_lib.LorentzianSquare,
-    "lor3": pulse_lib.LorentzianCube,
-    "sq": pulse_lib.Constant,
-    "sech": pulse_lib.Sech,
-    "sech2": pulse_lib.SechSquare,
-    "sin": pulse_lib.Sine,
-    "sin2": pulse_lib.SineSquare,
-    "sin3": pulse_lib.SineCube,
-    "sin4": pulse_lib.SineFourthPower,
-    "sin5": pulse_lib.SineFifthPower,
+    "gauss": [Gaussian, LiftedGaussian],
+    "lor": [Lorentzian, LiftedLorentzian],
+    "lor2": [Lorentzian2, LiftedLorentzian2],
+    "lor3": [Lorentzian3, LiftedLorentzian3],
+    "sq": [Constant, Constant],
+    "sech": [Sech, LiftedSech],
+    "sech2": [Sech2, LiftedSech2],
+    "sin": [Sine, Sine],
+    "sin2": [Sine2, Sine2],
+    "sin3": [Sine3, Sine3],
+    "sin4": [Sine4, Sine4],
+    "sin5": [Sine5, Sine5],
 }
 
 def get_calib_params(
@@ -143,34 +152,31 @@ def run_check(
     with pulse.build(backend=backend, default_alignment='sequential', name=f"calibration_with_N_pulses") as sched:
         pulse.set_frequency(q_freq[qubit], drive_chan)
         if pulse_type == "sq" or "sin" in pulse_type:
-            pulse_played = pulse_dict[pulse_type](
+            pulse_played = pulse_dict[pulse_type][remove_bg](
                 duration=duration,
                 amp=amp,
                 name=pulse_type
             )
         elif pulse_type == "gauss":
-            pulse_played = pulse_dict[pulse_type](
+            pulse_played = pulse_dict[pulse_type][remove_bg](
                 duration=duration,
                 amp=amp,
                 name=pulse_type,
                 sigma=sigma / np.sqrt(2),
-                zero_ends=remove_bg
             )
         elif pulse_type in ["lor", "lor2", "lor3"]:
-            pulse_played = pulse_dict[pulse_type](
-                duration=duration,
-                amp=amp,
-                name=pulse_type,
-                gamma=sigma,
-                zero_ends=remove_bg
-            )
-        else:
-            pulse_played = pulse_dict[pulse_type](
+            pulse_played = pulse_dict[pulse_type][remove_bg](
                 duration=duration,
                 amp=amp,
                 name=pulse_type,
                 sigma=sigma,
-                zero_ends=remove_bg
+            )
+        else:
+            pulse_played = pulse_dict[pulse_type][remove_bg](
+                duration=duration,
+                amp=amp,
+                name=pulse_type,
+                sigma=sigma,
             )
         pulse.play(pulse_played, drive_chan)
 

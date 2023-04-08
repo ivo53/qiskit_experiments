@@ -1,4 +1,5 @@
 import os
+import sys
 import pickle
 import argparse
 import itertools
@@ -14,6 +15,14 @@ from qiskit.circuit import Parameter, Gate
 from qiskit.pulse import library as pulse_lib
 from qiskit.tools.monitor import job_monitor
 from qiskit.providers.ibmq.managed import IBMQJobManager
+from qiskit_ibm_provider import IBMProvider
+
+current_dir = os.path.dirname(__file__)
+package_path = os.path.abspath(os.path.split(current_dir)[0])
+sys.path.insert(0, package_path)
+
+from pulse_types import *
+
 
 def make_all_dirs(path):
     path = path.replace("\\", "/")
@@ -82,18 +91,18 @@ if __name__ == "__main__":
         if backend in ["perth", "lagos", "nairobi", "oslo"] \
             else "ibmq_" + backend
     pulse_dict = {
-        "gauss": pulse_lib.Gaussian,
-        "lor": pulse_lib.Lorentzian,
-        "lor2": pulse_lib.LorentzianSquare,
-        "lor3": pulse_lib.LorentzianCube,
-        "sq": pulse_lib.Constant,
-        "sech": pulse_lib.Sech,
-        "sech2": pulse_lib.SechSquare,
-        "sin": pulse_lib.Sine,
-        "sin2": pulse_lib.SineSquare,
-        "sin3": pulse_lib.SineCube,
-        "sin4": pulse_lib.SineFourthPower,
-        "sin5": pulse_lib.SineFifthPower,
+        "gauss": [Gaussian, LiftedGaussian],
+        "lor": [Lorentzian, LiftedLorentzian],
+        "lor2": [Lorentzian2, LiftedLorentzian2],
+        "lor3": [Lorentzian3, LiftedLorentzian3],
+        "sq": [Constant, Constant],
+        "sech": [Sech, LiftedSech],
+        "sech2": [Sech2, LiftedSech2],
+        "sin": [Sine, Sine],
+        "sin2": [Sine2, Sine2],
+        "sin3": [Sine3, Sine3],
+        "sin4": [Sine4, Sine4],
+        "sin5": [Sine5, Sine5],
     }
     ## create folder where plots are saved
     file_dir = os.path.dirname(__file__)
@@ -101,12 +110,8 @@ if __name__ == "__main__":
     date = datetime.now()
     current_date = date.strftime("%Y-%m-%d")
     calib_dir = os.path.join(file_dir, "calibrations")
-    save_dir = os.path.join(calib_dir, current_date)
-    # if not os.path.isdir(save_dir):
-    #     os.mkdir(save_dir)
-    data_folder = os.path.join(file_dir, "data", backend_name, "calibration", current_date)
-    # if not os.path.isdir(data_folder):
-    #     os.mkdir(data_folder)
+    save_dir = os.path.join(file_dir, "plots", backend_name, "dephasing_induced_shift", current_date)
+    data_folder = os.path.join(file_dir, "data", backend_name, "dephasing_induced_shift", current_date)
     make_all_dirs(save_dir)
     make_all_dirs(data_folder)
 
@@ -161,34 +166,31 @@ if __name__ == "__main__":
     with pulse.build(backend=backend, default_alignment='sequential', name="dephasing_inducing_gate") as sched:
         pulse.set_frequency(rough_qubit_frequency, drive_chan)
         if pulse_type == "sq" or "sin" in pulse_type:
-            pulse_played = pulse_dict[pulse_type](
+            pulse_played = pulse_dict[pulse_type][remove_bg](
                 duration=duration,
                 amp=amp,
                 name=pulse_type
             )
         elif pulse_type == "gauss":
-            pulse_played = pulse_dict[pulse_type](
+            pulse_played = pulse_dict[pulse_type][remove_bg](
                 duration=duration,
                 amp=amp,
                 name=pulse_type,
                 sigma=sigma / np.sqrt(2),
-                zero_ends=remove_bg
             )
         elif pulse_type in ["lor", "lor2", "lor3"]:
-            pulse_played = pulse_dict[pulse_type](
-                duration=duration,
-                amp=amp,
-                name=pulse_type,
-                gamma=sigma,
-                zero_ends=remove_bg
-            )
-        else:
-            pulse_played = pulse_dict[pulse_type](
+            pulse_played = pulse_dict[pulse_type][remove_bg](
                 duration=duration,
                 amp=amp,
                 name=pulse_type,
                 sigma=sigma,
-                zero_ends=remove_bg
+            )
+        else:
+            pulse_played = pulse_dict[pulse_type][remove_bg](
+                duration=duration,
+                amp=amp,
+                name=pulse_type,
+                sigma=sigma,
             )
         pulse.play(pulse_played, drive_chan)
     
@@ -254,5 +256,5 @@ if __name__ == "__main__":
         plt.xlabel("Pulse width $\sigma$ [dt]")
         plt.ylabel("Transition Probability")
         plt.title(f"Dephasing-induced decoherence for amplitude {am.round(3)}")
-        plt.savefig(os.path.join(folder_name, f"deph_induced_shift_amp-{am.round(3)}.png").replace("\\","/"))
+        plt.savefig(os.path.join(save_dir, f"deph_induced_shift_amp-{am.round(3)}.png").replace("\\","/"))
         plt.close()

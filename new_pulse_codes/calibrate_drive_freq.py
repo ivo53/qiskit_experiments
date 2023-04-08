@@ -1,4 +1,5 @@
 import os
+import sys
 import argparse
 from copy import deepcopy
 from datetime import datetime
@@ -21,6 +22,14 @@ from qiskit.pulse import Delay,Play
 # This Pulse module helps us build sampled pulses for common pulse shapes
 from qiskit.pulse import library as pulse_lib
 from qiskit.providers.ibmq.managed import IBMQJobManager
+from qiskit_ibm_provider import IBMProvider
+
+current_dir = os.path.dirname(__file__)
+package_path = os.path.abspath(os.path.split(current_dir)[0])
+sys.path.insert(0, package_path)
+
+from pulse_types import *
+
 
 def make_all_dirs(path):
     path = path.replace("\\", "/")
@@ -34,19 +43,20 @@ def get_closest_multiple_of_16(num):
     return int(num + 8) - (int(num + 8) % 16)
 
 pulse_dict = {
-    "gauss": pulse_lib.Gaussian,
-    "lor": pulse_lib.Lorentzian,
-    "lor2": pulse_lib.LorentzianSquare,
-    "lor3": pulse_lib.LorentzianCube,
-    "sq": pulse_lib.Constant,
-    "sech": pulse_lib.Sech,
-    "sech2": pulse_lib.SechSquare,
-    "sin": pulse_lib.Sine,
-    "sin2": pulse_lib.SineSquare,
-    "sin3": pulse_lib.SineCube,
-    "sin4": pulse_lib.SineFourthPower,
-    "sin5": pulse_lib.SineFifthPower,
-    }
+    "gauss": [Gaussian, LiftedGaussian],
+    "lor": [Lorentzian, LiftedLorentzian],
+    "lor2": [Lorentzian2, LiftedLorentzian2],
+    "lor3": [Lorentzian3, LiftedLorentzian3],
+    "sq": [Constant, Constant],
+    "sech": [Sech, LiftedSech],
+    "sech2": [Sech2, LiftedSech2],
+    "sin": [Sine, Sine],
+    "sin2": [Sine2, Sine2],
+    "sin3": [Sine3, Sine3],
+    "sin4": [Sine4, Sine4],
+    "sin5": [Sine5, Sine5],
+}
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -90,7 +100,7 @@ if __name__ == "__main__":
     sigma = args.sigma
     duration = get_closest_multiple_of_16(args.duration)
     cutoff = args.cutoff
-    rb = args.remove_bg
+    remove_bg = args.remove_bg
     control_param = args.control_param
     max_experiments_per_job = args.max_experiments_per_job
     num_shots = args.num_shots
@@ -125,7 +135,7 @@ if __name__ == "__main__":
             lambda row: row["pulse_type"] == pulse_type and \
                 row["duration"] == duration and \
                 row["sigma"] == sigma and \
-                row["rb"] == rb, axis=1)]
+                row["rb"] == remove_bg, axis=1)]
     print(df)
     if df.shape[0] != 1:
         raise ValueError("More than one identical entry found!")
@@ -168,34 +178,31 @@ if __name__ == "__main__":
         dur_dt = duration
         pulse.set_frequency(freq, drive_chan)
         if pulse_type == "sq" or "sin" in pulse_type:
-            pulse_played = pulse_dict[pulse_type](
-                duration=dur_dt,
+            pulse_played = pulse_dict[pulse_type][remove_bg](
+                duration=duration,
                 amp=amp,
                 name=pulse_type
             )
         elif pulse_type == "gauss":
-            pulse_played = pulse_dict[pulse_type](
-                duration=dur_dt,
+            pulse_played = pulse_dict[pulse_type][remove_bg](
+                duration=duration,
                 amp=amp,
                 name=pulse_type,
                 sigma=sigma / np.sqrt(2),
-                zero_ends=rb
             )
         elif pulse_type in ["lor", "lor2", "lor3"]:
-            pulse_played = pulse_dict[pulse_type](
-                duration=dur_dt,
-                amp=amp,
-                name=pulse_type,
-                gamma=sigma,
-                zero_ends=rb
-            )
-        else:
-            pulse_played = pulse_dict[pulse_type](
-                duration=dur_dt,
+            pulse_played = pulse_dict[pulse_type][remove_bg](
+                duration=duration,
                 amp=amp,
                 name=pulse_type,
                 sigma=sigma,
-                zero_ends=rb
+            )
+        else:
+            pulse_played = pulse_dict[pulse_type][remove_bg](
+                duration=duration,
+                amp=amp,
+                name=pulse_type,
+                sigma=sigma,
             )
         pulse.play(pulse_played, drive_chan)
 

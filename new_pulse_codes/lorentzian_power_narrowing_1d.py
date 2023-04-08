@@ -1,4 +1,5 @@
 import os
+import sys
 import pickle
 from datetime import datetime
 from copy import deepcopy
@@ -14,6 +15,14 @@ from qiskit.scheduler import measure
 from qiskit import assemble
 from qiskit.tools.monitor import job_monitor
 from qiskit.providers.ibmq.managed import IBMQJobManager
+from qiskit_ibm_provider import IBMProvider
+
+current_dir = os.path.dirname(__file__)
+package_path = os.path.abspath(os.path.split(current_dir)[0])
+sys.path.insert(0, package_path)
+
+from pulse_types import *
+
 
 backend_name = "manila"
 
@@ -168,14 +177,14 @@ amp = Parameter('amp')
 with pulse.build(backend=backend, default_alignment='sequential', name="lorentz_2d") as sched:
     
     pulse.set_frequency(freq_off, drive_chan)
-    pulse.play(
-        pulse_lib.Lorentzian(
+    lor_pulse = Lorentzian(
             duration=dur_dt,
             amp=amp,
-            gamma=G,
-            name='lor_pulse',
-            zero_ends=False
-        ),
+            sigma=G,
+            name='lor_pulse'
+    )
+    pulse.play(
+        lor_pulse,
         drive_chan
     )
     # Create the frequency settings for the sweep (MUST BE IN HZ)
