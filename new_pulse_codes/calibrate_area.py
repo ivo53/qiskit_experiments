@@ -18,7 +18,6 @@ from qiskit_ibm_provider import IBMProvider
 
 current_dir = os.path.dirname(__file__)
 package_path = os.path.abspath(os.path.split(current_dir)[0])
-print(package_path)
 sys.path.insert(0, package_path)
 
 from pulse_types import *
@@ -150,7 +149,7 @@ if __name__ == "__main__":
     # provider = IBMQ.load_account()
     # backend = provider.get_backend(backend)
     backend = IBMProvider().get_backend(backend)
-    # backend_name = str(backend)
+
     print(f"Using {backend_name} backend.")
     backend_defaults = backend.defaults()
     backend_config = backend.configuration()
@@ -229,7 +228,9 @@ if __name__ == "__main__":
     #     shots=num_shots_per_exp,
     #     max_experiments_per_job=max_experiments_per_job
     # )
-    backend._max_circuits = max_experiments_per_job
+    # pi_sweep_results = pi_job.results()
+
+    # backend._max_circuits = max_experiments_per_job
     pi_job = backend.run(
         circs,
         shots=num_shots_per_exp
