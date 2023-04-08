@@ -1,4 +1,5 @@
 import os
+import sys
 import pickle
 import argparse
 from datetime import datetime
@@ -15,11 +16,16 @@ from qiskit.tools.monitor import job_monitor
 from qiskit.providers.ibmq.managed import IBMQJobManager
 from qiskit_ibm_provider import IBMProvider
 
-from ..pulse_types import *
+current_dir = os.path.dirname(__file__)
+package_path = os.path.abspath(os.path.split(current_dir)[0])
+print(package_path)
+sys.path.insert(0, package_path)
+
+from pulse_types import *
 
 def make_all_dirs(path):
     path = path.replace("\\", "/")
-    folders = path.split("/")
+    folders = path.split("/")  
     for i in range(2, len(folders) + 1):
         folder = "/".join(folders[:i])
         if not os.path.isdir(folder):
@@ -91,7 +97,7 @@ if __name__ == "__main__":
     num_exp = args.num_experiments
     backend = args.backend
     max_experiments_per_job = args.max_experiments_per_job
-    remove_bg = bool(args.remove_bg)
+    remove_bg = int(args.remove_bg)
     pulse_type = args.pulse_type
     l = args.l
     p = args.p
@@ -141,8 +147,9 @@ if __name__ == "__main__":
     meas_chan = pulse.MeasureChannel(qubit)
     acq_chan = pulse.AcquireChannel(qubit)
 
-    provider = IBMProvider.load_account()
-    backend = provider.get_backend(backend)
+    # provider = IBMQ.load_account()
+    # backend = provider.get_backend(backend)
+    backend = IBMProvider().get_backend(backend)
     # backend_name = str(backend)
     print(f"Using {backend_name} backend.")
     backend_defaults = backend.defaults()
@@ -215,15 +222,19 @@ if __name__ == "__main__":
     # rabi_schedule = qiskit.schedule(circs[-1], backend)
     # rabi_schedule.draw(backend=backend)
     
-    job_manager = IBMQJobManager()
-    pi_job = job_manager.run(
+    # job_manager = IBMQJobManager()
+    # pi_job = job_manager.run(
+    #     circs,
+    #     backend=backend,
+    #     shots=num_shots_per_exp,
+    #     max_experiments_per_job=max_experiments_per_job
+    # )
+    backend._max_circuits = max_experiments_per_job
+    pi_job = backend.run(
         circs,
-        backend=backend,
-        shots=num_shots_per_exp,
-        max_experiments_per_job=max_experiments_per_job
+        shots=num_shots_per_exp
     )
-
-    pi_sweep_results = pi_job.results()
+    pi_sweep_results = pi_job.result()
 
     pi_sweep_values = []
 
