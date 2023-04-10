@@ -8,20 +8,20 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from scipy.optimize import curve_fit
-from qiskit import pulse, IBMQ, QuantumCircuit
+from qiskit import pulse, IBMQ, QuantumCircuit, transpile
 from qiskit.circuit import Parameter, Gate
 # This Pulse module helps us build sampled pulses for common pulse shapes
-from qiskit.pulse import library as pulse_lib
+# from qiskit.pulse import library as pulse_lib
 from qiskit.tools.monitor import job_monitor
-from qiskit.providers.ibmq.managed import IBMQJobManager
+# from qiskit.providers.ibmq.managed import IBMQJobManager
 from qiskit_ibm_provider import IBMProvider
+# from qiskit_ibm_provider import IBMProvider
 
 current_dir = os.path.dirname(__file__)
 package_path = os.path.abspath(os.path.split(current_dir)[0])
 sys.path.insert(0, package_path)
 
-from pulse_types import *
-
+import pulse_types as pt
 def make_all_dirs(path):
     path = path.replace("\\", "/")
     folders = path.split("/")  
@@ -85,6 +85,8 @@ if __name__ == "__main__":
         help="The initial value of the l fit param.")
     parser.add_argument("-p", "--p", default=0.5, type=float,
         help="The initial value of the p fit param.")
+    parser.add_argument("-sv", "--save", default=0, type=int,
+        help="Whether to save the results from the fit (0 or 1).")
     args = parser.parse_args()
     # cutoff = args.cutoff
     lor_G = args.sigma
@@ -100,23 +102,25 @@ if __name__ == "__main__":
     pulse_type = args.pulse_type
     l = args.l
     p = args.p
+    save = bool(args.save)
     backend_name = backend
     backend = "ibm_" + backend \
         if backend in ["perth", "lagos", "nairobi", "oslo"] \
             else "ibmq_" + backend
     pulse_dict = {
-        "gauss": [Gaussian, LiftedGaussian],
-        "lor": [Lorentzian, LiftedLorentzian],
-        "lor2": [Lorentzian2, LiftedLorentzian2],
-        "lor3": [Lorentzian3, LiftedLorentzian3],
-        "sq": [Constant, Constant],
-        "sech": [Sech, LiftedSech],
-        "sech2": [Sech2, LiftedSech2],
-        "sin": [Sine, Sine],
-        "sin2": [Sine2, Sine2],
-        "sin3": [Sine3, Sine3],
-        "sin4": [Sine4, Sine4],
-        "sin5": [Sine5, Sine5],
+        "gauss": [pt.Gaussian, pt.LiftedGaussian],
+        "lor": [pt.Lorentzian, pt.LiftedLorentzian],
+        "lor2": [pt.Lorentzian2, pt.LiftedLorentzian2],
+        "lor3": [pt.Lorentzian3, pt.LiftedLorentzian3],
+        "sq": [pt.Constant, pt.Constant],
+        "sech": [pt.Sech, pt.LiftedSech],
+        "sech2": [pt.Sech2, pt.LiftedSech2],
+        "sin": [pt.Sine, pt.Sine],
+        "sin2": [pt.Sine2, pt.Sine2],
+        "sin3": [pt.Sine3, pt.Sine3],
+        "sin4": [pt.Sine4, pt.Sine4],
+        "sin5": [pt.Sine5, pt.Sine5],
+        "demkov": [pt.Demkov, pt.LiftedDemkov],
     }
     ## create folder where plots are saved
     file_dir = os.path.dirname(__file__)
@@ -146,20 +150,37 @@ if __name__ == "__main__":
     meas_chan = pulse.MeasureChannel(qubit)
     acq_chan = pulse.AcquireChannel(qubit)
 
+    # # with real provider
     # provider = IBMQ.load_account()
     # backend = provider.get_backend(backend)
+    
     backend = IBMProvider().get_backend(backend)
-
+    # print(backend)
+    print(backend.options)
+    # print(backend.status())
+    # print(backend.config())
+    # print(backend._default_options())
+    # #
+    # # with Fake provider only
+    # backend = FakeManilaV2()
+    # # 
     print(f"Using {backend_name} backend.")
+    # with real provider
     backend_defaults = backend.defaults()
     backend_config = backend.configuration()
-
+    
     center_frequency_Hz = backend_defaults.qubit_freq_est[qubit]
     dt = backend_config.dt
-
-
+    print(dt, center_frequency_Hz)
+    #
+    # # with Fake provider only
+    # center_frequency_Hz = backend.qubit_properties(qubit).frequency
+    # print(center_frequency_Hz)
+    # dt = backend.dt
+    # print(dt)
+    # #
     rough_qubit_frequency = center_frequency_Hz # 4962284031.287086 Hz
-
+    
     ## set params
     fit_crop = 1#.8
     amplitudes = np.linspace(
@@ -210,17 +231,18 @@ if __name__ == "__main__":
     pi_gate = Gate("rabi", 1, [amp])
     base_circ = QuantumCircuit(1, 1)
     base_circ.append(pi_gate, [0])
-    base_circ.measure(0, 0)
     base_circ.add_calibration(pi_gate, (qubit,), sched, [amp])
+    base_circ.measure(0, 0)
     circs = [
-        base_circ.assign_parameters(
+        transpile(base_circ.assign_parameters(
                 {amp: a},
                 inplace=False
-        ) for a in amplitudes]
+        ), backend=backend) for a in amplitudes]
 
-    # rabi_schedule = qiskit.schedule(circs[-1], backend)
+    # rabi_schedule = schedule(circs[-1], backend)
     # rabi_schedule.draw(backend=backend)
-    
+
+    # # with real provider    
     # job_manager = IBMQJobManager()
     # pi_job = job_manager.run(
     #     circs,
@@ -229,6 +251,17 @@ if __name__ == "__main__":
     #     max_experiments_per_job=max_experiments_per_job
     # )
     # pi_sweep_results = pi_job.results()
+    # print("Job ID:", pi_job.job_set_id())
+    # #
+    # # with Fake provider only
+    # pi_job = backend.run(
+    #     circs,
+    #     backend=backend,
+    #     shots=num_shots_per_exp
+    # )
+    # print("Job ID:", pi_job.job_id())
+    # pi_sweep_results = pi_job.result()
+    # #
 
     # backend._max_circuits = max_experiments_per_job
     pi_job = backend.run(
@@ -252,7 +285,8 @@ if __name__ == "__main__":
     plt.title("Rabi Calibration Curve")
     plt.xlabel("Amplitude [a.u.]")
     plt.ylabel("Transition Probability")
-    plt.savefig(os.path.join(save_dir, date.strftime("%H%M%S") + f"_{pulse_type}_dur_{duration}_s_{int(sigma)}_areacal.png"))
+    if save:
+        plt.savefig(os.path.join(save_dir, date.strftime("%H%M%S") + f"_{pulse_type}_dur_{duration}_s_{int(sigma)}_areacal.png"))
     datapoints = np.vstack((amplitudes, np.real(pi_sweep_values)))
     with open(os.path.join(data_folder, f"area_calibration_{date.strftime('%H%M%S')}.pkl"), "wb") as f:
         pickle.dump(datapoints, f)
@@ -309,18 +343,19 @@ if __name__ == "__main__":
         "rb": [int(remove_bg)]
     }
     print(param_dict)
-    with open(os.path.join(data_folder, f"fit_params_area_cal_{date.strftime('%H%M%S')}.pkl"), "wb") as f:
-        pickle.dump(param_dict, f)
+    if save:
+        with open(os.path.join(data_folder, f"fit_params_area_cal_{date.strftime('%H%M%S')}.pkl"), "wb") as f:
+            pickle.dump(param_dict, f)
 
-    new_entry = pd.DataFrame(param_dict)
-    params_file = os.path.join(calib_dir, "actual_params.csv")
-    if os.path.isfile(params_file):
-        param_df = pd.read_csv(params_file)
-        param_df = add_entry_and_remove_duplicates(param_df, new_entry)
-        # param_df = pd.concat([param_df, param_series.to_frame().T], ignore_index=True)
-        param_df.to_csv(params_file, index=False)
-    else:
-        new_entry.to_csv(params_file, index=False)
+        new_entry = pd.DataFrame(param_dict)
+        params_file = os.path.join(calib_dir, "actual_params.csv")
+        if os.path.isfile(params_file):
+            param_df = pd.read_csv(params_file)
+            param_df = add_entry_and_remove_duplicates(param_df, new_entry)
+            # param_df = pd.concat([param_df, param_series.to_frame().T], ignore_index=True)
+            param_df.to_csv(params_file, index=False)
+        else:
+            new_entry.to_csv(params_file, index=False)
 
     plt.figure(4)
     plt.scatter(amplitudes, np.real(pi_sweep_values), color='black')
@@ -330,6 +365,7 @@ if __name__ == "__main__":
     plt.xlabel("Amplitude [a.u.]")
     plt.ylabel("Transition Probability")
     # plt.ylabel("Measured Signal [a.u.]")
-    plt.savefig(os.path.join(save_dir, date.strftime("%H%M%S") + f"_{pulse_type}_pi_amp_sweep_fitted.png"))
+    if save:
+        plt.savefig(os.path.join(save_dir, date.strftime("%H%M%S") + f"_{pulse_type}_pi_amp_sweep_fitted.png"))
 
     plt.show()

@@ -28,23 +28,25 @@ current_dir = os.path.dirname(__file__)
 package_path = os.path.abspath(os.path.split(current_dir)[0])
 sys.path.insert(0, package_path)
 
-from pulse_types import *
+import pulse_types as pt
 
 
 pulse_dict = {
-    "gauss": [Gaussian, LiftedGaussian],
-    "lor": [Lorentzian, LiftedLorentzian],
-    "lor2": [Lorentzian2, LiftedLorentzian2],
-    "lor3": [Lorentzian3, LiftedLorentzian3],
-    "sq": [Constant, Constant],
-    "sech": [Sech, LiftedSech],
-    "sech2": [Sech2, LiftedSech2],
-    "sin": [Sine, Sine],
-    "sin2": [Sine2, Sine2],
-    "sin3": [Sine3, Sine3],
-    "sin4": [Sine4, Sine4],
-    "sin5": [Sine5, Sine5],
+    "gauss": [pt.Gaussian, pt.LiftedGaussian],
+    "lor": [pt.Lorentzian, pt.LiftedLorentzian],
+    "lor2": [pt.Lorentzian2, pt.LiftedLorentzian2],
+    "lor3": [pt.Lorentzian3, pt.LiftedLorentzian3],
+    "sq": [pt.Constant, pt.Constant],
+    "sech": [pt.Sech, pt.LiftedSech],
+    "sech2": [pt.Sech2, pt.LiftedSech2],
+    "sin": [pt.Sine, pt.Sine],
+    "sin2": [pt.Sine2, pt.Sine2],
+    "sin3": [pt.Sine3, pt.Sine3],
+    "sin4": [pt.Sine4, pt.Sine4],
+    "sin5": [pt.Sine5, pt.Sine5],
+    "demkov": [pt.Demkov, pt.LiftedDemkov],
 }
+
 
 def get_calib_params(
     backend, pulse_type, 

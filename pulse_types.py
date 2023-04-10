@@ -6,14 +6,15 @@ from qiskit.pulse.library import SymbolicPulse
 
 # a constant pulse
 def Constant(duration, amp, name):
-    t, amp_sym = sym.symbols("t, amp")
+    t, duration_sym, amp_sym = sym.symbols("t, duration, amp")
 
     instance = SymbolicPulse(
-        pulse_type="Constant",
+        pulse_type="ConstantCustom",
         duration=duration,
         parameters={"amp": amp},
-        envelope=amp_sym * sym.Piecewise((1, t >= 0), (1, t < 0), (1, True)),
+        envelope=amp_sym * sym.Piecewise((1, sym.And(t >= 0, t <= duration_sym)), (0, True)),
         name=name,
+        valid_amp_conditions=sym.And(sym.Abs(amp_sym) >= 0, sym.Abs(amp_sym) <= 1),
     )
 
     return instance
@@ -27,7 +28,7 @@ def Sawtooth(duration, amp, freq, name):
         duration=duration,
         parameters={"amp": amp, "freq": freq},
         envelope=2 * amp_sym * (freq_sym * t - sym.floor(1 / 2 + freq_sym * t)),
-        name=name,
+        name=name, 
     )
 
     return instance
@@ -215,7 +216,7 @@ def Gaussian(duration, amp, sigma, name):
     t, duration_sym, amp_sym, sigma_sym = sym.symbols("t, duration, amp, sigma")
 
     instance = SymbolicPulse(
-        pulse_type="Gaussian",
+        pulse_type="GaussianCustom",
         duration=duration,
         parameters={"duration": duration, "amp": amp, "sigma": sigma},
         envelope=amp_sym * sym.exp(- 0.5 * ((t - duration_sym/2) / sigma_sym) ** 2),

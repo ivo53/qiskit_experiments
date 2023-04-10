@@ -11,24 +11,24 @@ from scipy.optimize import curve_fit
 
 from qiskit import (
     QuantumCircuit, 
-    QuantumRegister, 
-    ClassicalRegister, 
+    # QuantumRegister, 
+    # ClassicalRegister, 
     pulse, 
     IBMQ
 ) 
 # This is where we access all of our Pulse features!
 from qiskit.circuit import Parameter, Gate
-from qiskit.pulse import Delay,Play
+# from qiskit.pulse import Delay,Play
 # This Pulse module helps us build sampled pulses for common pulse shapes
-from qiskit.pulse import library as pulse_lib
+# from qiskit.pulse import library as pulse_lib
 from qiskit.providers.ibmq.managed import IBMQJobManager
-from qiskit_ibm_provider import IBMProvider
+# from qiskit_ibm_provider import IBMProvider
 
 current_dir = os.path.dirname(__file__)
 package_path = os.path.abspath(os.path.split(current_dir)[0])
 sys.path.insert(0, package_path)
 
-from pulse_types import *
+import pulse_types as pt
 
 
 def make_all_dirs(path):
@@ -43,18 +43,19 @@ def get_closest_multiple_of_16(num):
     return int(num + 8) - (int(num + 8) % 16)
 
 pulse_dict = {
-    "gauss": [Gaussian, LiftedGaussian],
-    "lor": [Lorentzian, LiftedLorentzian],
-    "lor2": [Lorentzian2, LiftedLorentzian2],
-    "lor3": [Lorentzian3, LiftedLorentzian3],
-    "sq": [Constant, Constant],
-    "sech": [Sech, LiftedSech],
-    "sech2": [Sech2, LiftedSech2],
-    "sin": [Sine, Sine],
-    "sin2": [Sine2, Sine2],
-    "sin3": [Sine3, Sine3],
-    "sin4": [Sine4, Sine4],
-    "sin5": [Sine5, Sine5],
+    "gauss": [pt.Gaussian, pt.LiftedGaussian],
+    "lor": [pt.Lorentzian, pt.LiftedLorentzian],
+    "lor2": [pt.Lorentzian2, pt.LiftedLorentzian2],
+    "lor3": [pt.Lorentzian3, pt.LiftedLorentzian3],
+    "sq": [pt.Constant, pt.Constant],
+    "sech": [pt.Sech, pt.LiftedSech],
+    "sech2": [pt.Sech2, pt.LiftedSech2],
+    "sin": [pt.Sine, pt.Sine],
+    "sin2": [pt.Sine2, pt.Sine2],
+    "sin3": [pt.Sine3, pt.Sine3],
+    "sin4": [pt.Sine4, pt.Sine4],
+    "sin5": [pt.Sine5, pt.Sine5],
+    "demkov": [pt.Demkov, pt.LiftedDemkov],
 }
 
 
@@ -118,7 +119,7 @@ if __name__ == "__main__":
     file_dir = os.path.split(file_dir)[0]
     date = datetime.now()
     current_date = date.strftime("%Y-%m-%d")
-    calib_dir = os.path.join(file_dir, "calibrations")
+    calib_dir = os.path.join(file_dir, "calibrations", backend_name)
     save_dir = os.path.join(calib_dir, current_date)
     # if not os.path.isdir(save_dir):
     #     os.mkdir(save_dir)
@@ -137,8 +138,10 @@ if __name__ == "__main__":
                 row["sigma"] == sigma and \
                 row["rb"] == remove_bg, axis=1)]
     print(df)
-    if df.shape[0] != 1:
+    if df.shape[0] > 1:
         raise ValueError("More than one identical entry found!")
+    elif df.shape[0] == 0:
+        raise ValueError("No entries found!")
     ser = df.iloc[0]
     l = ser.at["l"]
     p = ser.at["p"]
