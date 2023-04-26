@@ -155,6 +155,11 @@ if __name__ == "__main__":
     # backend = provider.get_backend(backend)
     
     backend = IBMProvider().get_backend(backend)
+    # print(backend)
+    print(backend.options)
+    # print(backend.status())
+    # print(backend.config())
+    # print(backend._default_options())
     # #
     # # with Fake provider only
     # backend = FakeManilaV2()
@@ -263,7 +268,6 @@ if __name__ == "__main__":
         circs,
         shots=num_shots_per_exp
     )
-    job_id = pi_job.job_id()
     pi_sweep_results = pi_job.result()
 
     pi_sweep_values = []
@@ -295,8 +299,8 @@ if __name__ == "__main__":
             init_params, 
             maxfev=100000, 
             bounds=(
-                [-0.6, 0, 0, -10, 0.4], 
-                [-.40, 1e4, 100, 10, 0.6]
+                [-0.53, 0, 0, -10, 0.45], 
+                [-.47, 1e4, 100, 10, 0.55]
             )
         )
         y_fit = function(x_values, *fitparams)
@@ -336,8 +340,7 @@ if __name__ == "__main__":
         "drive_freq": [center_frequency_Hz],
         "duration": [duration],
         "sigma": [sigma],
-        "rb": [int(remove_bg)],
-        "job_id": job_id
+        "rb": [int(remove_bg)]
     }
     print(param_dict)
     if save:

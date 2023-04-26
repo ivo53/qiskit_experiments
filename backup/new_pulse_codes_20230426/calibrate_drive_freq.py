@@ -22,7 +22,7 @@ from qiskit.circuit import Parameter, Gate
 # This Pulse module helps us build sampled pulses for common pulse shapes
 # from qiskit.pulse import library as pulse_lib
 from qiskit.providers.ibmq.managed import IBMQJobManager
-from qiskit_ibm_provider import IBMProvider
+# from qiskit_ibm_provider import IBMProvider
 
 current_dir = os.path.dirname(__file__)
 package_path = os.path.abspath(os.path.split(current_dir)[0])
@@ -130,7 +130,6 @@ if __name__ == "__main__":
     make_all_dirs(data_folder)
 
     params_file = os.path.join(calib_dir, "actual_params.csv")
-    print(params_file)
     if os.path.isfile(params_file):
         param_df = pd.read_csv(params_file)
     df = param_df[param_df.apply(

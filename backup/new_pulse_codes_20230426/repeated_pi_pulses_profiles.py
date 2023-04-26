@@ -1,5 +1,4 @@
 import os
-import sys
 import argparse
 from copy import deepcopy
 from datetime import datetime
@@ -11,25 +10,17 @@ from scipy.optimize import curve_fit
 
 from qiskit import (
     QuantumCircuit, 
-    # QuantumRegister, 
-    # ClassicalRegister, 
+    QuantumRegister, 
+    ClassicalRegister, 
     pulse, 
     IBMQ
 ) 
 # This is where we access all of our Pulse features!
 from qiskit.circuit import Parameter, Gate
-# from qiskit.pulse import Delay,Play
+from qiskit.pulse import Delay,Play
 # This Pulse module helps us build sampled pulses for common pulse shapes
-# from qiskit.pulse import library as pulse_lib
+from qiskit.pulse import library as pulse_lib
 from qiskit.providers.ibmq.managed import IBMQJobManager
-from qiskit_ibm_provider import IBMProvider
-
-current_dir = os.path.dirname(__file__)
-package_path = os.path.abspath(os.path.split(current_dir)[0])
-sys.path.insert(0, package_path)
-
-import pulse_types as pt
-
 
 def make_all_dirs(path):
     path = path.replace("\\", "/")
@@ -43,38 +34,30 @@ def get_closest_multiple_of_16(num):
     return int(num + 8) - (int(num + 8) % 16)
 
 pulse_dict = {
-    "gauss": [pt.Gaussian, pt.LiftedGaussian],
-    "lor": [pt.Lorentzian, pt.LiftedLorentzian],
-    "lor2": [pt.Lorentzian2, pt.LiftedLorentzian2],
-    "lor3": [pt.Lorentzian3, pt.LiftedLorentzian3],
-    "sq": [pt.Constant, pt.Constant],
-    "sech": [pt.Sech, pt.LiftedSech],
-    "sech2": [pt.Sech2, pt.LiftedSech2],
-    "sin": [pt.Sine, pt.Sine],
-    "sin2": [pt.Sine2, pt.Sine2],
-    "sin3": [pt.Sine3, pt.Sine3],
-    "sin4": [pt.Sine4, pt.Sine4],
-    "sin5": [pt.Sine5, pt.Sine5],
-    "demkov": [pt.Demkov, pt.LiftedDemkov],
-}
-
+    "gauss": pulse_lib.Gaussian,
+    "lor": pulse_lib.Lorentzian,
+    "lor2": pulse_lib.LorentzianSquare,
+    "lor3": pulse_lib.LorentzianCube,
+    "sq": pulse_lib.Constant,
+    "sech": pulse_lib.Sech,
+    "sech2": pulse_lib.SechSquare,
+    "sin": pulse_lib.Sine,
+    "sin2": pulse_lib.SineSquare,
+    "sin3": pulse_lib.SineCube,
+    "sin4": pulse_lib.SineFourthPower,
+    "sin5": pulse_lib.SineFifthPower,
+    }
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-pt", "--pulse_type", default="gauss", type=str,
-        help="Pulse type (e.g. sq, gauss, sine, sech etc.)")
+    parser.add_argument("-pt", "--pulse_type", default="sin", type=str,
+        help="Pulse type (e.g. sq, gauss, sin, sech etc.)")
     parser.add_argument("-q", "--qubit", default=0, type=int,
         help="The number of the qubit to be used.")
-    # parser.add_argument("-l", "--l", default=10, type=float,
-    #     help="Parameter l in Rabi oscillations fit")
-    # parser.add_argument("-p", "--p", default=0.5, type=float,
-    #     help="Parameter p in Rabi oscillations fit")
-    # parser.add_argument("-x0", "--x0", default=0.005, type=float,
-    #     help="Parameter x0 in Rabi oscillations fit")
     parser.add_argument("-s", "--sigma", default=180, type=float,
         help="Pulse width (sigma) parameter")    
     parser.add_argument("-T", "--duration", default=2256, type=int,
-        help="Lorentz duration parameter")
+        help="Pulse duration parameter")
     parser.add_argument("-c", "--cutoff", default=0.5, type=float,
         help="Cutoff parameter in PERCENT of maximum amplitude of Lorentzian")
     parser.add_argument("-rb", "--remove_bg", default=1, type=int,
@@ -83,6 +66,10 @@ if __name__ == "__main__":
         help="States whether width or duration is the controlled parameter")
     parser.add_argument("-epj", "--max_experiments_per_job", default=100, type=int,
         help="Maximum experiments per job")
+    parser.add_argument("-np", "--num_pulses", default=5, type=int,
+        help="Number of repeated pi pulses for experiment.")
+    parser.add_argument("-o", "--same_orientation", default=0, type=int,
+        help="Whether to use the modulus (in the case of a sinusoidal func).")
     parser.add_argument("-ns", "--num_shots", default=2048, type=int,
         help="Number of shots per experiment (datapoint).")
     parser.add_argument("-ne", "--num_experiments", default=100, type=int,
@@ -101,9 +88,11 @@ if __name__ == "__main__":
     sigma = args.sigma
     duration = get_closest_multiple_of_16(args.duration)
     cutoff = args.cutoff
-    remove_bg = args.remove_bg
+    rb = args.remove_bg
     control_param = args.control_param
     max_experiments_per_job = args.max_experiments_per_job
+    num_pulses = args.num_pulses
+    same_orientation = bool(args.same_orientation)
     num_shots = args.num_shots
     span = args.span
     num_experiments = args.num_experiments
@@ -120,29 +109,29 @@ if __name__ == "__main__":
     date = datetime.now()
     current_date = date.strftime("%Y-%m-%d")
     calib_dir = os.path.join(file_dir, "calibrations", backend_name)
-    save_dir = os.path.join(calib_dir, current_date)
+    project_dir = os.path.join(file_dir, "plots", backend_name, "repeated_pi_pulses_profiles")
+    save_dir = os.path.join(project_dir, current_date)
     # if not os.path.isdir(save_dir):
     #     os.mkdir(save_dir)
-    data_folder = os.path.join(file_dir, "data", backend_name, "calibration", current_date)
+    data_folder = os.path.join(file_dir, "data", backend_name, "repeated_pi_pulses_profiles", current_date)
     # if not os.path.isdir(data_folder):
     #     os.mkdir(data_folder)
     make_all_dirs(save_dir)
     make_all_dirs(data_folder)
 
     params_file = os.path.join(calib_dir, "actual_params.csv")
-    print(params_file)
     if os.path.isfile(params_file):
         param_df = pd.read_csv(params_file)
     df = param_df[param_df.apply(
             lambda row: row["pulse_type"] == pulse_type and \
                 row["duration"] == duration and \
                 row["sigma"] == sigma and \
-                row["rb"] == remove_bg, axis=1)]
-    print(df)
+                row["rb"] == rb, axis=1)]
+    # print(df)
     if df.shape[0] > 1:
         raise ValueError("More than one identical entry found!")
-    elif df.shape[0] == 0:
-        raise ValueError("No entries found!")
+    elif df.shape[0] < 1:
+        raise ValueError("No entry found!")
     ser = df.iloc[0]
     l = ser.at["l"]
     p = ser.at["p"]
@@ -181,37 +170,42 @@ if __name__ == "__main__":
     with pulse.build(backend=backend, default_alignment='sequential', name="calibrate_freq") as sched:
         dur_dt = duration
         pulse.set_frequency(freq, drive_chan)
-        if pulse_type == "sq" or "sin" in pulse_type:
-            pulse_played = pulse_dict[pulse_type][remove_bg](
-                duration=duration,
-                amp=amp,
-                name=pulse_type
-            )
-        elif pulse_type == "gauss":
-            pulse_played = pulse_dict[pulse_type][remove_bg](
-                duration=duration,
-                amp=amp,
-                name=pulse_type,
-                sigma=sigma / np.sqrt(2),
-            )
-        elif pulse_type in ["lor", "lor2", "lor3"]:
-            pulse_played = pulse_dict[pulse_type][remove_bg](
-                duration=duration,
-                amp=amp,
-                name=pulse_type,
-                sigma=sigma,
-            )
-        else:
-            pulse_played = pulse_dict[pulse_type][remove_bg](
-                duration=duration,
-                amp=amp,
-                name=pulse_type,
-                sigma=sigma,
-            )
-        pulse.play(pulse_played, drive_chan)
+        for p in range(num_pulses):
+            modifier = (-1) ** p if not same_orientation else 1
+            if pulse_type == "sq" or "sin" in pulse_type:
+                pulse_played = pulse_dict[pulse_type](
+                    duration=dur_dt,
+                    amp=modifier * amp,
+                    name=pulse_type
+                )
+            elif pulse_type == "gauss":
+                pulse_played = pulse_dict[pulse_type](
+                    duration=dur_dt,
+                    amp=amp,
+                    name=pulse_type,
+                    sigma=sigma / np.sqrt(2),
+                    zero_ends=rb
+                )
+            elif pulse_type in ["lor", "lor2", "lor3"]:
+                pulse_played = pulse_dict[pulse_type](
+                    duration=dur_dt,
+                    amp=amp,
+                    name=pulse_type,
+                    gamma=sigma,
+                    zero_ends=rb
+                )
+            else:
+                pulse_played = pulse_dict[pulse_type](
+                    duration=dur_dt,
+                    amp=amp,
+                    name=pulse_type,
+                    sigma=sigma,
+                    zero_ends=rb
+                )
+            pulse.play(pulse_played, drive_chan)
 
     # Create gate holder and append to base circuit
-    custom_gate = Gate("pi_pulse", 1, [freq])
+    custom_gate = Gate(f"{num_pulses}_pi_pulses", 1, [freq])
     base_circ = QuantumCircuit(num_qubits, 1)
     base_circ.append(custom_gate, [qubit])
     base_circ.measure(qubit, 0)
@@ -260,28 +254,28 @@ if __name__ == "__main__":
     ## fit curve
 
 
-    def fit_function(x_values, y_values, function, init_params):
-        fitparams, conv = curve_fit(function, x_values, y_values, init_params)#, maxfev=100000)
-        y_fit = function(x_values, *fitparams)
+    # def fit_function(x_values, y_values, function, init_params):
+    #     fitparams, conv = curve_fit(function, x_values, y_values, init_params)#, maxfev=100000)
+    #     y_fit = function(x_values, *fitparams)
         
-        return fitparams, y_fit
+    #     return fitparams, y_fit
 
-    fit_params, y_fit = fit_function(frequencies_GHz,
-                                    np.real(sweep_values), 
-                                    lambda x, A, q_freq, B, C: (A / np.pi) * (B / ((x - q_freq)**2 + B**2)) + C,
-                                    [0.3, 4.975, 0.2, 0] # initial parameters for curve_fit
-                                    )
-    plt.figure(2)
-    plt.scatter(frequencies_GHz, np.real(sweep_values), color='black')
-    plt.plot(frequencies_GHz, y_fit, color='red')
-    plt.xlim([min(frequencies_GHz), max(frequencies_GHz)])
-    plt.title("Fitted Drive Frequency Calibration Curve")
-    plt.xlabel("Frequency [GHz]")
-    plt.ylabel("Measured Signal [a.u.]")
-    plt.savefig(os.path.join(save_dir, date.strftime("%H%M%S") + f"_frequency_sweep_fitted.png"))
+    # fit_params, y_fit = fit_function(frequencies_GHz,
+    #                                 np.real(sweep_values), 
+    #                                 lambda x, A, q_freq, B, C: (A / np.pi) * (B / ((x - q_freq)**2 + B**2)) + C,
+    #                                 [0.3, 4.975, 0.2, 0] # initial parameters for curve_fit
+    #                                 )
+    # plt.figure(2)
+    # plt.scatter(frequencies_GHz, np.real(sweep_values), color='black')
+    # plt.plot(frequencies_GHz, y_fit, color='red')
+    # plt.xlim([min(frequencies_GHz), max(frequencies_GHz)])
+    # plt.title("Fitted Drive Frequency Calibration Curve")
+    # plt.xlabel("Frequency [GHz]")
+    # plt.ylabel("Measured Signal [a.u.]")
+    # plt.savefig(os.path.join(save_dir, date.strftime("%H%M%S") + f"_frequency_sweep_fitted.png"))
     plt.show()
 
-    A, rough_qubit_frequency, B, C = fit_params
-    rough_qubit_frequency = rough_qubit_frequency*GHz # make sure qubit freq is in Hz
-    print(f"We've updated our qubit frequency estimate from "
-        f"{round(backend_defaults.qubit_freq_est[qubit] / GHz, 5)} GHz to {round(rough_qubit_frequency/GHz, 5)} GHz.")
+    # A, rough_qubit_frequency, B, C = fit_params
+    # rough_qubit_frequency = rough_qubit_frequency*GHz # make sure qubit freq is in Hz
+    # print(f"We've updated our qubit frequency estimate from "
+    #     f"{round(backend_defaults.qubit_freq_est[qubit] / GHz, 5)} GHz to {round(rough_qubit_frequency/GHz, 5)} GHz.")

@@ -1,5 +1,4 @@
 import os
-import sys
 import argparse
 from copy import deepcopy
 from datetime import datetime
@@ -11,25 +10,17 @@ from scipy.optimize import curve_fit
 
 from qiskit import (
     QuantumCircuit, 
-    # QuantumRegister, 
-    # ClassicalRegister, 
+    QuantumRegister, 
+    ClassicalRegister, 
     pulse, 
     IBMQ
 ) 
 # This is where we access all of our Pulse features!
 from qiskit.circuit import Parameter, Gate
-# from qiskit.pulse import Delay,Play
+from qiskit.pulse import Delay,Play
 # This Pulse module helps us build sampled pulses for common pulse shapes
-# from qiskit.pulse import library as pulse_lib
+from qiskit.pulse import library as pulse_lib
 from qiskit.providers.ibmq.managed import IBMQJobManager
-from qiskit_ibm_provider import IBMProvider
-
-current_dir = os.path.dirname(__file__)
-package_path = os.path.abspath(os.path.split(current_dir)[0])
-sys.path.insert(0, package_path)
-
-import pulse_types as pt
-
 
 def make_all_dirs(path):
     path = path.replace("\\", "/")
@@ -43,21 +34,19 @@ def get_closest_multiple_of_16(num):
     return int(num + 8) - (int(num + 8) % 16)
 
 pulse_dict = {
-    "gauss": [pt.Gaussian, pt.LiftedGaussian],
-    "lor": [pt.Lorentzian, pt.LiftedLorentzian],
-    "lor2": [pt.Lorentzian2, pt.LiftedLorentzian2],
-    "lor3": [pt.Lorentzian3, pt.LiftedLorentzian3],
-    "sq": [pt.Constant, pt.Constant],
-    "sech": [pt.Sech, pt.LiftedSech],
-    "sech2": [pt.Sech2, pt.LiftedSech2],
-    "sin": [pt.Sine, pt.Sine],
-    "sin2": [pt.Sine2, pt.Sine2],
-    "sin3": [pt.Sine3, pt.Sine3],
-    "sin4": [pt.Sine4, pt.Sine4],
-    "sin5": [pt.Sine5, pt.Sine5],
-    "demkov": [pt.Demkov, pt.LiftedDemkov],
-}
-
+    "gauss": pulse_lib.Gaussian,
+    "lor": pulse_lib.Lorentzian,
+    "lor2": pulse_lib.LorentzianSquare,
+    "lor3": pulse_lib.LorentzianCube,
+    "sq": pulse_lib.Constant,
+    "sech": pulse_lib.Sech,
+    "sech2": pulse_lib.SechSquare,
+    "sin": pulse_lib.Sine,
+    "sin2": pulse_lib.SineSquare,
+    "sin3": pulse_lib.SineCube,
+    "sin4": pulse_lib.SineFourthPower,
+    "sin5": pulse_lib.SineFifthPower,
+    }
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -101,7 +90,7 @@ if __name__ == "__main__":
     sigma = args.sigma
     duration = get_closest_multiple_of_16(args.duration)
     cutoff = args.cutoff
-    remove_bg = args.remove_bg
+    rb = args.remove_bg
     control_param = args.control_param
     max_experiments_per_job = args.max_experiments_per_job
     num_shots = args.num_shots
@@ -119,7 +108,7 @@ if __name__ == "__main__":
     file_dir = os.path.split(file_dir)[0]
     date = datetime.now()
     current_date = date.strftime("%Y-%m-%d")
-    calib_dir = os.path.join(file_dir, "calibrations", backend_name)
+    calib_dir = os.path.join(file_dir, "calibrations")
     save_dir = os.path.join(calib_dir, current_date)
     # if not os.path.isdir(save_dir):
     #     os.mkdir(save_dir)
@@ -130,19 +119,16 @@ if __name__ == "__main__":
     make_all_dirs(data_folder)
 
     params_file = os.path.join(calib_dir, "actual_params.csv")
-    print(params_file)
     if os.path.isfile(params_file):
         param_df = pd.read_csv(params_file)
     df = param_df[param_df.apply(
             lambda row: row["pulse_type"] == pulse_type and \
                 row["duration"] == duration and \
                 row["sigma"] == sigma and \
-                row["rb"] == remove_bg, axis=1)]
+                row["rb"] == rb, axis=1)]
     print(df)
-    if df.shape[0] > 1:
+    if df.shape[0] != 1:
         raise ValueError("More than one identical entry found!")
-    elif df.shape[0] == 0:
-        raise ValueError("No entries found!")
     ser = df.iloc[0]
     l = ser.at["l"]
     p = ser.at["p"]
@@ -182,31 +168,34 @@ if __name__ == "__main__":
         dur_dt = duration
         pulse.set_frequency(freq, drive_chan)
         if pulse_type == "sq" or "sin" in pulse_type:
-            pulse_played = pulse_dict[pulse_type][remove_bg](
-                duration=duration,
+            pulse_played = pulse_dict[pulse_type](
+                duration=dur_dt,
                 amp=amp,
                 name=pulse_type
             )
         elif pulse_type == "gauss":
-            pulse_played = pulse_dict[pulse_type][remove_bg](
-                duration=duration,
+            pulse_played = pulse_dict[pulse_type](
+                duration=dur_dt,
                 amp=amp,
                 name=pulse_type,
                 sigma=sigma / np.sqrt(2),
+                zero_ends=rb
             )
         elif pulse_type in ["lor", "lor2", "lor3"]:
-            pulse_played = pulse_dict[pulse_type][remove_bg](
-                duration=duration,
+            pulse_played = pulse_dict[pulse_type](
+                duration=dur_dt,
                 amp=amp,
                 name=pulse_type,
-                sigma=sigma,
+                gamma=sigma,
+                zero_ends=rb
             )
         else:
-            pulse_played = pulse_dict[pulse_type][remove_bg](
-                duration=duration,
+            pulse_played = pulse_dict[pulse_type](
+                duration=dur_dt,
                 amp=amp,
                 name=pulse_type,
                 sigma=sigma,
+                zero_ends=rb
             )
         pulse.play(pulse_played, drive_chan)
 
