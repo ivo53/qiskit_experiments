@@ -259,31 +259,62 @@ if __name__ == "__main__":
     # #
 
     # backend._max_circuits = max_experiments_per_job
-    pi_job = backend.run(
-        circs,
-        shots=num_shots_per_exp
-    )
-    job_id = pi_job.job_id()
-    pi_sweep_results = pi_job.result()
+    size = duration * num_exp
+    size_limit = 258144
 
-    pi_sweep_values = []
+    job_ids = []
+    values = []
+    
+    if size < size_limit:
+        pi_job = backend.run(
+            circs,
+            shots=num_shots_per_exp
+        )
+        job_ids.append(pi_job.job_id())
+        result = pi_job.result()
+        for i in range(len(circs)):
+            try:
+                counts = result.get_counts(i)["1"]
+            except KeyError:
+                counts = 0
+            values.append(counts / num_shots_per_exp)
+    else:
+        num_jobs = size // size_limit + 1
+        size_part = num_exp // num_jobs
+        extra = num_exp % num_jobs
+        parts = [[] for _ in range(num_jobs)]
+        for i in range(num_jobs):
+            start = i * size_part + min(i, extra)
+            end = (i + 1) * size_part + min(i + 1, extra)
+            parts[i] = circs[start:end]
 
-    for i in range(len(circs)):
-        try:
-            counts = pi_sweep_results.get_counts(i)["1"]
-        except KeyError:
-            counts = 0
-        pi_sweep_values.append(counts / num_shots_per_exp)
+        jobs = []
+        for circs_part in parts:
+            current_job = backend.run(
+                circs_part,
+                shots=num_shots_per_exp
+            )
+            jobs.append(current_job)
+            job_ids.append(current_job.job_id())
+        
+        for job, circs_part in zip(jobs, parts):
+            result = job.result()
+            for i in range(len(circs_part)):
+                try:
+                    counts = result.get_counts(i)["1"]
+                except KeyError:
+                    counts = 0
+                values.append(counts / num_shots_per_exp)
 
     # print(amplitudes, np.real(pi_sweep_values))
     plt.figure(3)
-    plt.scatter(amplitudes, np.real(pi_sweep_values), color='black') # plot real part of sweep values
+    plt.scatter(amplitudes, np.real(values), color='black') # plot real part of sweep values
     plt.title("Rabi Calibration Curve")
     plt.xlabel("Amplitude [a.u.]")
     plt.ylabel("Transition Probability")
     if save:
         plt.savefig(os.path.join(save_dir, date.strftime("%H%M%S") + f"_{pulse_type}_dur_{duration}_s_{int(sigma)}_areacal.png"))
-    datapoints = np.vstack((amplitudes, np.real(pi_sweep_values)))
+    datapoints = np.vstack((amplitudes, np.real(values)))
     with open(os.path.join(data_folder, f"area_calibration_{date.strftime('%H%M%S')}.pkl"), "wb") as f:
         pickle.dump(datapoints, f)
     ## fit curve
@@ -295,7 +326,7 @@ if __name__ == "__main__":
             init_params, 
             maxfev=100000, 
             bounds=(
-                [-0.6, 0, 0, -10, 0.4], 
+                [-0.6, 50, 0, -10, 0.4], 
                 [-.40, 1e4, 100, 10, 0.6]
             )
         )
@@ -306,7 +337,7 @@ if __name__ == "__main__":
 
     rabi_fit_params, _ = fit_function(
         amplitudes[: fit_crop_parameter],
-        np.real(pi_sweep_values[: fit_crop_parameter]), 
+        np.real(values[: fit_crop_parameter]), 
         lambda x, A, l, p, x0, B: A * (np.cos(l * (1 - np.exp(- p * (x - x0))))) + B,
         [-0.47273362, l, p, 0, 0.47747625]
         # lambda x, A, k, B: A * (np.cos(k * x)) + B,
@@ -337,7 +368,7 @@ if __name__ == "__main__":
         "duration": [duration],
         "sigma": [sigma],
         "rb": [int(remove_bg)],
-        "job_id": job_id
+        "job_id": [",".join(job_ids)]
     }
     print(param_dict)
     if save:
@@ -355,7 +386,7 @@ if __name__ == "__main__":
             new_entry.to_csv(params_file, index=False)
 
     plt.figure(4)
-    plt.scatter(amplitudes, np.real(pi_sweep_values), color='black')
+    plt.scatter(amplitudes, np.real(values), color='black')
     plt.plot(detailed_amps, extended_y_fit, color='red')
     plt.xlim([min(amplitudes), max(amplitudes)])
     plt.title("Fitted Rabi Calibration Curve")
