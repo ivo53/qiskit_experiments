@@ -2,6 +2,7 @@ import numpy as np
 from scipy.optimize import curve_fit, root
 from scipy.integrate import quad, quad_vec
 import scipy.special as sp
+import mpmath as mp
 
 import pulse_shapes
 
@@ -129,7 +130,42 @@ def sin(x, q_freq, delta, eps):
     G = quad_vec(fg_, -1e-6, 1e-6, epsabs=1e-13, epsrel=1e-5)[0]
     P2 = np.sin(0.5 * tau * np.sqrt(omega_0 ** 2 + ALPHA["sin"] * D ** 2)) ** 2 * np.abs(G / tau) ** 2
     return post_process(P2, eps, delta)
-    
+
+
+def double_approx(x, q_freq, delta, eps, tau, pulse_type):
+    T = dur * 2e-9 / 9
+    sigma = s * 2e-9 / 9
+    omega_0 = pulse_shapes.find_rabi_amp(pulse_type, T, sigma)
+    sigma /= T
+    omega_0 *= T
+    D = (x - q_freq) * 1e6 * T
+    omega = lambda t: pulse_shapes.rabi_freq(t, omega_0, pulse_type, 1, sigma)
+    beta = np.sqrt(np.pi * omega(tau))
+    d = (D / (2 * beta))
+    eta = np.abs(D) * sp.ellipeinc(np.pi, -omega_0**2 / D**2) / np.pi
+    chi1 = d**2 / 2 + np.angle(sp.gamma(1/2 * (1 + 1j * d**2))) \
+        - d**2 / 2 * np.log(d**2 / 2)
+    chi2 = -np.pi / 4 - d**2 / 2 - np.angle(sp.gamma(1j * d**2 / 2)) \
+        + d**2 / 2 * np.log(d**2 / 2)
+    P2 = 1 / 4 * ((1 + np.exp(-np.pi * d**2)) * np.sin(eta / 2 - 2 * chi1)\
+        - (1 - np.exp(-np.pi * d**2)) * np.sin(eta / 2 + 2 * chi2)) ** 2
+    return post_process(P2, eps, delta)
+
+def sin_dappr(x, q_freq, delta, eps, tau):
+    return double_approx(x, q_freq, delta, eps, tau, "sin")
+def sech_dappr(x, q_freq, delta, eps, tau):
+    return double_approx(x, q_freq, delta, eps, tau, "sech")
+def sech2_dappr(x, q_freq, delta, eps, tau):
+    return double_approx(x, q_freq, delta, eps, tau, "sech2")
+def gauss_dappr(x, q_freq, delta, eps, tau):
+    return double_approx(x, q_freq, delta, eps, tau, "gauss")
+def lor_dappr(x, q_freq, delta, eps, tau):
+    return double_approx(x, q_freq, delta, eps, tau, "lor")
+def lor2_dappr(x, q_freq, delta, eps, tau):
+    return double_approx(x, q_freq, delta, eps, tau, "lor2")
+def lor3_dappr(x, q_freq, delta, eps, tau):
+    return double_approx(x, q_freq, delta, eps, tau, "lor3")
+
 def rlzsm_approx(x, q_freq, delta, eps, tau, pulse_type):
     T = dur * 2e-9 / 9
     sigma = s * 2e-9 / 9
@@ -344,7 +380,7 @@ def gauss(x, q_freq, delta, eps):
     omega_0 = pulse_shapes.find_rabi_amp("gauss", T, sigma)
 
     D = (x - q_freq) * 1e6
-    alpha = np.abs(O / D)
+    alpha = np.abs(omega_0 / D)
     alpha[np.isnan(alpha)] = 10000000
     # print(alpha)
     m, mu, nu = (1.311468, 0.316193, 0.462350)
@@ -398,6 +434,7 @@ def rabi(x, q_freq, delta, eps):
     omega_0 = pulse_shapes.find_rabi_amp("rabi", T, sigma)
 
     D = (x - q_freq) * 1e6
-    P2 = (O ** 2 / (O**2 + (D) ** 2)) * \
-        np.sin(0.5 * T * np.sqrt(O**2 + (D) ** 2)) ** 2
+    P2 = (omega_0 ** 2 / (omega_0**2 + (D) ** 2)) * \
+        np.sin(0.5 * T * np.sqrt(omega_0**2 + (D) ** 2)) ** 2
     return post_process(P2, eps, delta)
+
