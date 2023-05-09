@@ -78,7 +78,7 @@ date = times[pulse_type][dur_idx][0]
 time = times[pulse_type][dur_idx][1]
 fit_func = pulse_type if "_" not in pulse_type else pulse_type.split("_")[0]
 # baseline_fit_func = "sinc2" if pulse_type in ["rabi", "constant"] else "lorentzian"
-comparison = 1 # 0 or 1, whether to have both curves
+comparison = 0 # 0 or 1, whether to have both curves
 
 FIT_FUNCTIONS = {
     "lorentzian": lorentzian,
@@ -150,19 +150,19 @@ def fit_once(
     fit_params, y_fit, err = fit_function(
         detuning,#[int(len(detuning) / 4):int(3 * len(detuning) / 4)],
         vals,#[int(len(detuning) / 4):int(3 * len(detuning) / 4)], 
-        FIT_FUNCTIONS[fit_func][0],
+        FIT_FUNCTIONS[fit_func][1],
         # initial, initial_min, initial_max,
         args, args_min, args_max,
         s, dur
     )
-    y_fit = FIT_FUNCTIONS[fit_func][0](detuning, *fit_params)
+    y_fit = FIT_FUNCTIONS[fit_func][1](detuning, *fit_params)
     ##
     ##
     if comparison:
         baseline_fit_params, baseline_y_fit, baseline_err = fit_function(
             detuning,
             vals, 
-            FIT_FUNCTIONS[fit_func][1],
+            FIT_FUNCTIONS[fit_func][0],
             args, args_min, args_max,
             s, dur
 
@@ -245,6 +245,21 @@ print(f"Error on residuals: {err_res}")
 scaled_ef = extended_freq / (2 * np.pi)
 scaled_det = detuning / (2 * np.pi)
 
+
+date = datetime.now()
+txt_name = pulse_type + "_" + str(dur) + "_" + str(comparison) + "_" + date.strftime("%Y%m%d") + ".txt"
+with open(os.path.join(data_folder, txt_name), "w") as file:
+    file.write(model_name_dict[fit_func][0] + "\n")
+    file.write("Double Approx SI: " + str(similarity_idx) + "\n")
+    if comparison:
+        file.write("rLZSM SI: " + str(baseline_similarity_idx) + "\n")
+    file.write(str(q_freq_model) + "+-" + str(q_freq_err_model) + "\n")
+    if comparison:
+        file.write(str(q_freq_bl) + "+-" + str(q_freq_err_bl) + "\n")
+        file.write("deviation: " + str(q_freq_model - q_freq_bl) + "+-" + str(np.sqrt(q_freq_err_model ** 2 + q_freq_err_bl ** 2)) + "\n")
+    file.write(f"Error on residuals: {str(err_res)}" + "\n")
+
+
 if comparison:
     baseline_dof = len(vals) - len(baseline_fit_params)
     baseline_residuals = baseline_y_fit - vals
@@ -256,16 +271,16 @@ gs = fig.add_gridspec(figsize[1], 1)
 ax0 = fig.add_subplot(gs[:5, :])
 ax0.scatter(scaled_det, vals, color='black', marker="P", label="Measured values")
 if comparison:
-    ax0.plot(scaled_ef, baseline_extended_y_fit, color='blue', label=f"{model_name_dict[fit_func][1]} model fit")
-ax0.plot(scaled_ef, extended_y_fit, color='red', label=f"{model_name_dict[fit_func][0]} model fit")
+    ax0.plot(scaled_ef, baseline_extended_y_fit, color='blue', label=f"{model_name_dict[fit_func][0]} model fit")
+ax0.plot(scaled_ef, extended_y_fit, color='red', label=f"{model_name_dict[fit_func][1]} model fit")
 ax0.set_xlim(np.round(scaled_ef[0]/10)*10, -np.round(scaled_ef[0]/10)*10)
 # Create a legend object and customize the order of the labels
 handles, labels = plt.gca().get_legend_handles_labels()
 order = [0, 2, 1] if comparison else [0, 1] # Change the order of the labels here
 ax0.legend([handles[idx] for idx in order], [labels[idx] for idx in order])
 
-major_interval = 14
-minor_interval = 0.5 if pulse_type=="rabi" else 3.5
+major_interval = 20.
+minor_interval = 0.5 if pulse_type=="rabi" else 2.5
 major_xticks = np.round(np.arange(np.round(scaled_ef[0]/10)*10, -np.round(scaled_ef[0]/10)*10 + 1e-1, major_interval),1)
 # x_limit = np.floor(np.abs(extended_freq[0]) / 5) * 5
 # x_interval = np.round(x_limit / 5) if pulse_type == "rabi" else np.round(x_limit / 6)
@@ -356,7 +371,6 @@ plt.xlabel("Detuning [MHz]", fontsize=20)
 #     date.strftime("%H%M%S") + f"_{pulse_type}_cutoff_{cutoff}_{ctrl_param}_{c_p}_area_{area}_frequency_sweep_fitted.png"
 save_dir = os.path.join(file_dir, "paper_ready_plots")
 
-date = datetime.now()
-fig_name = pulse_type + "_" + str(dur) + "_" + date.strftime("%Y%m%d") + ".eps"
-plt.savefig(os.path.join(save_dir, fig_name), format="eps")
+fig_name = pulse_type + "_" + str(dur) + "_" + str(comparison) + "_" + date.strftime("%Y%m%d") + ".pdf"
+plt.savefig(os.path.join(save_dir, fig_name), format="pdf")
 plt.show()

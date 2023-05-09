@@ -260,12 +260,12 @@ if __name__ == "__main__":
 
     # backend._max_circuits = max_experiments_per_job
     size = duration * num_exp
-    size_limit = 258144
+    SIZE_LIMIT = 258144
 
     job_ids = []
     values = []
     
-    if size < size_limit:
+    if size < SIZE_LIMIT:
         pi_job = backend.run(
             circs,
             shots=num_shots_per_exp
@@ -279,7 +279,7 @@ if __name__ == "__main__":
                 counts = 0
             values.append(counts / num_shots_per_exp)
     else:
-        num_jobs = size // size_limit + 1
+        num_jobs = size // SIZE_LIMIT + 1
         size_part = num_exp // num_jobs
         extra = num_exp % num_jobs
         parts = [[] for _ in range(num_jobs)]

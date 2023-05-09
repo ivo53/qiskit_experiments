@@ -29,7 +29,7 @@ package_path = os.path.abspath(os.path.split(current_dir)[0])
 sys.path.insert(0, package_path)
 
 import pulse_types as pt
-
+from utils.run_jobs import run_jobs
 
 def make_all_dirs(path):
     path = path.replace("\\", "/")
@@ -159,9 +159,8 @@ if __name__ == "__main__":
     meas_chan = pulse.MeasureChannel(qubit)
     acq_chan = pulse.AcquireChannel(qubit)
 
-    provider = IBMQ.load_account()
-    backend = provider.get_backend(backend)
-    # backend = provider.get_backend("ibmq_qasm_simulator")
+    backend = IBMProvider().get_backend(backend)
+
     print(f"Using {backend_name} backend.")
     backend_defaults = backend.defaults()
     backend_config = backend.configuration()
@@ -221,20 +220,22 @@ if __name__ == "__main__":
             inplace=False
         ) for f in frequencies]
 
-    job_manager = IBMQJobManager()
-    job = job_manager.run(
-        circs,
-        backend=backend,
-        name="Frequency calibration",
-        max_experiments_per_job=max_experiments_per_job,
-        shots=num_shots
-    )
-    frequency_sweep_results = job.results()
+    sweep_values, job_ids = run_jobs(circs, backend, duration, num_shots_per_exp=num_shots)
 
-    sweep_values = []
-    for i in range(len(circs)):
-        counts = frequency_sweep_results.get_counts(i)["1"]
-        sweep_values.append(counts / num_shots)
+    # job_manager = IBMQJobManager()
+    # job = job_manager.run(
+    #     circs,
+    #     backend=backend,
+    #     name="Frequency calibration",
+    #     max_experiments_per_job=max_experiments_per_job,
+    #     shots=num_shots
+    # )
+    # frequency_sweep_results = job.results()
+
+    # sweep_values = []
+    # for i in range(len(circs)):
+    #     counts = frequency_sweep_results.get_counts(i)["1"]
+    #     sweep_values.append(counts / num_shots)
 
 
     frequencies_GHz = frequencies / GHz

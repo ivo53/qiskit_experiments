@@ -22,7 +22,7 @@ package_path = os.path.abspath(os.path.split(current_dir)[0])
 sys.path.insert(0, package_path)
 
 from pulse_types import *
-
+from utils.run_jobs import run_jobs
 
 backend_name = "manila"
 
@@ -64,8 +64,7 @@ make_all_dirs(data_folder)
 make_all_dirs(folder_name)
 
 
-provider = IBMQ.load_account()
-backend = provider.get_backend(f"ibmq_{backend_name}")
+backend = IBMProvider().get_backend(f"ibmq_{backend_name}")
 backend_config = backend.configuration()
 print(f"Using backend ibmq_{backend_name}")
 
@@ -197,27 +196,29 @@ circs = [
 num_circs = len(circs)
 num_shots = 1024
 
-job_manager = IBMQJobManager()
+# job_manager = IBMQJobManager()
 
-jobs = job_manager.run(
-    circs,
-    backend=backend, 
-    shots=num_shots,
-    max_experiments_per_job=max_experiments_per_job,
-    name="Lorentzian Power Narrowing"
-)
-results = jobs.results()
-transition_probability = []
-for i in range(num_circs):
-    print(results.get_counts(i))
-    try:
-        transition_probability.append(results.get_counts(i)["1"] / num_shots)
-    except KeyError:
-        transition_probability.append(1 - results.get_counts(i)["0"] / num_shots)
+# jobs = job_manager.run(
+#     circs,
+#     backend=backend, 
+#     shots=num_shots,
+#     max_experiments_per_job=max_experiments_per_job,
+#     name="Lorentzian Power Narrowing"
+# )
+# results = jobs.results()
+# transition_probability = []
+# for i in range(num_circs):
+#     print(results.get_counts(i))
+#     try:
+#         transition_probability.append(results.get_counts(i)["1"] / num_shots)
+#     except KeyError:
+#         transition_probability.append(1 - results.get_counts(i)["0"] / num_shots)
+
+transition_probability, job_ids = run_jobs(circs, backend, dur_dt, num_shots_per_exp=num_shots)
 
 transition_probability = np.array(transition_probability).reshape(len(amplitudes), len(frequencies_GHz))
-job_set_id = jobs.job_set_id()
-print("JobsID:", job_set_id)
+# job_set_id = jobs.job_set_id()
+print("JobsID:", job_ids)
 
 ## save final data
 freq_offset = (frequencies_Hz - center_frequency_Hz) / 10**6

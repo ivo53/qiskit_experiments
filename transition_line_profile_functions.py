@@ -1,8 +1,8 @@
 import numpy as np
+import mpmath as mp
+import scipy.special as sp
 from scipy.optimize import curve_fit, root
 from scipy.integrate import quad, quad_vec
-import scipy.special as sp
-import mpmath as mp
 
 import pulse_shapes
 
