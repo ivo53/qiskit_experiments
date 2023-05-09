@@ -12,75 +12,98 @@ import mpmath as mp
 from transition_line_profile_functions import *
 
 
+# times = {
+#     "gauss": [["2022-06-16", "174431"]],
+#     "constant": [["2022-06-16", "174532"]],
+#     "rabi": [["2022-06-16", "174532"]],
+#     "sine": [["2022-06-16", "174541"]],
+#     "sine2": [["2022-06-16", "174543"]],
+#     "sine3": [["2022-06-16", "174546"]],
+#     "rz": [["2022-06-16", "174403"]],
+#     "sech2": [["2022-06-16", "174406"]],
+#     "demkov": [["2022-06-16", "174352"]],
+#     "lor_192": [["2023-02-28", "025139"],["2023-02-28", "025146"],["2023-02-28", "020906"],["2023-02-28", "020911"],["2023-02-28", "020917"],["2023-02-28", "020925"]],
+#     "lor2_192": [["2023-02-28", "025156"],["2023-02-28", "025202"],["2023-02-28", "021915"],["2023-02-28", "021921"],["2023-02-28", "021925"],["2023-02-28", "021933"]],
+#     "lor3_192": [["2023-02-28", "025228"],["2023-02-28", "025233"],["2023-02-28", "022002"],["2023-02-28", "022009"],["2023-02-28", "022017"],["2023-02-28", "022026"]],
+#     "sech_192": [["2023-02-28", "025719"],["2023-02-28", "025724"],["2023-02-28", "012715"],["2023-02-28", "012720"],["2023-02-28", "012726"],["2023-02-28", "012733"]],
+#     "sech2_192": [["2023-02-28", "025731"],["2023-02-28", "025737"],["2023-02-28", "012801"],["2023-02-28", "012806"],["2023-02-28", "012810"],["2023-02-28", "012818"]],
+#     "gauss_192": [["2023-02-28", "025701"],["2023-02-28", "025706"],["2023-02-28", "012839"],["2023-02-28", "012843"],["2023-02-28", "012848"],["2023-02-28", "012857"]],
+#     "sin_192": [["2023-02-28", "025352"]],
+#     "sin2_192": [["2023-02-28", "025357"]],
+#     "sin3_192": [["2023-02-28", "025401"]],
+#     "sin4_192": [["2023-02-28", "025405"]],
+#     "sin5_192": [["2023-02-28", "025410"]],
+# }
+
 times = {
-    "gauss": [["2022-06-16", "174431"]],
-    "constant": [["2022-06-16", "174532"]],
-    "rabi": [["2022-06-16", "174532"]],
-    "sine": [["2022-06-16", "174541"]],
-    "sine2": [["2022-06-16", "174543"]],
-    "sine3": [["2022-06-16", "174546"]],
-    "rz": [["2022-06-16", "174403"]],
-    "sech2": [["2022-06-16", "174406"]],
-    "demkov": [["2022-06-16", "174352"]],
-    "lor_192": [["2023-02-28", "025139"],["2023-02-28", "025146"],["2023-02-28", "020906"],["2023-02-28", "020911"],["2023-02-28", "020917"],["2023-02-28", "020925"]],
-    "lor2_192": [["2023-02-28", "025156"],["2023-02-28", "025202"],["2023-02-28", "021915"],["2023-02-28", "021921"],["2023-02-28", "021925"],["2023-02-28", "021933"]],
-    "lor3_192": [["2023-02-28", "025228"],["2023-02-28", "025233"],["2023-02-28", "022002"],["2023-02-28", "022009"],["2023-02-28", "022017"],["2023-02-28", "022026"]],
-    "sech_192": [["2023-02-28", "025719"],["2023-02-28", "025724"],["2023-02-28", "012715"],["2023-02-28", "012720"],["2023-02-28", "012726"],["2023-02-28", "012733"]],
-    "sech2_192": [["2023-02-28", "025731"],["2023-02-28", "025737"],["2023-02-28", "012801"],["2023-02-28", "012806"],["2023-02-28", "012810"],["2023-02-28", "012818"]],
-    "gauss_192": [["2023-02-28", "025701"],["2023-02-28", "025706"],["2023-02-28", "012839"],["2023-02-28", "012843"],["2023-02-28", "012848"],["2023-02-28", "012857"]],
-    "sin_192": [["2023-02-28", "025352"]],
-    "sin2_192": [["2023-02-28", "025357"]],
-    "sin3_192": [["2023-02-28", "025401"]],
-    "sin4_192": [["2023-02-28", "025405"]],
-    "sin5_192": [["2023-02-28", "025410"]],
+    "lor_192": [["2023-04-27", "135516"],["2023-04-27", "135524"],["2023-04-27", "135528"],["2023-04-27", "135532"]],
+    "lor2_192": [["2023-04-27", "135609"],["2023-04-27", "135613"],["2023-04-27", "135616"],["2023-04-27", "135619"]],
+    "lor3_192": [["2023-04-27", "135622"],["2023-04-27", "135625"],["2023-04-27", "135628"],["2023-04-27", "135631"]],
+    "sech_192": [["2023-04-27", "135702"],["2023-04-27", "135706"],["2023-04-27", "135710"],["2023-04-27", "135714"]],
+    "sech2_192": [["2023-04-27", "135730"],["2023-04-27", "135734"],["2023-04-27", "135736"],["2023-04-27", "135738"]],
+    "gauss_192": [["2023-04-27", "135639"],["2023-04-27", "135644"],["2023-04-27", "135648"],["2023-04-27", "135651"]],
+    "demkov_192": [["2023-04-27", "135803"],["2023-04-27", "135807"],["2023-04-27", "135811"],["2023-04-27", "135815"]],
+    "sin_192": [["2023-04-27", "135342"]],
+    "sin2_192": [["2023-04-27", "135402"]],
+    "sin3_192": [["2023-04-27", "135404"]],
+    "sin4_192": [["2023-04-27", "135406"]],
+    "sin5_192": [["2023-04-27", "135408"]],
 }
+
+# durations = {
+#     192: 0,
+#     384: 1,
+#     768: 2,
+#     1152: 3,
+#     1920: 4,
+#     3840: 5
+# }
 
 durations = {
     192: 0,
-    384: 1,
-    768: 2,
-    1152: 3,
-    1920: 4,
-    3840: 5
+    224: 1,
+    256: 2,
+    320: 3
 }
  
 # date = "2022-06-16"
 area = "pi"
-backend_name = "manila"
+backend_name = "quito"
 s = 192
-dur = 192
-pulse_type = "sech2"
+dur = 320
+pulse_type = "lor3"
 pulse_type = pulse_type if s is None else "_".join([pulse_type, str(s)])
 dur_idx = durations [dur] if dur is not None else 0
 date = times[pulse_type][dur_idx][0]
 time = times[pulse_type][dur_idx][1]
 fit_func = pulse_type if "_" not in pulse_type else pulse_type.split("_")[0]
 # baseline_fit_func = "sinc2" if pulse_type in ["rabi", "constant"] else "lorentzian"
-comparison = 0 # 0 or 1, whether to have both curves
+comparison = 1 # 0 or 1, whether to have both curves
 
 FIT_FUNCTIONS = {
     "lorentzian": lorentzian,
     "constant": rabi,
     "rabi": rabi,
-    "gauss": [gauss_rlzsm,], #gauss_rzconj,
-    "rz": [sech_rlzsm,], #rz,
-    "sech": [sech_rlzsm,], #rz,
-    "demkov": demkov,
-    "sech2": [sech2_rlzsm,], #sech_sq,
+    "gauss": [gauss_rlzsm, gauss_dappr], #gauss_rzconj,
+    "rz": [sech_rlzsm, sech_dappr], #rz,
+    "sech": [sech_rlzsm, sech_dappr], #rz,
+    "demkov": [demkov,],
+    "sech2": [sech2_rlzsm, sech2_dappr], #sech_sq,
     "sinc2": sinc2,
-    "sin": [sin_rlzsm, sin],
+    "sin": [sin_rlzsm, sin_dappr],
     "sin2": [sin2,],
     "sin3": [sin3,],
     "sin4": [sin4,],
     "sin5": [sin5,],
-    "lor": [lor_rlzsm,],
-    "lor2": [lor2_rlzsm,],
-    "lor3": [lor3_rlzsm,],
+    "lor": [lor_rlzsm, lor_dappr],
+    "lor2": [lor2_rlzsm, lor2_dappr],
+    "lor3": [lor3_rlzsm, lor3_dappr],
 }
 file_dir = os.path.dirname(__file__)
 data_folder = os.path.join(file_dir, "data", backend_name, "calibration", date)
 data_files = os.listdir(data_folder)
-center_freq = 4962284031.287086 * 1e-6
+# center_freq = 4962284031.287086 * 1e-6
+center_freq = 5300687845.108738 * 1e-6
 for d in data_files:
     if d.startswith(times[pulse_type][dur_idx][1]):
         csv_file = d
@@ -92,19 +115,19 @@ for d in data_files:
 
 model_name_dict = {
     "rabi": ["Rabi", "Sinc$^2$"], 
-    "rz": ["Rosen-Zener rLZSM", "Lorentzian"], 
-    "sech": ["Rosen-Zener rLZSM", "Lorentzian"], 
-    "gauss": ["Gaussian rLZSM", "Lorentzian"], 
-    "demkov": ["Demkov", "Lorentzian"], 
-    "sech2": ["Sech$^2$ rLZSM", "Lorentzian"],
-    "sin": ["Sine rLZSM", "Sine RZ Conjecture"],
-    "sin2": ["Sine$^2$", "Lorentzian"],
-    "sin3": ["Sine$^3$", "Lorentzian"],
-    "sin4": ["Sine$^4$", "Lorentzian"],
-    "sin5": ["Sine$^5$", "Lorentzian"],
-    "lor": ["Lorentzian rLZSM", "Lorentzian"],
-    "lor2": ["Lorentzian$^2$ rLZSM", "Lorentzian"],
-    "lor3": ["Lorentzian$^3$ rLZSM", "Lorentzian"],
+    "rz": ["Rosen-Zener rLZSM", "Double Approx"], 
+    "sech": ["Rosen-Zener rLZSM", "Double Approx"], 
+    "gauss": ["Gaussian rLZSM", "Double Approx"], 
+    "demkov": ["Demkov rLZSM", "Double Approx"], 
+    "sech2": ["Sech$^2$ rLZSM", "Double Approx"],
+    "sin": ["Sine rLZSM", "Double Approx"],
+    "sin2": ["Sine$^2$", "Double Approx"],
+    "sin3": ["Sine$^3$", "Double Approx"],
+    "sin4": ["Sine$^4$", "Double Approx"],
+    "sin5": ["Sine$^5$", "Double Approx"],
+    "lor": ["Lorentzian rLZSM", "Double Approx"],
+    "lor2": ["Lorentzian$^2$ rLZSM", "Double Approx"],
+    "lor3": ["Lorentzian$^3$ rLZSM", "Double Approx"],
 }
 
 df = pd.read_csv(os.path.join(data_folder, csv_file))
@@ -140,9 +163,7 @@ def fit_once(
             detuning,
             vals, 
             FIT_FUNCTIONS[fit_func][1],
-            [0.1, 0, 0], # initial parameters for curve_fit
-            [-3, 0, 0],
-            [3, 0.5, 0.6],
+            args, args_min, args_max,
             s, dur
 
             # [1, 0, 1], # initial parameters for curve_fit
@@ -151,10 +172,7 @@ def fit_once(
         )
     ##
     # print(fit_params, "\n", baseline_fit_params)
-    if ef is not None: 
-        ef = sech2_extended_freq
-    else:
-        ef = extended_freq
+    ef = extended_freq
     extended_y_fit = FIT_FUNCTIONS[fit_func][0](ef, *fit_params)
     similarity_idx = np.sum(np.abs(y_fit - vals))
     overfitting_idx = np.mean(np.abs(np.diff(extended_y_fit)))
@@ -212,11 +230,11 @@ residuals = y_fit - vals
 err_res = np.sqrt(np.sum(residuals ** 2) / dof)
 
 print(model_name_dict[fit_func][0])
-print("Model SI:", similarity_idx)
+print("rLZSM SI:", similarity_idx)
 q_freq_model = fit_params[0] / (2 * np.pi)
 q_freq_err_model = err[0] / (2 * np.pi)
 if comparison:
-    print("Baseline SI:", baseline_similarity_idx)
+    print("Double approx SI:", baseline_similarity_idx)
     q_freq_bl = baseline_fit_params[-2] / (2 * np.pi)
     q_freq_err_bl = baseline_err[-2] / (2 * np.pi)
 print(q_freq_model, "+-", q_freq_err_model)
@@ -336,8 +354,9 @@ plt.xlabel("Detuning [MHz]", fontsize=20)
 
 # fig2_name = date.strftime("%H%M%S") + f"_{pulse_type}_area_{area}_frequency_sweep_fitted.png" if pulse_type not in lorentz_pulses else \
 #     date.strftime("%H%M%S") + f"_{pulse_type}_cutoff_{cutoff}_{ctrl_param}_{c_p}_area_{area}_frequency_sweep_fitted.png"
-save_dir = "C:/Users/Ivo/Documents/PhD Documents/rLZSM/"
+save_dir = os.path.join(file_dir, "paper_ready_plots")
+
 date = datetime.now()
-fig_name = pulse_type + "_" + date.strftime("%Y%m%d") + ".pdf"
-plt.savefig(os.path.join(save_dir, fig_name), format="pdf")
+fig_name = pulse_type + "_" + str(dur) + "_" + date.strftime("%Y%m%d") + ".eps"
+plt.savefig(os.path.join(save_dir, fig_name), format="eps")
 plt.show()
