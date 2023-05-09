@@ -99,7 +99,7 @@ print(f"Qubit {qubit} has an estimated frequency of {center_frequency_Hz / GHz} 
 
 
 # Drive pulse parameters (us = microseconds)
-dur_dt = 300 * 16#1117 * 16 #525 * 16 #644 * 16 #483 * 16 #5152
+dur_dt = 30 * 16#1117 * 16 #525 * 16 #644 * 16 #483 * 16 #5152
 
 resolution = (100,100)#(5, 10)
 
