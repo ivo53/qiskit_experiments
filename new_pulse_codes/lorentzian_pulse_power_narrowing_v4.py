@@ -80,8 +80,6 @@ us = 1.0e-6 # Microseconds
 ns = 1.0e-9 # Nanoseconds
 # We will find the qubit frequency for the following qubit.
 qubit = 0
-# We will define memory slot channel 0.
-mem_slot = 0
 
 # samples need to be multiples of 16
 def get_closest_multiple_of_16(num):

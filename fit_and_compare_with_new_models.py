@@ -70,8 +70,8 @@ durations = {
 area = "pi"
 backend_name = "quito"
 s = 192
-dur = 320
-pulse_type = "lor3"
+dur = 192
+pulse_type = "sin"
 pulse_type = pulse_type if s is None else "_".join([pulse_type, str(s)])
 dur_idx = durations [dur] if dur is not None else 0
 date = times[pulse_type][dur_idx][0]
@@ -219,7 +219,7 @@ if comparison:
     baseline_similarity_idx, baseline_y_fit, \
         baseline_extended_y_fit, baseline_fit_params, baseline_err = baseline
 else:
-    fit = fit[0]        
+    fit = fit[0]
 similarity_idx, y_fit, extended_y_fit, fit_params, err = fit
 print(fit_params)
 # print(baseline_fit_params)
@@ -269,10 +269,10 @@ figsize = (10,7) if comparison else (10,6)
 fig = plt.figure(constrained_layout=True, figsize=figsize)
 gs = fig.add_gridspec(figsize[1], 1)
 ax0 = fig.add_subplot(gs[:5, :])
-ax0.scatter(scaled_det, vals, color='black', marker="P", label="Measured values")
+ax0.semilogy(scaled_det, vals, color='black', marker="P", label="Measured values")
 if comparison:
-    ax0.plot(scaled_ef, baseline_extended_y_fit, color='blue', label=f"{model_name_dict[fit_func][0]} model fit")
-ax0.plot(scaled_ef, extended_y_fit, color='red', label=f"{model_name_dict[fit_func][1]} model fit")
+    ax0.semilogy(scaled_ef, baseline_extended_y_fit, color='blue', label=f"{model_name_dict[fit_func][0]} model fit")
+ax0.semilogy(scaled_ef, extended_y_fit, color='red', label=f"{model_name_dict[fit_func][1]} model fit")
 ax0.set_xlim(np.round(scaled_ef[0]/10)*10, -np.round(scaled_ef[0]/10)*10)
 # Create a legend object and customize the order of the labels
 handles, labels = plt.gca().get_legend_handles_labels()
@@ -296,9 +296,9 @@ minor_yticks = np.arange(0, 1.01, 0.1).round(1)
 ax0.set_xticks(major_xticks)
 ax0.set_xticklabels([])
 ax0.set_xticks(minor_xticks, minor="True")
-ax0.set_yticks(major_yticks)
-ax0.set_yticklabels(major_yticks, fontsize=16)
-ax0.set_yticks(minor_yticks, minor="True")
+# ax0.set_yticks(major_yticks)
+# ax0.set_yticklabels(major_yticks, fontsize=16)
+# ax0.set_yticks(minor_yticks, minor="True")
 ax0.grid(which='minor', alpha=0.3)
 ax0.grid(which='major', alpha=0.6)
 
