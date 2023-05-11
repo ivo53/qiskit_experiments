@@ -269,7 +269,11 @@ figsize = (10,7) if comparison else (10,6)
 fig = plt.figure(constrained_layout=True, figsize=figsize)
 gs = fig.add_gridspec(figsize[1], 1)
 ax0 = fig.add_subplot(gs[:5, :])
+<<<<<<< HEAD
 ax0.semilogy(scaled_det, vals, color='black', marker="P", label="Measured values")
+=======
+ax0.semilogy(scaled_det, vals, color='black', marker="P", label="Measured values", linewidth=0.)
+>>>>>>> b3849ae0b4352f28c3824f6b384fdba65a763d41
 if comparison:
     ax0.semilogy(scaled_ef, baseline_extended_y_fit, color='blue', label=f"{model_name_dict[fit_func][0]} model fit")
 ax0.semilogy(scaled_ef, extended_y_fit, color='red', label=f"{model_name_dict[fit_func][1]} model fit")
