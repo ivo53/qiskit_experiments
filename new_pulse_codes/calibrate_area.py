@@ -15,12 +15,12 @@ from qiskit.circuit import Parameter, Gate
 from qiskit.tools.monitor import job_monitor
 # from qiskit.providers.ibmq.managed import IBMQJobManager
 from qiskit_ibm_provider import IBMProvider
-# from qiskit_ibm_provider import IBMProvider
 
 current_dir = os.path.dirname(__file__)
 package_path = os.path.abspath(os.path.split(current_dir)[0])
 sys.path.insert(0, package_path)
 
+from utils.run_jobs import run_jobs
 import pulse_types as pt
 def make_all_dirs(path):
     path = path.replace("\\", "/")
@@ -57,14 +57,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-pt", "--pulse_type", default="gauss", type=str,
         help="Pulse type (e.g. sq, gauss, sine, sech etc.)")
-    # parser.add_argument("-G", "--lorentz_G", default=180, type=float,
-    #     help="Lorentz width (gamma) parameter")    
     parser.add_argument("-s", "--sigma", default=180, type=float,
         help="Pulse width (sigma) parameter")    
     parser.add_argument("-T", "--duration", default=2256, type=int,
         help="Pulse duration parameter")
-    # parser.add_argument("-c", "--cutoff", default=0.5, type=float,
-    #     help="Cutoff parameter in PERCENT of maximum amplitude of Lorentzian")
     parser.add_argument("-rb", "--remove_bg", default=0, type=int,
         help="Whether to drop the background (and thus discontinuities) "
             "of the pulse (0 or 1).")
@@ -85,9 +81,12 @@ if __name__ == "__main__":
         help="The initial value of the l fit param.")
     parser.add_argument("-p", "--p", default=0.5, type=float,
         help="The initial value of the p fit param.")
+    parser.add_argument("-q", "--qubit", default=0, type=int,
+        help="Number of qubit to use.")
     parser.add_argument("-sv", "--save", default=0, type=int,
         help="Whether to save the results from the fit (0 or 1).")
     args = parser.parse_args()
+
     # cutoff = args.cutoff
     lor_G = args.sigma
     duration = get_closest_multiple_of_16(args.duration)
@@ -102,6 +101,7 @@ if __name__ == "__main__":
     pulse_type = args.pulse_type
     l = args.l
     p = args.p
+    qubit = args.qubit
     save = bool(args.save)
     backend_name = backend
     backend = "ibm_" + backend \
@@ -189,50 +189,95 @@ if __name__ == "__main__":
     print(f"The area calibration will start from amp {amplitudes[0]} "
     f"and end at {amplitudes[-1]} with approx step {(final_amp - initial_amp)/num_exp}.")
 
-    amp = Parameter('amp')
-    with pulse.build(backend=backend, default_alignment='sequential', name="calibrate_area") as sched:
-        dur_dt = duration
-        pulse.set_frequency(rough_qubit_frequency, drive_chan)
-        if pulse_type == "sq" or "sin" in pulse_type:
-            pulse_played = pulse_dict[pulse_type][remove_bg](
-                duration=dur_dt,
-                amp=amp,
-                name=pulse_type
-            )
-        elif pulse_type == "gauss":
-            pulse_played = pulse_dict[pulse_type][remove_bg](
-                duration=dur_dt,
-                amp=amp,
-                name=pulse_type,
-                sigma=sigma / np.sqrt(2)
-            )
-        elif pulse_type in ["lor", "lor2", "lor3"]:
-            pulse_played = pulse_dict[pulse_type][remove_bg](
-                duration=dur_dt,
-                amp=amp,
-                name=pulse_type,
-                sigma=sigma,
-            )
-        else:
-            pulse_played = pulse_dict[pulse_type][remove_bg](
-                duration=dur_dt,
-                amp=amp,
-                name=pulse_type,
-                sigma=sigma,
-            )
-        pulse.play(pulse_played, drive_chan)
+    def add_circ(amp, duration, sigma, qubit=0):
+        # amp = Parameter("amp")
+        # duration = 16 * 100
+        # sigma = 192
+        # freq_param = Parameter("freq")
+        with pulse.build(backend=backend, default_alignment='sequential', name="calibrate_area") as sched:
+            dur_dt = duration
+            pulse.set_frequency(rough_qubit_frequency, drive_chan)
+            if pulse_type == "sq" or "sin" in pulse_type:
+                pulse_played = pulse_dict[pulse_type][remove_bg](
+                    duration=dur_dt,
+                    amp=amp,
+                    name=pulse_type
+                )
+            elif pulse_type == "gauss":
+                pulse_played = pulse_dict[pulse_type][remove_bg](
+                    duration=dur_dt,
+                    amp=amp,
+                    name=pulse_type,
+                    sigma=sigma / np.sqrt(2)
+                )
+            elif pulse_type in ["lor", "lor2", "lor3"]:
+                pulse_played = pulse_dict[pulse_type][remove_bg](
+                    duration=dur_dt,
+                    amp=amp,
+                    name=pulse_type,
+                    sigma=sigma,
+                )
+            else:
+                pulse_played = pulse_dict[pulse_type][remove_bg](
+                    duration=dur_dt,
+                    amp=amp,
+                    name=pulse_type,
+                    sigma=sigma,
+                )
+            pulse.play(pulse_played, drive_chan)
+        pi_gate = Gate("rabi", 1, [])
+        base_circ = QuantumCircuit(5, 1)
+        base_circ.append(pi_gate, [qubit])
+        base_circ.measure(qubit, 0)
+        base_circ.add_calibration(pi_gate, (qubit,), sched, [])
+        return base_circ
+
+    # amp = Parameter('amp')
+    # with pulse.build(backend=backend, default_alignment='sequential', name="calibrate_area") as sched:
+    #     dur_dt = duration
+    #     pulse.set_frequency(rough_qubit_frequency, drive_chan)
+    #     if pulse_type == "sq" or "sin" in pulse_type:
+    #         pulse_played = pulse_dict[pulse_type][remove_bg](
+    #             duration=dur_dt,
+    #             amp=amp,
+    #             name=pulse_type
+    #         )
+    #     elif pulse_type == "gauss":
+    #         pulse_played = pulse_dict[pulse_type][remove_bg](
+    #             duration=dur_dt,
+    #             amp=amp,
+    #             name=pulse_type,
+    #             sigma=sigma / np.sqrt(2)
+    #         )
+    #     elif pulse_type in ["lor", "lor2", "lor3"]:
+    #         pulse_played = pulse_dict[pulse_type][remove_bg](
+    #             duration=dur_dt,
+    #             amp=amp,
+    #             name=pulse_type,
+    #             sigma=sigma,
+    #         )
+    #     else:
+    #         pulse_played = pulse_dict[pulse_type][remove_bg](
+    #             duration=dur_dt,
+    #             amp=amp,
+    #             name=pulse_type,
+    #             sigma=sigma,
+    #         )
+    #     pulse.play(pulse_played, drive_chan)
 
     # Create gate holder and append to base circuit
-    pi_gate = Gate("rabi", 1, [amp])
-    base_circ = QuantumCircuit(1, 1)
-    base_circ.append(pi_gate, [0])
-    base_circ.add_calibration(pi_gate, (qubit,), sched, [amp])
-    base_circ.measure(0, 0)
-    circs = [
-        transpile(base_circ.assign_parameters(
-                {amp: a},
-                inplace=False
-        ), backend=backend) for a in amplitudes]
+    # pi_gate = Gate("rabi", 1, [amp])
+    # base_circ = QuantumCircuit(1, 1)
+    # base_circ.append(pi_gate, [0])
+    # base_circ.add_calibration(pi_gate, (qubit,), sched, [amp])
+    # base_circ.measure(0, 0)
+    # circs = [
+    #     transpile(base_circ.assign_parameters(
+    #             {amp: a},
+    #             inplace=False
+    #     ), backend=backend) for a in amplitudes]
+
+    circs = [add_circ(a, duration, sigma, qubit=qubit) for a in amplitudes]
 
     # rabi_schedule = schedule(circs[-1], backend)
     # rabi_schedule.draw(backend=backend)
@@ -258,53 +303,7 @@ if __name__ == "__main__":
     # pi_sweep_results = pi_job.result()
     # #
 
-    # backend._max_circuits = max_experiments_per_job
-    size = duration * num_exp
-    SIZE_LIMIT = 258144
-
-    job_ids = []
-    values = []
-    
-    if size < SIZE_LIMIT:
-        pi_job = backend.run(
-            circs,
-            shots=num_shots_per_exp
-        )
-        job_ids.append(pi_job.job_id())
-        result = pi_job.result()
-        for i in range(len(circs)):
-            try:
-                counts = result.get_counts(i)["1"]
-            except KeyError:
-                counts = 0
-            values.append(counts / num_shots_per_exp)
-    else:
-        num_jobs = size // SIZE_LIMIT + 1
-        size_part = num_exp // num_jobs
-        extra = num_exp % num_jobs
-        parts = [[] for _ in range(num_jobs)]
-        for i in range(num_jobs):
-            start = i * size_part + min(i, extra)
-            end = (i + 1) * size_part + min(i + 1, extra)
-            parts[i] = circs[start:end]
-
-        jobs = []
-        for circs_part in parts:
-            current_job = backend.run(
-                circs_part,
-                shots=num_shots_per_exp
-            )
-            jobs.append(current_job)
-            job_ids.append(current_job.job_id())
-        
-        for job, circs_part in zip(jobs, parts):
-            result = job.result()
-            for i in range(len(circs_part)):
-                try:
-                    counts = result.get_counts(i)["1"]
-                except KeyError:
-                    counts = 0
-                values.append(counts / num_shots_per_exp)
+    values, job_ids = run_jobs(circs, backend, duration, num_shots_per_exp=num_shots_per_exp)
 
     # print(amplitudes, np.real(pi_sweep_values))
     plt.figure(3)

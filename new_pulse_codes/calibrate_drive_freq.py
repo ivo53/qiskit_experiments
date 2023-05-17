@@ -176,49 +176,94 @@ if __name__ == "__main__":
     # print(dt)
     amp = -np.log(1 - np.pi / l) / p + x0
 
-    freq = Parameter('freq')
-    with pulse.build(backend=backend, default_alignment='sequential', name="calibrate_freq") as sched:
-        dur_dt = duration
-        pulse.set_frequency(freq, drive_chan)
-        if pulse_type == "sq" or "sin" in pulse_type:
-            pulse_played = pulse_dict[pulse_type][remove_bg](
-                duration=duration,
-                amp=amp,
-                name=pulse_type
-            )
-        elif pulse_type == "gauss":
-            pulse_played = pulse_dict[pulse_type][remove_bg](
-                duration=duration,
-                amp=amp,
-                name=pulse_type,
-                sigma=sigma / np.sqrt(2),
-            )
-        elif pulse_type in ["lor", "lor2", "lor3"]:
-            pulse_played = pulse_dict[pulse_type][remove_bg](
-                duration=duration,
-                amp=amp,
-                name=pulse_type,
-                sigma=sigma,
-            )
-        else:
-            pulse_played = pulse_dict[pulse_type][remove_bg](
-                duration=duration,
-                amp=amp,
-                name=pulse_type,
-                sigma=sigma,
-            )
-        pulse.play(pulse_played, drive_chan)
+    def add_circ(amp, duration, sigma, freq, qubit=0):
+        # amp = Parameter("amp")
+        # duration = 16 * 100
+        # sigma = 192
+        # freq_param = Parameter("freq")
+        with pulse.build(backend=backend, default_alignment='sequential', name="calibrate_area") as sched:
+            dur_dt = duration
+            pulse.set_frequency(freq, drive_chan)
+            if pulse_type == "sq" or "sin" in pulse_type:
+                pulse_played = pulse_dict[pulse_type][remove_bg](
+                    duration=dur_dt,
+                    amp=amp,
+                    name=pulse_type
+                )
+            elif pulse_type == "gauss":
+                pulse_played = pulse_dict[pulse_type][remove_bg](
+                    duration=dur_dt,
+                    amp=amp,
+                    name=pulse_type,
+                    sigma=sigma / np.sqrt(2)
+                )
+            elif pulse_type in ["lor", "lor2", "lor3"]:
+                pulse_played = pulse_dict[pulse_type][remove_bg](
+                    duration=dur_dt,
+                    amp=amp,
+                    name=pulse_type,
+                    sigma=sigma,
+                )
+            else:
+                pulse_played = pulse_dict[pulse_type][remove_bg](
+                    duration=dur_dt,
+                    amp=amp,
+                    name=pulse_type,
+                    sigma=sigma,
+                )
+            pulse.play(pulse_played, drive_chan)
+        pi_gate = Gate("rabi", 1, [])
+        base_circ = QuantumCircuit(5, 1)
+        base_circ.append(pi_gate, [qubit])
+        base_circ.measure(qubit, 0)
+        base_circ.add_calibration(pi_gate, (qubit,), sched, [])
+        return base_circ
 
-    # Create gate holder and append to base circuit
-    custom_gate = Gate("pi_pulse", 1, [freq])
-    base_circ = QuantumCircuit(num_qubits, 1)
-    base_circ.append(custom_gate, [qubit])
-    base_circ.measure(qubit, 0)
-    base_circ.add_calibration(custom_gate, (qubit,), sched, [freq])
-    circs = [base_circ.assign_parameters(
-            {freq: f},
-            inplace=False
-        ) for f in frequencies]
+    # freq = Parameter('freq')
+    # with pulse.build(backend=backend, default_alignment='sequential', name="calibrate_freq") as sched:
+    #     dur_dt = duration
+    #     pulse.set_frequency(freq, drive_chan)
+    #     if pulse_type == "sq" or "sin" in pulse_type:
+    #         pulse_played = pulse_dict[pulse_type][remove_bg](
+    #             duration=duration,
+    #             amp=amp,
+    #             name=pulse_type
+    #         )
+    #     elif pulse_type == "gauss":
+    #         pulse_played = pulse_dict[pulse_type][remove_bg](
+    #             duration=duration,
+    #             amp=amp,
+    #             name=pulse_type,
+    #             sigma=sigma / np.sqrt(2),
+    #         )
+    #     elif pulse_type in ["lor", "lor2", "lor3"]:
+    #         pulse_played = pulse_dict[pulse_type][remove_bg](
+    #             duration=duration,
+    #             amp=amp,
+    #             name=pulse_type,
+    #             sigma=sigma,
+    #         )
+    #     else:
+    #         pulse_played = pulse_dict[pulse_type][remove_bg](
+    #             duration=duration,
+    #             amp=amp,
+    #             name=pulse_type,
+    #             sigma=sigma,
+    #         )
+    #     pulse.play(pulse_played, drive_chan)
+
+    # # Create gate holder and append to base circuit
+    # custom_gate = Gate("pi_pulse", 1, [freq])
+    # base_circ = QuantumCircuit(num_qubits, 1)
+    # base_circ.append(custom_gate, [qubit])
+    # base_circ.measure(qubit, 0)
+    # base_circ.add_calibration(custom_gate, (qubit,), sched, [freq])
+    # circs = [base_circ.assign_parameters(
+    #         {freq: f},
+    #         inplace=False
+    #     ) for f in frequencies]
+
+    circs = [add_circ(amp, duration, sigma, f, qubit=qubit) for f in frequencies]
 
     sweep_values, job_ids = run_jobs(circs, backend, duration, num_shots_per_exp=num_shots)
 

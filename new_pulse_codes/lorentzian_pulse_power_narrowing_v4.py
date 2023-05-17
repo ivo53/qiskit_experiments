@@ -24,7 +24,7 @@ sys.path.insert(0, package_path)
 from pulse_types import *
 from utils.run_jobs import run_jobs
 
-backend_name = "manila"
+backend_name = "lagos"
 
 def make_all_dirs(path):
     folders = path.split("/")
@@ -63,10 +63,13 @@ data_folder = os.path.join(
 make_all_dirs(data_folder)
 make_all_dirs(folder_name)
 
+backend_full_name = "ibm_" + backend_name \
+    if backend_name in ["perth", "lagos", "nairobi", "oslo"] \
+        else "ibmq_" + backend_name
 
-backend = IBMProvider().get_backend(f"ibmq_{backend_name}")
+backend = IBMProvider().get_backend(backend_full_name)
 backend_config = backend.configuration()
-print(f"Using backend ibmq_{backend_name}")
+print(f"Using backend {backend_full_name}")
 
 dt = backend_config.dt
 print(f"Sampling time: {dt*1e9} ns")
@@ -139,36 +142,55 @@ frequencies_Hz = frequencies_GHz * GHz
 # base_circ.draw(output='mpl')
 drive_chan = pulse.DriveChannel(qubit)
 
+def add_circ(amp, freq):
+    with pulse.build(backend=backend, default_alignment='sequential', name="lorentz_2d") as sched:
+        pulse.set_frequency(freq, drive_chan)
+        pulse.play(
+            Lorentzian(
+                duration=dur_dt,
+                amp=amp,
+                sigma=G,
+                name='lor_pulse'
+            ),
+            drive_chan
+        )
+    lorentz = Gate("lorentz", 1, [])
+    base_circ = QuantumCircuit(5, 1)
+    base_circ.append(lorentz, [qubit])
+    base_circ.measure(qubit, 0)
+    base_circ.add_calibration(lorentz, (qubit,), sched, [])
+    return base_circ
+
 # Create the base schedule
 # Start with drive pulse acting on the drive channel
-circs = []
-freq_off = Parameter('freq_off')
-amp = Parameter('amp')
-with pulse.build(backend=backend, default_alignment='sequential', name="lorentz_2d") as sched:
+# circs = []
+# freq_off = Parameter('freq_off')
+# amp = Parameter('amp')
+# with pulse.build(backend=backend, default_alignment='sequential', name="lorentz_2d") as sched:
     
-    pulse.set_frequency(freq_off, drive_chan)
-    pulse.play(
-        Lorentzian(
-            duration=dur_dt,
-            amp=amp,
-            sigma=G,
-            name='lor_pulse'
-        ),
-        drive_chan
-    )
-    # Create the frequency settings for the sweep (MUST BE IN HZ)
-frequencies_Hz = frequencies_GHz*GHz
+#     pulse.set_frequency(freq_off, drive_chan)
+#     pulse.play(
+#         Lorentzian(
+#             duration=dur_dt,
+#             amp=amp,
+#             sigma=G,
+#             name='lor_pulse'
+#         ),
+#         drive_chan
+#     )
+#     # Create the frequency settings for the sweep (MUST BE IN HZ)
+# frequencies_Hz = frequencies_GHz*GHz
 
-lorentz = Gate("lorentz", 1, [amp, freq_off])
-base_circ = QuantumCircuit(5, 1)
-base_circ.append(lorentz, [qubit])
-base_circ.measure(qubit, 0)
-base_circ.add_calibration(lorentz, (qubit,), sched, [amp, freq_off])
-circs = [
-    base_circ.assign_parameters(
-            {amp: a, freq_off: f},
-            inplace=False
-    ) for a in amplitudes for f in frequencies_Hz]
+# lorentz = Gate("lorentz", 1, [amp, freq_off])
+# base_circ = QuantumCircuit(5, 1)
+# base_circ.append(lorentz, [qubit])
+# base_circ.measure(qubit, 0)
+# base_circ.add_calibration(lorentz, (qubit,), sched, [amp, freq_off])
+# circs = [
+#     base_circ.assign_parameters(
+#             {amp: a, freq_off: f},
+#             inplace=False
+#     ) for a in amplitudes for f in frequencies_Hz]
 
 # for a in amplitudes:
 #     for f in frequencies_Hz - center_frequency_Hz:
@@ -181,14 +203,7 @@ circs = [
 #         circs.append(circ_copy)
 
 
-# schedules = [
-#     sched.assign_parameters(
-#         {freq: f, amp: a},
-#         inplace=False
-#     ) for f in frequencies_Hz for a in amplitudes
-# ]
-# schedules[-2].draw(backend=backend)
-
+circs = [add_circ(a, f) for a in amplitudes for f in frequencies_Hz]
 
 # num_schedules = len(schedules)
 num_circs = len(circs)
