@@ -318,17 +318,20 @@ if __name__ == "__main__":
         pickle.dump(datapoints, f)
     ## fit curve
     def fit_function(x_values, y_values, function, init_params):
-        fitparams, conv = curve_fit(
-            function, 
-            x_values, 
-            y_values, 
-            init_params, 
-            maxfev=100000, 
-            bounds=(
-                [-0.6, 50, 0, -10, 0.4], 
-                [-.40, 1e4, 100, 10, 0.6]
+        try:
+            fitparams, conv = curve_fit(
+                function, 
+                x_values, 
+                y_values, 
+                init_params, 
+                maxfev=100000, 
+                bounds=(
+                    [-0.6, 50, 0, -10, 0.4], 
+                    [-.40, 1e4, 100, 10, 0.6]
+                )
             )
-        )
+        except ValueError:
+            return 100000, 100000
         y_fit = function(x_values, *fitparams)
         
         return fitparams, y_fit
