@@ -30,7 +30,10 @@ def make_all_dirs(path):
 def download_file(backend, access_token):
     url=f'https://api.quantum-computing.ibm.com/api/Backends/{backend}/properties'
     # BE CAREFUL TO CHANGE THE NEXT LINE TO THE DESIRED FOLDER (or you will have user Ivo created ;))
-    save_dir = f"C:/Users/prt_mayhem_root/Documents/IBM Calibration Data/{backend.split('_')[-1]}/"
+    
+    home_path = os.path.expanduser(os.getenv('USERPROFILE'))
+
+    save_dir = f"{home_path}/Documents/IBM Calibration Data/{backend.split('_')[-1]}/"
     make_all_dirs(save_dir)
     headers = {
         'authority': 'api.quantum-computing.ibm.com',

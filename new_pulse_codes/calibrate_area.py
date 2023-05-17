@@ -7,7 +7,7 @@ from datetime import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-from scipy.optimize import curve_fit
+from scipy.optimize import curve_fit, differential_evolution
 from qiskit import pulse, IBMQ, QuantumCircuit, transpile
 from qiskit.circuit import Parameter, Gate
 # This Pulse module helps us build sampled pulses for common pulse shapes
@@ -333,14 +333,44 @@ if __name__ == "__main__":
         
         return fitparams, y_fit
 
+    def mae_function(x_values, y_values, function, init_params):
+        return np.sum(np.abs(fit_function(x_values, y_values, function, init_params)[1] - y_values))
 
-    rabi_fit_params, _ = fit_function(
-        amplitudes[: fit_crop_parameter],
+    # rabi_fit_params, _ = fit_function(
+    #     amplitudes[: fit_crop_parameter],
+    #     np.real(values[: fit_crop_parameter]), 
+    #     lambda x, A, l, p, x0, B: A * (np.cos(l * (1 - np.exp(- p * (x - x0))))) + B,
+    #     [-0.47273362, l, p, 0, 0.47747625]
+    #     # lambda x, A, k, B: A * (np.cos(k * x)) + B,
+    #     # [-0.5, 50, 0.5]
+    # )
+
+    bounds = list(zip([-0.6, 50, 0, -10, 0.4], [-.40, 1e4, 100, 10, 0.6]))
+    
+    strategy = 'best1bin'  # The differential evolution strategy
+    population_size = 10  # The number of candidate solutions in each generation
+    mutation = (0.5, 1.0)  # The mutation factor range
+    recombination = 0.7  # The crossover probability range
+    result = differential_evolution(
+        lambda init_params: mae_function(
+            amplitudes[: fit_crop_parameter], 
+            np.real(values[: fit_crop_parameter]), 
+            lambda x, A, l, p, x0, B: A * (np.cos(l * (1 - np.exp(- p * (x - x0))))) + B, 
+            init_params 
+        ), 
+        bounds, strategy=strategy,
+        popsize=population_size, 
+        mutation=mutation, recombination=recombination
+    )
+
+    optimal_params = result.x
+    min_error = result.fun
+
+    rabi_fit_params, _ = fit_function(            
+        amplitudes[: fit_crop_parameter], 
         np.real(values[: fit_crop_parameter]), 
-        lambda x, A, l, p, x0, B: A * (np.cos(l * (1 - np.exp(- p * (x - x0))))) + B,
-        [-0.47273362, l, p, 0, 0.47747625]
-        # lambda x, A, k, B: A * (np.cos(k * x)) + B,
-        # [-0.5, 50, 0.5]
+        lambda x, A, l, p, x0, B: A * (np.cos(l * (1 - np.exp(- p * (x - x0))))) + B, 
+        optimal_params 
     )
 
     print(rabi_fit_params)
