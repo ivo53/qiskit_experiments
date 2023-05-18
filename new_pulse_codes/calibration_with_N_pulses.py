@@ -28,6 +28,7 @@ current_dir = os.path.dirname(__file__)
 package_path = os.path.abspath(os.path.split(current_dir)[0])
 sys.path.insert(0, package_path)
 
+from utils.run_jobs import run_jobs
 import pulse_types as pt
 
 
@@ -94,8 +95,8 @@ def initialize_backend(backend):
     # acq_chan = pulse.AcquireChannel(qubit)
     
     backend_name = backend
-    provider = IBMQ.load_account()
-    backend = provider.get_backend(backend_full_name)
+    # provider = IBMQ.load_account()
+    backend = IBMProvider().get_backend(backend_full_name)
     print(f"Using {backend_name} backend.")
     backend_defaults = backend.defaults()
     backend_config = backend.configuration()
@@ -148,88 +149,140 @@ def run_check(
         num_exp
     )
     Ns = np.arange(0, N_max + N_interval / 2, N_interval, dtype="int64")
-    base_circ = QuantumCircuit(num_qubits, len(Ns))
-    amp = Parameter("amp")
-    # N = Parameter("N")
-    with pulse.build(backend=backend, default_alignment='sequential', name=f"calibration_with_N_pulses") as sched:
-        pulse.set_frequency(q_freq[qubit], drive_chan)
-        if pulse_type == "sq" or "sin" in pulse_type:
-            pulse_played = pulse_dict[pulse_type][remove_bg](
-                duration=duration,
-                amp=amp,
-                name=pulse_type
-            )
-        elif pulse_type == "gauss":
-            pulse_played = pulse_dict[pulse_type][remove_bg](
-                duration=duration,
-                amp=amp,
-                name=pulse_type,
-                sigma=sigma / np.sqrt(2),
-            )
-        elif pulse_type in ["lor", "lor2", "lor3"]:
-            pulse_played = pulse_dict[pulse_type][remove_bg](
-                duration=duration,
-                amp=amp,
-                name=pulse_type,
-                sigma=sigma,
-            )
-        else:
-            pulse_played = pulse_dict[pulse_type][remove_bg](
-                duration=duration,
-                amp=amp,
-                name=pulse_type,
-                sigma=sigma,
-            )
-        pulse.play(pulse_played, drive_chan)
 
-    custom_gate = Gate("N_pulses", 1, [amp])
-    for i, N in enumerate(Ns):
-        for _ in range(N):
-            base_circ.append(custom_gate, [qubit])
-        base_circ.measure(qubit, i)
-        base_circ.reset(qubit)
+    def add_circ(amp, duration, sigma, freq, Ns, qubit=0):
+        with pulse.build(backend=backend, default_alignment='sequential', name="calibrate_area_with_N_pulses") as sched:
+            dur_dt = duration
+            pulse.set_frequency(freq, drive_chan)
+            if pulse_type == "sq" or "sin" in pulse_type:
+                pulse_played = pulse_dict[pulse_type][remove_bg](
+                    duration=dur_dt,
+                    amp=amp,
+                    name=pulse_type
+                )
+            elif pulse_type == "gauss":
+                pulse_played = pulse_dict[pulse_type][remove_bg](
+                    duration=dur_dt,
+                    amp=amp,
+                    name=pulse_type,
+                    sigma=sigma / np.sqrt(2)
+                )
+            elif pulse_type in ["lor", "lor2", "lor3"]:
+                pulse_played = pulse_dict[pulse_type][remove_bg](
+                    duration=dur_dt,
+                    amp=amp,
+                    name=pulse_type,
+                    sigma=sigma,
+                )
+            else:
+                pulse_played = pulse_dict[pulse_type][remove_bg](
+                    duration=dur_dt,
+                    amp=amp,
+                    name=pulse_type,
+                    sigma=sigma,
+                )
+            pulse.play(pulse_played, drive_chan)
     
-    base_circ.add_calibration(custom_gate, (qubit,), sched, [amp])
-    circs = [
-        base_circ.assign_parameters(
-            {amp: a},
-            inplace=False
-        ) for a in amplitudes
-    ]
+        base_circ = QuantumCircuit(num_qubits, len(Ns))
+        custom_gate = Gate("N_pulses", 1, [])
+        for i, N in enumerate(Ns):
+            for _ in range(N):
+                base_circ.append(custom_gate, [qubit])
+            base_circ.measure(qubit, i)
+            base_circ.reset(qubit)
+        base_circ.add_calibration(custom_gate, (qubit,), sched, [])
+        return base_circ
+
+
+    # base_circ = QuantumCircuit(num_qubits, len(Ns))
+    # amp = Parameter("amp")
+    # # N = Parameter("N")
+    
+    # with pulse.build(backend=backend, default_alignment='sequential', name=f"calibration_with_N_pulses") as sched:
+    #     pulse.set_frequency(q_freq[qubit], drive_chan)
+    #     if pulse_type == "sq" or "sin" in pulse_type:
+    #         pulse_played = pulse_dict[pulse_type][remove_bg](
+    #             duration=duration,
+    #             amp=amp,
+    #             name=pulse_type
+    #         )
+    #     elif pulse_type == "gauss":
+    #         pulse_played = pulse_dict[pulse_type][remove_bg](
+    #             duration=duration,
+    #             amp=amp,
+    #             name=pulse_type,
+    #             sigma=sigma / np.sqrt(2),
+    #         )
+    #     elif pulse_type in ["lor", "lor2", "lor3"]:
+    #         pulse_played = pulse_dict[pulse_type][remove_bg](
+    #             duration=duration,
+    #             amp=amp,
+    #             name=pulse_type,
+    #             sigma=sigma,
+    #         )
+    #     else:
+    #         pulse_played = pulse_dict[pulse_type][remove_bg](
+    #             duration=duration,
+    #             amp=amp,
+    #             name=pulse_type,
+    #             sigma=sigma,
+    #         )
+    #     pulse.play(pulse_played, drive_chan)
+
+    # custom_gate = Gate("N_pulses", 1, [amp])
+    # for i, N in enumerate(Ns):
+    #     for _ in range(N):
+    #         base_circ.append(custom_gate, [qubit])
+    #     base_circ.measure(qubit, i)
+    #     base_circ.reset(qubit)
+    
+    # base_circ.add_calibration(custom_gate, (qubit,), sched, [amp])
+    # circs = [
+    #     base_circ.assign_parameters(
+    #         {amp: a},
+    #         inplace=False
+    #     ) for a in amplitudes
+    # ]
+
+    circs = [add_circ(a, duration, sigma, q_freq[qubit], Ns) for a in amplitudes]
 
     max_experiments_per_job = 100
     num_shots = 1024
 
-    job_manager = IBMQJobManager()
-    job = job_manager.run(
-        circs,
-        backend=backend,
-        name="N pulses calibration",
-        max_experiments_per_job=max_experiments_per_job,
-        shots=num_shots
-    )
-    N_pulse_cal_results = job.results()
+    sweep_values, job_ids = run_jobs(circs, backend, duration *len(Ns)  , num_shots_per_exp=num_shots)
 
-    sweep_values = []
-    for i in range(len(circs)):
-        counts = N_pulse_cal_results.get_counts(i)
-        exp_values = np.zeros((len(Ns)), dtype="int64")
-        for k in counts.keys():
-            for i, meas in enumerate(k):
-                if int(meas) == 0:
-                    exp_values[i] += counts[k]
-        sweep_values.extend(exp_values / num_shots)
+    # job_manager = IBMQJobManager()
+    # job = job_manager.run(
+    #     circs,
+    #     backend=backend,
+    #     name="N pulses calibration",
+    #     max_experiments_per_job=max_experiments_per_job,
+    #     shots=num_shots
+    # )
+    # N_pulse_cal_results = job.results()
+
+    # sweep_values = []
+    # for i in range(len(circs)):
+    #     counts = N_pulse_cal_results.get_counts(i)
+    #     exp_values = np.zeros((len(Ns)), dtype="int64")
+    #     for k in counts.keys():
+    #         for i, meas in enumerate(k):
+    #             if int(meas) == 0:
+    #                 exp_values[i] += counts[k]
+    #     sweep_values.extend(exp_values / num_shots)
+
     print(N, np.array(sweep_values).reshape(np.round(N_max / N_interval + 1).astype(np.int64), len(amplitudes)))
     return Ns, np.array(sweep_values).reshape(np.round(N_max / N_interval + 1).astype(np.int64), len(amplitudes))
 
 
 def find_least_variation(x, ys, init_params=[1, 1], bounds=[[-100, -100],[100, 100]]):
-    y_fits = []
-    for y in ys:
-        par, y_fit = fit_function(x, y, linear_func, init_params, bounds)
-        y_fits.append(y_fit)
-    y_fits = np.array(y_fits)
-    diff = np.mean(np.abs(ys - y_fits[:, None]), axis=1)
+    # y_fits = []
+    # for y in ys:
+    #     par, y_fit = fit_function(x, y, linear_func, init_params, bounds)
+    #     y_fits.append(y_fit)
+    # y_fits = np.array(y_fits)
+    # diff = np.mean(np.abs(ys - y_fits[:, None]), axis=1)
+    diff = np.sum(ys, 1)
     closest_idx = np.argmin(diff)
     return closest_idx
 
@@ -262,6 +315,8 @@ if __name__ == "__main__":
         oslo, jakarta, manila, quito, belem, lima).")
     parser.add_argument("-sp", "--span", default=0.01, type=float,
         help="The span of the amplitude sweep as a fraction of the amplitude value.")
+    parser.add_argument("-iter", "--num_iterations", default=3, type=int,
+        help="The number of optimization iterations of the algorithm.")
     args = parser.parse_args()
 
     pulse_type = args.pulse_type
@@ -277,13 +332,14 @@ if __name__ == "__main__":
     num_exp = args.num_experiments
     backend = args.backend
     amp_span = args.span
+    num_iterations = args.num_iterations
 
     l, p, x0 = get_calib_params(
         backend, pulse_type, 
         sigma, duration,
         remove_bg
     )
-    for i in range(3):
+    for i in range(num_iterations):
         x, ys = run_check(
             amp_span / (10**i), 
             duration, sigma, 
