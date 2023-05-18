@@ -24,7 +24,7 @@ def run_jobs(circs, backend, duration, num_shots_per_exp=1024):
         size_part = num_exp // num_jobs
         if size_part > CIRC_LIMIT:
             size_part = CIRC_LIMIT
-            num_jobs = num_exp // size_part + 1
+            num_jobs = num_exp // size_part + int(num_exp % size_part > 0)
         extra = num_exp % num_jobs
         parts = [[] for _ in range(num_jobs)]
         for i in range(num_jobs):
