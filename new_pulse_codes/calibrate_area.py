@@ -348,32 +348,47 @@ if __name__ == "__main__":
     #     # [-0.5, 50, 0.5]
     # )
 
-    bounds = list(zip([-0.6, 50, 0, -10, 0.4], [-.40, 1e4, 100, 10, 0.6]))
+    bounds = list(zip([-0.47273363, 20, 0.49, 0, 0.47], [-.4727335, 1e4, 0.5, 0.01, 0.48]))
     
-    strategy = 'best1bin'  # The differential evolution strategy
-    population_size = 10  # The number of candidate solutions in each generation
-    mutation = (0.5, 1.0)  # The mutation factor range
-    recombination = 0.7  # The crossover probability range
-    result = differential_evolution(
-        lambda init_params: mae_function(
+    # differential evolution
+    # strategy = 'best1bin'  # The differential evolution strategy
+    # population_size = 100  # The number of candidate solutions in each generation
+    # maxiter = 10000  # The maximum number of iterations
+    # mutation = (0.5, 1.0)  # The mutation factor range
+    # recombination = 0.7  # The crossover probability range
+    # result = differential_evolution(
+    #     lambda init_params: mae_function(
+    #         amplitudes[: fit_crop_parameter], 
+    #         np.real(values[: fit_crop_parameter]), 
+    #         lambda x, A, l, p, x0, B: A * (np.cos(l * (1 - np.exp(- p * (x - x0))))) + B, 
+    #         init_params 
+    #     ), 
+    #     bounds, strategy=strategy,
+    #     popsize=population_size, maxiter=maxiter,
+    #     mutation=mutation, recombination=recombination,
+    #     x0=[-0.47273362, l, p, 0, 0.47747625]
+    # )
+
+    # optimal_params = result.x
+    # min_error = result.fun
+
+    max_l = 1000
+    mae_threshold = 2
+    for current_l in range(50, max_l, 50):
+        if mae_function(
             amplitudes[: fit_crop_parameter], 
             np.real(values[: fit_crop_parameter]), 
             lambda x, A, l, p, x0, B: A * (np.cos(l * (1 - np.exp(- p * (x - x0))))) + B, 
-            init_params 
-        ), 
-        bounds, strategy=strategy,
-        popsize=population_size, 
-        mutation=mutation, recombination=recombination
-    )
-
-    optimal_params = result.x
-    min_error = result.fun
+            [-0.47273362, current_l, p, 0, 0.47747625]
+        ) < mae_threshold:
+            l = current_l
+            break
 
     rabi_fit_params, _ = fit_function(            
         amplitudes[: fit_crop_parameter], 
         np.real(values[: fit_crop_parameter]), 
         lambda x, A, l, p, x0, B: A * (np.cos(l * (1 - np.exp(- p * (x - x0))))) + B, 
-        optimal_params 
+        [-0.47273362, l, p, 0, 0.47747625] 
     )
 
     print(rabi_fit_params)
