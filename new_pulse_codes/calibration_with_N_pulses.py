@@ -251,27 +251,7 @@ def run_check(
 
     sweep_values, job_ids = run_jobs(circs, backend, duration *len(Ns)  , num_shots_per_exp=num_shots)
 
-    # job_manager = IBMQJobManager()
-    # job = job_manager.run(
-    #     circs,
-    #     backend=backend,
-    #     name="N pulses calibration",
-    #     max_experiments_per_job=max_experiments_per_job,
-    #     shots=num_shots
-    # )
-    # N_pulse_cal_results = job.results()
-
-    # sweep_values = []
-    # for i in range(len(circs)):
-    #     counts = N_pulse_cal_results.get_counts(i)
-    #     exp_values = np.zeros((len(Ns)), dtype="int64")
-    #     for k in counts.keys():
-    #         for i, meas in enumerate(k):
-    #             if int(meas) == 0:
-    #                 exp_values[i] += counts[k]
-    #     sweep_values.extend(exp_values / num_shots)
-
-    print(N, np.array(sweep_values).reshape(np.round(N_max / N_interval + 1).astype(np.int64), len(amplitudes)))
+    print(Ns, np.array(sweep_values).reshape(np.round(N_max / N_interval + 1).astype(np.int64), len(amplitudes)))
     return Ns, np.array(sweep_values).reshape(np.round(N_max / N_interval + 1).astype(np.int64), len(amplitudes))
 
 
