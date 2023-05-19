@@ -59,7 +59,7 @@ if __name__ == "__main__":
         help="Pulse type (e.g. sq, gauss, sine, sech etc.)")
     parser.add_argument("-s", "--sigma", default=180, type=float,
         help="Pulse width (sigma) parameter")    
-    parser.add_argument("-T", "--duration", default=2256, type=int,
+    parser.add_argument("-T", "--duration", default=2256, type=float,
         help="Pulse duration parameter")
     parser.add_argument("-rb", "--remove_bg", default=0, type=int,
         help="Whether to drop the background (and thus discontinuities) "
@@ -88,8 +88,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # cutoff = args.cutoff
-    lor_G = args.sigma
-    duration = get_closest_multiple_of_16(args.duration)
+    duration = get_closest_multiple_of_16(round(args.duration))
     sigma = args.sigma
     initial_amp = args.initial_amp
     final_amp = args.final_amp

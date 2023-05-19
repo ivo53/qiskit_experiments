@@ -73,7 +73,7 @@ if __name__ == "__main__":
     #     help="Parameter x0 in Rabi oscillations fit")
     parser.add_argument("-s", "--sigma", default=180, type=float,
         help="Pulse width (sigma) parameter")    
-    parser.add_argument("-T", "--duration", default=2256, type=int,
+    parser.add_argument("-T", "--duration", default=2256, type=float,
         help="Lorentz duration parameter")
     parser.add_argument("-c", "--cutoff", default=0.5, type=float,
         help="Cutoff parameter in PERCENT of maximum amplitude of Lorentzian")
@@ -99,7 +99,7 @@ if __name__ == "__main__":
     # p = args.p
     # x0 = args.x0
     sigma = args.sigma
-    duration = get_closest_multiple_of_16(args.duration)
+    duration = get_closest_multiple_of_16(round(args.duration))
     cutoff = args.cutoff
     remove_bg = args.remove_bg
     control_param = args.control_param
