@@ -24,7 +24,7 @@ sys.path.insert(0, package_path)
 from pulse_types import *
 from utils.run_jobs import run_jobs
 
-backend_name = "lagos"
+backend_name = "manila"
 
 def make_all_dirs(path):
     folders = path.split("/")
