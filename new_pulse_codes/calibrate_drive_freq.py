@@ -167,13 +167,14 @@ if __name__ == "__main__":
     backend_defaults = backend.defaults()
     backend_config = backend.configuration()
     center_frequency_Hz = backend_defaults.qubit_freq_est[qubit]
+    print(center_frequency_Hz)
     num_qubits = backend_config.n_qubits
     if num_qubits <= qubit:
         raise ValueError("Qubit index out of range for this system.")
     span = span * center_frequency_Hz
-    frequencies = np.arange(center_frequency_Hz - span / 2, 
-                            center_frequency_Hz + span / 2,
-                            span / num_experiments)
+    frequencies = np.linspace(center_frequency_Hz - span / 2, 
+                              center_frequency_Hz + span / 2,
+                              num_experiments)
     dt = backend_config.dt
     # print(dt)
     amp = -np.log(1 - np.pi / l) / p + x0
@@ -268,22 +269,6 @@ if __name__ == "__main__":
     circs = [add_circ(amp, duration, sigma, f, qubit=qubit) for f in frequencies]
 
     sweep_values, job_ids = run_jobs(circs, backend, duration, num_shots_per_exp=num_shots)
-
-    # job_manager = IBMQJobManager()
-    # job = job_manager.run(
-    #     circs,
-    #     backend=backend,
-    #     name="Frequency calibration",
-    #     max_experiments_per_job=max_experiments_per_job,
-    #     shots=num_shots
-    # )
-    # frequency_sweep_results = job.results()
-
-    # sweep_values = []
-    # for i in range(len(circs)):
-    #     counts = frequency_sweep_results.get_counts(i)["1"]
-    #     sweep_values.append(counts / num_shots)
-
 
     frequencies_GHz = frequencies / GHz
 

@@ -22,6 +22,7 @@ sys.path.insert(0, package_path)
 
 from utils.run_jobs import run_jobs
 import pulse_types as pt
+
 def make_all_dirs(path):
     path = path.replace("\\", "/")
     folders = path.split("/")  
@@ -375,7 +376,7 @@ if __name__ == "__main__":
 
     max_l = 1000
     mae_threshold = 2
-    for current_l in range(50, max_l, 50):
+    for current_l in range(50, max_l, 25):
         if mae_function(
             amplitudes[: fit_crop_parameter], 
             np.real(values[: fit_crop_parameter]), 
