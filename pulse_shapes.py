@@ -3,6 +3,10 @@ from scipy.integrate import quad_vec
 # the equations of all pulse shapes
 
 
+def integrate(f, a, b, n):
+    values = np.linspace(a, b, n)
+    return np.sum(f(values)) * (b - a) / n
+
 def normalise(
     f, t, 
     T: float,
@@ -165,18 +169,28 @@ def find_pulse_width(pulse_type: str, T: float, sigma: float=None, rb: bool=True
         tau = quad_vec(
             lambda t: normalise(pulse_shapes[pulse_type], t, T, sigma), 
             0, T, 
-            epsabs=1e-13, epsrel=1e-5
+            epsabs=1e-6, epsrel=1e-6
         )[0]
+        # tau = integrate(
+        #     lambda t: normalise(pulse_shapes[pulse_type], t, T, sigma), 
+        #     0, T, 1000000
+        # )
     else:
         tau = quad_vec(
             lambda t: pulse_shapes[pulse_type](t, T, sigma), 
             0, T, 
-            epsabs=1e-13, epsrel=1e-5
+            epsabs=1e-6, epsrel=1e-6
         )[0]
+        # tau = integrate(
+        #     lambda t: pulse_shapes[pulse_type](t, T, sigma), 
+        #     0, T, 1000000
+        # )
+
     return tau
 
 def find_rabi_amp(pulse_type: str, T: float, sigma: float=None, pulse_area: float=np.pi, rb: bool=True):
     if "_" in pulse_type:
         pulse_type = pulse_type.split("_")[0]
     tau = find_pulse_width(pulse_type, T, sigma, rb)
+    print("tau = ", tau)
     return pulse_area / tau

@@ -50,11 +50,13 @@ ALPHA = {
     "demkov": 0.15786564335245298
 }
 
-def fit_function(x_values, y_values, function, init_params, lower, higher, sigma=None, duration=None):
+def fit_function(x_values, y_values, function, init_params, lower, higher, sigma=None, duration=None, remove_bg=True):
     global s
     global dur
+    global rb
     s = sigma
     dur = sigma if duration is None else duration
+    rb = remove_bg
     fitparams, conv = curve_fit(
         function, 
         x_values, y_values, init_params, 
@@ -78,7 +80,7 @@ def lorentzian(x, s, A, q_freq, c):
 def rz(x, q_freq, delta, eps):
     sigma = s * 2e-9 / 9
     T = dur * 2e-9 / 9
-    O = pulse_shapes.find_rabi_amp("rz", T, sigma)
+    O = pulse_shapes.find_rabi_amp("rz", T, sigma, rb=rb)
 
     D = (x - q_freq) * 1e6
     P2 = np.sin(0.5 * np.pi * O * sigma) ** 2 \
@@ -88,7 +90,7 @@ def rz(x, q_freq, delta, eps):
 def demkov(x, q_freq, delta, eps):
     sigma = s * 2e-9 / 9
     T = dur * 2e-9 / 9
-    omega_0 = pulse_shapes.find_rabi_amp("demkov", T, sigma)
+    omega_0 = pulse_shapes.find_rabi_amp("demkov", T, sigma, rb=rb)
 
     s_inf = np.pi * omega_0 * sigma
     al = (x - q_freq) * 1e6 * sigma
@@ -100,7 +102,7 @@ def demkov(x, q_freq, delta, eps):
 def sech_sq(x, q_freq, delta, eps):
     sigma = s * 2e-9 / 9
     T = dur * 2e-9 / 9
-    omega_0 = pulse_shapes.find_rabi_amp("sech2", T, sigma)
+    omega_0 = pulse_shapes.find_rabi_amp("sech2", T, sigma, rb=rb)
 
     D = (x - q_freq) * 1e6
     def f_(t):
@@ -117,7 +119,7 @@ def sech_sq(x, q_freq, delta, eps):
 def sin(x, q_freq, delta, eps):
     T = dur * 2e-9 / 9
     sigma = T / np.pi
-    omega_0 = pulse_shapes.find_rabi_amp("sin", T, sigma)
+    omega_0 = pulse_shapes.find_rabi_amp("sin", T, sigma, rb=rb)
 
     D = (x - q_freq) * 1e6
     def f_(t):
@@ -135,11 +137,11 @@ def sin(x, q_freq, delta, eps):
 def double_approx(x, q_freq, delta, eps, tau, pulse_type):
     T = dur * 2e-9 / 9
     sigma = s * 2e-9 / 9
-    omega_0 = pulse_shapes.find_rabi_amp(pulse_type, T, sigma)
+    omega_0 = pulse_shapes.find_rabi_amp(pulse_type, T, sigma, rb=rb)
     sigma /= T
     omega_0 *= T
     D = (x - q_freq) * 1e6 * T
-    omega = lambda t: pulse_shapes.rabi_freq(t, omega_0, pulse_type, 1, sigma)
+    omega = lambda t: pulse_shapes.rabi_freq(t, omega_0, pulse_type, 1, sigma, rb=rb)
     beta = np.sqrt(np.pi * omega(tau))
     d = (D / (2 * beta))
     eta = np.abs(D) * sp.ellipeinc(np.pi, -omega_0**2 / D**2) / np.pi
@@ -170,13 +172,13 @@ def rlzsm_approx(x, q_freq, delta, eps, tau, pulse_type):
     T = dur * 2e-9 / 9
     sigma = s * 2e-9 / 9
     # sigma = T / np.pi
-    omega_0 = pulse_shapes.find_rabi_amp(pulse_type, T, sigma)
+    omega_0 = pulse_shapes.find_rabi_amp(pulse_type, T, sigma, rb=rb)
     
     # sigma /= T
     sigma /= T
     omega_0 *= T
     D = (x - q_freq) * 1e6 * T
-    omega = lambda t: pulse_shapes.rabi_freq(t, omega_0, pulse_type, 1, sigma)
+    omega = lambda t: pulse_shapes.rabi_freq(t, omega_0, pulse_type, 1, sigma, rb=rb)
 
     beta = np.sqrt(np.pi * omega(tau))
     d = (D / (2 * beta))
@@ -243,7 +245,7 @@ def lor3_rlzsm(x, q_freq, delta, eps, tau):
 def sin2(x, q_freq, delta, eps):
     T = dur * 2e-9 / 9
     sigma = T / np.pi
-    omega_0 = pulse_shapes.find_rabi_amp("sin2", T, sigma)
+    omega_0 = pulse_shapes.find_rabi_amp("sin2", T, sigma, rb=rb)
 
     D = (x - q_freq) * 1e6
     def f_(t):
@@ -261,7 +263,7 @@ def sin2(x, q_freq, delta, eps):
 def sin3(x, q_freq, delta, eps):
     T = dur * 2e-9 / 9
     sigma = T / np.pi
-    omega_0 = pulse_shapes.find_rabi_amp("sin3", T, sigma)
+    omega_0 = pulse_shapes.find_rabi_amp("sin3", T, sigma, rb=rb)
 
     D = (x - q_freq) * 1e6
     def f_(t):
@@ -278,7 +280,7 @@ def sin3(x, q_freq, delta, eps):
 def sin4(x, q_freq, delta, eps):
     T = dur * 2e-9 / 9
     sigma = T / np.pi
-    omega_0 = pulse_shapes.find_rabi_amp("sin4", T, sigma)
+    omega_0 = pulse_shapes.find_rabi_amp("sin4", T, sigma, rb=rb)
 
     D = (x - q_freq) * 1e6
     def f_(t):
@@ -295,7 +297,7 @@ def sin4(x, q_freq, delta, eps):
 def sin5(x, q_freq, delta, eps):
     T = dur * 2e-9 / 9
     sigma = T / np.pi
-    omega_0 = pulse_shapes.find_rabi_amp("sin5", T, sigma)
+    omega_0 = pulse_shapes.find_rabi_amp("sin5", T, sigma, rb=rb)
 
     D = (x - q_freq) * 1e6
     def f_(t):
@@ -325,7 +327,7 @@ def sin5(x, q_freq, delta, eps):
 def gauss(x, q_freq, delta, eps):
     sigma = s * 2e-9 / 9 / np.sqrt(2)
     T = dur * 2e-9 / 9
-    omega_0 = pulse_shapes.find_rabi_amp("gauss", T, sigma)
+    omega_0 = pulse_shapes.find_rabi_amp("gauss", T, sigma, rb=rb)
 
     D = (x - q_freq) * 1e6
     alpha = np.abs(omega_0 / D)
@@ -358,7 +360,7 @@ def gauss(x, q_freq, delta, eps):
 def gauss_rzconj(x, q_freq, delta, eps):
     sigma = s * 2e-9 / 9 / np.sqrt(2)
     T = dur * 2e-9 / 9
-    omega_0 = pulse_shapes.find_rabi_amp("gauss", T, sigma)
+    omega_0 = pulse_shapes.find_rabi_amp("gauss", T, sigma, rb=rb)
 
     D = (x - q_freq) * 1e6
     def f_(t):
@@ -374,9 +376,9 @@ def gauss_rzconj(x, q_freq, delta, eps):
 
 
 def demkov_rzconj(x, q_freq, delta, eps):
-    sigma = s * 2e-9 / 9 / np.sqrt(2)
+    sigma = s * 2e-9 / 9
     T = dur * 2e-9 / 9
-    omega_0 = pulse_shapes.find_rabi_amp("demkov", T, sigma)
+    omega_0 = pulse_shapes.find_rabi_amp("demkov", T, sigma, rb=rb)
 
     D = (x - q_freq) * 1e6
     def f_(t):
@@ -397,7 +399,7 @@ def sinc2(x, s, A, q_freq, c):
 def rabi(x, q_freq, delta, eps):
     sigma = s * 2e-9 / 9
     T = dur * 2e-9 / 9
-    omega_0 = pulse_shapes.find_rabi_amp("rabi", T, sigma)
+    omega_0 = pulse_shapes.find_rabi_amp("rabi", T, sigma, rb=rb)
 
     D = (x - q_freq) * 1e6
     P2 = (omega_0 ** 2 / (omega_0**2 + (D) ** 2)) * \

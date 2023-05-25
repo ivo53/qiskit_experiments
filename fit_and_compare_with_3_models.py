@@ -36,6 +36,13 @@ times = {
     # "sin3_192": [["2023-04-27", "135404"]],
     # "sin4_192": [["2023-04-27", "135406"]],
     # "sin5_192": [["2023-04-27", "135408"]],
+    
+    # "gauss": ["2023-05-20", "025844"],
+    # "constant": ["2023-05-20", "104446"],
+    # "rabi": ["2023-05-20", "104446"],
+    # "rz": ["2023-05-20", "025817"],
+    # "sech2": ["2023-05-20", "025829"],
+    # "demkov": ["2023-05-20", "101530"]
     "gauss": ["2023-05-20", "025844"],
     "constant": ["2023-05-20", "104446"],
     "rabi": ["2023-05-20", "104446"],
@@ -44,6 +51,13 @@ times = {
     "demkov": ["2023-05-20", "101530"]
 }
 
+# durations = {
+#     "gauss": 957.28,
+#     "demkov": 2386.41,
+#     "rz": 2652.58,
+#     "sech2": 1459.18,
+#     "rabi": 192,
+# }
 durations = {
     "gauss": 957.28,
     "demkov": 2386.41,
@@ -57,7 +71,7 @@ durations = {
 area = "pi"
 backend_name = "manila"
 s = 192
-pulse_type = "rz"
+pulse_type = "gauss"
 dur = get_closest_multiple_of_16(round(durations[pulse_type]))
 # pulse_type = pulse_type if dur is None else "_".join([pulse_type, str(s)])
 # dur_idx = durations [dur] if dur is not None else 0
@@ -127,7 +141,7 @@ freq = df["frequency_ghz"].to_numpy() * 1e3
 vals = df["transition_probability"].to_numpy()
 
 length = len(freq)
-middle_length = round(0.8 * length)
+middle_length = round(0.6 * length)
 start = (length - middle_length) // 2
 end = start + middle_length
 
@@ -142,9 +156,9 @@ def fit_once(
     args, args_min, args_max,
     ef=None
 ):
-    initial = [0.1, 0, 0]
+    initial = [0.1, 0.5, 0.5]
     initial_min = [-5, 0, 0]
-    initial_max = [5, 0.5, 0.6]
+    initial_max = [5, 1, 1]
     # initial = [0.1, 0, 0]
     # initial_min = [-3, 0, 0]
     # initial_max = [3, 0.5, 0.6]

@@ -1,4 +1,4 @@
-SIZE_LIMIT = 258144
+SIZE_LIMIT = 250000
 CIRC_LIMIT = 100
 def run_jobs(circs, backend, duration, num_shots_per_exp=1024):
     num_exp = len(circs)
@@ -20,11 +20,14 @@ def run_jobs(circs, backend, duration, num_shots_per_exp=1024):
                 counts = 0
             values.append(counts / num_shots_per_exp)
     else:
-        num_jobs = size // SIZE_LIMIT + 1
-        size_part = num_exp // num_jobs
-        if size_part > CIRC_LIMIT:
-            size_part = CIRC_LIMIT
-            num_jobs = num_exp // size_part + int(num_exp % size_part > 0)
+        # num_jobs = size // SIZE_LIMIT + 1
+        # size_part = num_exp // num_jobs
+        # if size_part > CIRC_LIMIT:
+        #     size_part = CIRC_LIMIT
+        #     num_jobs = num_exp // size_part + int(num_exp % size_part > 0)
+        # extra = num_exp % num_jobs
+        size_part = min(CIRC_LIMIT, SIZE_LIMIT // duration)
+        num_jobs = num_exp // size_part + bool(num_exp % size_part)
         extra = num_exp % num_jobs
         parts = [[] for _ in range(num_jobs)]
         for i in range(num_jobs):
