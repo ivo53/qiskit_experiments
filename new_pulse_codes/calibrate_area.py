@@ -82,6 +82,8 @@ if __name__ == "__main__":
         help="The initial value of the l fit param.")
     parser.add_argument("-p", "--p", default=0.5, type=float,
         help="The initial value of the p fit param.")
+    parser.add_argument("-x0", "--x0", default=0.01, type=float,
+        help="The initial value of the x0 fit param.")
     parser.add_argument("-q", "--qubit", default=0, type=int,
         help="Number of qubit to use.")
     parser.add_argument("-sv", "--save", default=0, type=int,
@@ -101,6 +103,7 @@ if __name__ == "__main__":
     pulse_type = args.pulse_type
     l = args.l
     p = args.p
+    x0 = args.x0
     qubit = args.qubit
     save = bool(args.save)
     backend_name = backend
@@ -123,6 +126,7 @@ if __name__ == "__main__":
         "sin4": [pt.Sine4, pt.Sine4],
         "sin5": [pt.Sine5, pt.Sine5],
         "demkov": [pt.Demkov, pt.LiftedDemkov],
+        "drag": [pt.Drag, pt.LiftedDrag],
     }
     ## create folder where plots are saved
     file_dir = os.path.dirname(__file__)
@@ -218,6 +222,14 @@ if __name__ == "__main__":
                     amp=amp,
                     name=pulse_type,
                     sigma=sigma,
+                )
+            elif pulse_type == "drag":
+                pulse_played = pulse_dict[pulse_type][remove_bg](
+                    duration=dur_dt,
+                    amp=amp,
+                    beta=1,
+                    name=pulse_type,
+                    sigma=sigma / np.sqrt(2),
                 )
             else:
                 pulse_played = pulse_dict[pulse_type][remove_bg](
@@ -328,8 +340,8 @@ if __name__ == "__main__":
                 init_params, 
                 maxfev=100000, 
                 bounds=(
-                    [-0.6, 50, 0, -10, 0.4], 
-                    [-.40, 1e4, 100, 10, 0.6]
+                    [-0.6, 1, 0, -1, 0.4], 
+                    [-0.40, 1e4, 100, 1, 0.6]
                 )
             )
         except ValueError:
@@ -350,7 +362,7 @@ if __name__ == "__main__":
     #     # [-0.5, 50, 0.5]
     # )
 
-    bounds = list(zip([-0.47273363, 20, 0.49, 0, 0.47], [-.4727335, 1e4, 0.5, 0.01, 0.48]))
+    # bounds = list(zip([-0.47273363, 20, 0.49, 0, 0.47], [-.4727335, 1e4, 0.5, 0.01, 0.48]))
     
     # differential evolution
     # strategy = 'best1bin'  # The differential evolution strategy
@@ -376,12 +388,12 @@ if __name__ == "__main__":
 
     max_l = 1000
     mae_threshold = 2
-    for current_l in range(50, max_l, 25):
+    for current_l in np.arange(1, 33)**2:
         if mae_function(
             amplitudes[: fit_crop_parameter], 
             np.real(values[: fit_crop_parameter]), 
             lambda x, A, l, p, x0, B: A * (np.cos(l * (1 - np.exp(- p * (x - x0))))) + B, 
-            [-0.47273362, current_l, p, 0, 0.47747625]
+            [-0.47273362, current_l, p, x0, 0.47747625]
         ) < mae_threshold:
             l = current_l
             break

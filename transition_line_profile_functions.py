@@ -81,6 +81,7 @@ def rz(x, q_freq, delta, eps):
     sigma = s * 2e-9 / 9
     T = dur * 2e-9 / 9
     O = pulse_shapes.find_rabi_amp("rz", T, sigma, rb=rb)
+    print("rabi_amp:", O/(2*np.pi))
 
     D = (x - q_freq) * 1e6
     P2 = np.sin(0.5 * np.pi * O * sigma) ** 2 \
@@ -91,7 +92,7 @@ def demkov(x, q_freq, delta, eps):
     sigma = s * 2e-9 / 9
     T = dur * 2e-9 / 9
     omega_0 = pulse_shapes.find_rabi_amp("demkov", T, sigma, rb=rb)
-
+    print("rabi_amp:", omega_0/(2*np.pi))
     s_inf = np.pi * omega_0 * sigma
     al = (x - q_freq) * 1e6 * sigma
     bessel11 = np.array([complex(mp.besselj(1/2 + 1j * a / 2, s_inf / (2 * np.pi))) for a in al])
@@ -103,6 +104,7 @@ def sech_sq(x, q_freq, delta, eps):
     sigma = s * 2e-9 / 9
     T = dur * 2e-9 / 9
     omega_0 = pulse_shapes.find_rabi_amp("sech2", T, sigma, rb=rb)
+    print("rabi_amp:", omega_0/(2*np.pi))
 
     D = (x - q_freq) * 1e6
     def f_(t):
@@ -328,6 +330,7 @@ def gauss(x, q_freq, delta, eps):
     sigma = s * 2e-9 / 9 / np.sqrt(2)
     T = dur * 2e-9 / 9
     omega_0 = pulse_shapes.find_rabi_amp("gauss", T, sigma, rb=rb)
+    print("rabi_amp:", omega_0/(2*np.pi))
 
     D = (x - q_freq) * 1e6
     alpha = np.abs(omega_0 / D)
@@ -361,6 +364,7 @@ def gauss_rzconj(x, q_freq, delta, eps):
     sigma = s * 2e-9 / 9 / np.sqrt(2)
     T = dur * 2e-9 / 9
     omega_0 = pulse_shapes.find_rabi_amp("gauss", T, sigma, rb=rb)
+    print("rabi_amp:", omega_0/(2*np.pi))
 
     D = (x - q_freq) * 1e6
     def f_(t):
@@ -379,6 +383,7 @@ def demkov_rzconj(x, q_freq, delta, eps):
     sigma = s * 2e-9 / 9
     T = dur * 2e-9 / 9
     omega_0 = pulse_shapes.find_rabi_amp("demkov", T, sigma, rb=rb)
+    print("rabi_amp:", omega_0/(2*np.pi))
 
     D = (x - q_freq) * 1e6
     def f_(t):
@@ -400,6 +405,7 @@ def rabi(x, q_freq, delta, eps):
     sigma = s * 2e-9 / 9
     T = dur * 2e-9 / 9
     omega_0 = pulse_shapes.find_rabi_amp("rabi", T, sigma, rb=rb)
+    print("rabi_amp:", omega_0/(2*np.pi))
 
     D = (x - q_freq) * 1e6
     P2 = (omega_0 ** 2 / (omega_0**2 + (D) ** 2)) * \
