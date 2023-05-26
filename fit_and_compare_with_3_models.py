@@ -14,6 +14,14 @@ from transition_line_profile_functions import *
 def get_closest_multiple_of_16(num):
     return int(num + 8) - (int(num + 8) % 16)
 
+center_freqs = {
+    "armonk": 4971730000 * 1e-6,
+    "quito": 5300687845.108738 * 1e-6,
+    "manila": 4962287341.966912 * 1e-6,
+    "perth": 5157543429.014656 * 1e-6,
+    "lima": 5029749743.642724 * 1e-6
+}
+
 # times = {
 #     "gauss": ["2022-06-16", "174431"],
 #     "constant": ["2022-06-16", "174532"],
@@ -46,18 +54,43 @@ times = {
     # # "rz": ["2023-05-20", "025817"],
     # # "sech2": ["2023-05-20", "025829"],
     # # "demkov": ["2023-05-20", "101530"]
-    # "gauss": ["2023-05-24", "002154"],
-    # # "constant": ["2023-05-24", "104446"],
-    # # "rabi": ["2023-05-24", "104446"],
-    # "rz": ["2023-05-24", "002129"],
-    # "sech2": ["2023-05-24", "002141"],
-    # "demkov": ["2023-05-24", "002210"]
-    "constant": ["2023-05-25", "221645"],
-    "rabi": ["2023-05-25", "221645"],
-    "rz": ["2023-05-25", "221729"],
-    "demkov": ["2023-05-25", "015554"],
-    "sech2": ["2023-05-25", "221740"],
-    "gauss": ["2023-05-25", "221752"],
+    #
+    # "constant": ["2023-05-25", "221645"],
+    # "rabi": ["2023-05-25", "221645"],
+    # "rz": ["2023-05-25", "221729"],
+    # "demkov": ["2023-05-25", "015554"],
+    # "sech2": ["2023-05-25", "221740"],
+    # "gauss": ["2023-05-25", "221752"],
+    #
+    # "constant": ["2023-05-25", "225504"],
+    # "rabi": ["2023-05-25", "225504"],
+    # "rz": ["2023-05-25", "225550"],
+    # "demkov": ["2023-05-25", "225637"],
+    # "sech2": ["2023-05-25", "225600"],
+    # "gauss": ["2023-05-25", "225625"],
+    # "lor": ["2023-05-25", "225648"],
+    # "lor2": ["2023-05-25", "225524"],
+    # "lor3": ["2023-05-25", "225532"],
+    #
+    # "constant": ["2023-05-26", "003832"],
+    # "rabi": ["2023-05-26", "003832"],
+    # "rz": ["2023-05-26", "003032"],
+    # "demkov": ["2023-05-26", "003102"],
+    # "sech2": ["2023-05-26", "003041"],
+    # "gauss": ["2023-05-26", "003052"],
+    # "lor": ["2023-05-26", "003113"],
+    # "lor2": ["2023-05-26", "003010"],
+    # "lor3": ["2023-05-26", "003023"],
+    #
+    "constant": ["2023-05-26", "021927"],
+    "rabi": ["2023-05-26", "021927"],
+    "rz": ["2023-05-26", "012657"],
+    "demkov": ["2023-05-26", "012735"],
+    "sech2": ["2023-05-26", "012710"],
+    "gauss": ["2023-05-26", "012723"],
+    "lor": ["2023-05-26", "003113"],
+    "lor2": ["2023-05-26", "012617"],
+    "lor3": ["2023-05-26", "012642"],
 }
 
 # durations = {
@@ -68,11 +101,12 @@ times = {
 #     "rabi": 192,
 # }
 durations = {
-    "gauss": 957.28,
-    "demkov": 2386.41,
-    "rz": 2652.58,
-    "sech2": 1459.18,
-    "rabi": 192,
+    "gauss": 504.63,
+    "demkov": 1326.29,
+    "rz": 1459.37,
+    "sech2": 796.18,
+    "rabi": 96,
+    "lor": 1910.38
     # "gauss": 957.28,
     # "demkov": 2386.41,
     # "rz": 2652.58,
@@ -90,9 +124,9 @@ durations = {
  
 # date = "2022-06-16"
 area = "pi"
-backend_name = "lima"
+backend_name = "perth"
 s = 96
-pulse_type = "sq"
+pulse_type = "sech2"
 dur = get_closest_multiple_of_16(round(durations[pulse_type]))
 # pulse_type = pulse_type if dur is None else "_".join([pulse_type, str(s)])
 # dur_idx = durations [dur] if dur is not None else 0
@@ -103,6 +137,7 @@ baseline_fit_func = "lorentzian"
 second_fit = 1 # 0 or 1, whether to have both curves
 comparison = 1 # 0 or 1, whether to have a Lorentzian fit for comparison
 log_plot = 0 # 0 or 1, whether to plot transition probability in a logarithmic plot
+central_fraction = 0.8
 
 FIT_FUNCTIONS = {
     "lorentzian": [lorentzian],
@@ -126,16 +161,11 @@ FIT_FUNCTIONS = {
 file_dir = os.path.dirname(__file__)
 data_folder = os.path.join(file_dir, "data", backend_name, "calibration", date)
 data_files = os.listdir(data_folder)
-# center_freq = 4971730000 * 1e-6 # armonk
-# center_freq = 5300687845.108738 * 1e-6 # quito
-# center_freq = 4962287341.966912 * 1e-6 # manila
-# center_freq = 5157543429.014656 * 1e-6 # perth
-center_freq = 5029749743.642724 * 1e-6 # lima
 for d in data_files:
     if d.startswith(times[pulse_type][1]):
         csv_file = d
         break
-
+center_freq = center_freqs[backend_name]
 # pulse_type = d.split("_")[1]
 # pulse_type = "rabi" if pulse_type in ["sq", "constant"] else pulse_type
 # pulse_type = "rz" if pulse_type in ["sech", "rosenzener"] else pulse_type
@@ -164,7 +194,7 @@ freq = df["frequency_ghz"].to_numpy() * 1e3
 vals = df["transition_probability"].to_numpy()
 
 length = len(freq)
-middle_length = round(1 * length)
+middle_length = round(central_fraction * length)
 start = (length - middle_length) // 2
 end = start + middle_length
 

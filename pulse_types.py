@@ -469,10 +469,11 @@ def LiftedDemkov(duration, amp, sigma, name):
 def Drag(duration, amp, sigma, beta, name):
     t, duration_sym, amp_sym, sigma_sym, beta_sym = sym.symbols("t, duration, amp, sigma, beta")
 
-    gaussian = amp_sym * sym.exp(- 0.5 * ((t - duration_sym/2) / sigma_sym) ** 2)
+    gaussian = sym.exp(- 0.5 * ((t - duration_sym/2) / sigma_sym) ** 2)
     gaussian_deriv = sym.diff(gaussian, t)
-    envelope = gaussian + 1j * beta_sym * gaussian_deriv
-    
+    envelope = amp_sym * (gaussian + 1j * beta_sym * gaussian_deriv)
+    lifted_envelope = [sym.re(lifted_envelope), sym.im(lifted_envelope)]
+
     instance = SymbolicPulse(
         pulse_type="Drag",
         duration=duration,
@@ -487,12 +488,12 @@ def Drag(duration, amp, sigma, beta, name):
 def LiftedDrag(duration, amp, sigma, beta, name):
     t, duration_sym, amp_sym, sigma_sym, beta_sym = sym.symbols("t, duration, amp, sigma, beta")
 
-    gaussian = amp_sym * sym.exp(- 0.5 * ((t - duration_sym/2) / sigma_sym) ** 2)
+    gaussian = sym.exp(- 0.5 * ((t - duration_sym/2) / sigma_sym) ** 2)
     gaussian_deriv = sym.diff(gaussian, t)
-    envelope = gaussian + 1j * beta_sym * gaussian_deriv
+    envelope = amp_sym * (gaussian + 1j * beta_sym * gaussian_deriv)
     new_amp = amp_sym / (amp_sym - envelope.subs(t, 0))
     lifted_envelope = new_amp * (envelope - envelope.subs(t, 0))
-
+    lifted_envelope = [sym.re(lifted_envelope), sym.im(lifted_envelope)]
     instance = SymbolicPulse(
         pulse_type="LiftedDrag",
         duration=duration,

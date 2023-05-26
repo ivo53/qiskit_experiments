@@ -2,20 +2,14 @@ import os
 import sys
 import pickle
 from datetime import datetime
-from copy import deepcopy
 
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 # from qiskit.tools.jupyter import *
-from qiskit import IBMQ, QuantumCircuit, QuantumRegister, ClassicalRegister
+from qiskit import QuantumCircuit
 from qiskit import pulse                  # This is where we access all of our Pulse features!
 from qiskit.circuit import Parameter, Gate # This is Parameter Class for variable parameters.
-from qiskit.pulse import library as pulse_lib
-from qiskit.scheduler import measure
-from qiskit import assemble
-from qiskit.tools.monitor import job_monitor
-from qiskit.providers.ibmq.managed import IBMQJobManager
 from qiskit_ibm_provider import IBMProvider
 
 current_dir = os.path.dirname(__file__)
@@ -69,7 +63,7 @@ def initialize_backend(backend):
     num_qubits = backend_config.n_qubits
 
     q_freq = [backend_defaults.qubit_freq_est[q] for q in range(num_qubits)]
-    dt = backend_config.dt
+    # dt = backend_config.dt
 
     return backend, drive_chan, num_qubits, q_freq
 

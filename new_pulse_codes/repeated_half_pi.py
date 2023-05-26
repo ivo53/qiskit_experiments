@@ -1,8 +1,8 @@
 import os
 import sys
 import argparse
-from copy import deepcopy
 from datetime import datetime
+import subprocess
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -11,17 +11,9 @@ from scipy.optimize import curve_fit
 
 from qiskit import (
     QuantumCircuit, 
-    QuantumRegister, 
-    ClassicalRegister, 
-    pulse, 
-    IBMQ
+    pulse
 ) 
-# This is where we access all of our Pulse features!
 from qiskit.circuit import Parameter, Gate
-from qiskit.pulse import Delay,Play
-# This Pulse module helps us build sampled pulses for common pulse shapes
-from qiskit.pulse import library as pulse_lib
-from qiskit.providers.ibmq.managed import IBMQJobManager
 from qiskit_ibm_provider import IBMProvider
 
 current_dir = os.path.dirname(__file__)
@@ -73,7 +65,20 @@ def get_calib_params(
         idx = input("More than one identical calibrations found! "
                     "Which do you want to use? ")
     elif df.shape[0] < 1:
-        raise ValueError("No entry found!")
+        print("No entry found!")
+        command = [
+            "python", 
+            f"{os.path.join(file_dir, 'new_pulse_codes', 'calibrate_area.py')}", 
+            f"-sv 1 -ne 100 -ns 1024 -b {backend} -T {duration} -s {sigma} -rb {remove_bg} -ia 0.001 -fa 0.2"
+        ]
+        subprocess.run(command, check=True)
+        param_df = pd.read_csv(params_file)
+        df = param_df[param_df.apply(
+                lambda row: row["pulse_type"] == pulse_type and \
+                    row["duration"] == duration and \
+                    row["sigma"] == sigma and \
+                    row["rb"] == remove_bg, axis=1)]
+
     ser = df.iloc[idx]
     l = ser.at["l"]
     p = ser.at["p"]
@@ -123,14 +128,14 @@ def run_check(
     backend, drive_chan, num_qubits, q_freq = initialize_backend(backend)
     if closest_amp is None:
         closest_amp = -np.log(1 - np.pi / (2 * l)) / p + x0
-    amplitudes = np.linspace(
-        closest_amp - amp_span / 2,
-        closest_amp + amp_span / 2,
-        num_exp
-    )
-    Ns = np.arange(0, N_max + N_interval / 2, N_interval, dtype="int64")
+    # amplitudes = np.linspace(
+    #     closest_amp - amp_span / 2,
+    #     closest_amp + amp_span / 2,
+    #     num_exp
+    # )
+    # Ns = np.arange(0, N_max + N_interval / 2, N_interval, dtype="int64")
 
-    def add_circ(amp, duration, sigma, freq, Ns, qubit=0):
+    def add_circ(amp, duration, sigma, freq, N, qubit=0):
         with pulse.build(backend=backend, default_alignment='sequential', name="calibrate_area_with_N_pulses") as sched:
             dur_dt = duration
             pulse.set_frequency(freq, drive_chan)
@@ -163,21 +168,20 @@ def run_check(
                 )
             pulse.play(pulse_played, drive_chan)
     
-        base_circ = QuantumCircuit(num_qubits, len(Ns))
+        base_circ = QuantumCircuit(num_qubits, 1)
         custom_gate = Gate("N_pulses", 1, [])
-        for i, N in enumerate(Ns):
-            for _ in range(N):
-                base_circ.append(custom_gate, [qubit])
-            base_circ.measure(qubit, i)
-            base_circ.reset(qubit)
+        for _ in range(N):
+            base_circ.append(custom_gate, [qubit])
+        base_circ.measure(qubit, 0)
+        base_circ.reset(qubit)
         base_circ.add_calibration(custom_gate, (qubit,), sched, [])
         return base_circ
-    circs = [add_circ(a, duration, sigma, q_freq[qubit], Ns) for a in amplitudes]
+    circs = [add_circ(closest_amp, duration, sigma, q_freq[qubit], N) for N in range(N_max)]
 
-    sweep_values, job_ids = run_jobs(circs, backend, duration * len(Ns), num_shots_per_exp=num_shots)
+    sweep_values, job_ids = run_jobs(circs, backend, duration, num_shots_per_exp=num_shots)
 
-    print(Ns, np.array(sweep_values).reshape(np.round(N_max / N_interval + 1).astype(np.int64), len(amplitudes)))
-    return Ns, np.array(sweep_values).reshape(np.round(N_max / N_interval + 1).astype(np.int64), len(amplitudes))
+    print(np.arange(N_max), np.array(sweep_values))
+    return np.arange(N_max), np.array(sweep_values)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
