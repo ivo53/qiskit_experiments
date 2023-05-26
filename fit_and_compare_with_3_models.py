@@ -126,18 +126,18 @@ durations = {
 area = "pi"
 backend_name = "perth"
 s = 96
-pulse_type = "sech2"
+pulse_type = "demkov"
 dur = get_closest_multiple_of_16(round(durations[pulse_type]))
 # pulse_type = pulse_type if dur is None else "_".join([pulse_type, str(s)])
 # dur_idx = durations [dur] if dur is not None else 0
 date = times[pulse_type][0]
 time = times[pulse_type][1]
 fit_func = pulse_type
-baseline_fit_func = "lorentzian"
 second_fit = 1 # 0 or 1, whether to have both curves
 comparison = 1 # 0 or 1, whether to have a Lorentzian fit for comparison
 log_plot = 0 # 0 or 1, whether to plot transition probability in a logarithmic plot
-central_fraction = 0.8
+central_fraction = 1.
+every_nth = 1
 
 FIT_FUNCTIONS = {
     "lorentzian": [lorentzian],
@@ -195,11 +195,11 @@ vals = df["transition_probability"].to_numpy()
 
 length = len(freq)
 middle_length = round(central_fraction * length)
-start = (length - middle_length) // 2
+start = (length - middle_length) // 2 
 end = start + middle_length
 
-freq = freq[start:end]
-vals = vals[start:end]
+freq = freq[start:end:every_nth]
+vals = vals[start:end:every_nth]
 
 detuning = 2 * np.pi * (freq - center_freq)
 extended_freq = np.linspace(detuning[0], detuning[-1], 5000)
@@ -250,14 +250,14 @@ def fit_once(
     # print(fit_params, "\n", baseline_fit_params)
     ef = extended_freq
     extended_y_fit = FIT_FUNCTIONS[fit_func][0](ef, *fit_params)
-    similarity_idx = np.sum(np.abs(y_fit - vals))
+    similarity_idx = np.mean(np.abs(y_fit - vals))
     overfitting_idx = np.mean(np.abs(np.diff(extended_y_fit)))
     overfitting = overfitting_idx > 0.1
 
 
     if second_fit:
         second_extended_y_fit = FIT_FUNCTIONS[fit_func][1](ef, *second_fit_params)
-        second_similarity_idx = np.sum(np.abs(second_y_fit - vals))
+        second_similarity_idx = np.mean(np.abs(second_y_fit - vals))
         second_overfitting_idx = np.mean(np.abs(np.diff(second_extended_y_fit)))
         second_overfitting = second_overfitting_idx > 0.1
         if second_overfitting:
@@ -265,7 +265,7 @@ def fit_once(
             exit(1)
     if comparison:
         baseline_extended_y_fit = FIT_FUNCTIONS[fit_func][2](ef, *baseline_fit_params)
-        baseline_similarity_idx = np.sum(np.abs(baseline_y_fit - vals))
+        baseline_similarity_idx = np.mean(np.abs(baseline_y_fit - vals))
         baseline_overfitting_idx = np.mean(np.abs(np.diff(baseline_extended_y_fit)))
         baseline_overfitting = baseline_overfitting_idx > 0.1
         if baseline_overfitting:
@@ -352,7 +352,7 @@ scaled_det = detuning / (2 * np.pi)
 
 
 date = datetime.now()
-txt_name = pulse_type + "_" + str(dur) + "_" + str(comparison) + "_" + date.strftime("%Y%m%d") + ".txt"
+txt_name = pulse_type + "_" + str(dur) + "_" + str(comparison) + "_" + date.strftime("%Y%m%d") + "_" + date.strftime("%H%M%S") + ".txt"
 with open(os.path.join(data_folder, txt_name), "w") as file:
     file.write(model_name_dict[fit_func][0] + "\n")
     file.write(f"{model_name_dict[fit_func][0]} MAE: " + str(similarity_idx) + "\n")
@@ -415,8 +415,9 @@ else:
     order = [0, 2, 1] if second_fit else [0, 1] 
 ax0.legend([handles[idx] for idx in order], [labels[idx] for idx in order])
 
-major_interval = 20.
-minor_interval = 0.5 if pulse_type=="rabi" else 2.5
+major_interval = -np.round(scaled_ef[0]/10)*10 / 4 # 42.5
+minor_interval = major_interval / 4
+# minor_interval = 0.5 if pulse_type=="rabi" else 2.5
 major_xticks = np.round(np.arange(np.round(scaled_ef[0]/10)*10, -np.round(scaled_ef[0]/10)*10 + 1e-1, major_interval),1)
 # x_limit = np.floor(np.abs(extended_freq[0]) / 5) * 5
 # x_interval = np.round(x_limit / 5) if pulse_type == "rabi" else np.round(x_limit / 6)
@@ -527,6 +528,6 @@ plt.xlabel("Detuning [MHz]", fontsize=20)
 #     date.strftime("%H%M%S") + f"_{pulse_type}_cutoff_{cutoff}_{ctrl_param}_{c_p}_area_{area}_frequency_sweep_fitted.png"
 save_dir = os.path.join(file_dir, "paper_ready_plots")
 
-fig_name = pulse_type + "_" + str(dur) + "_" + str(comparison) + "_" + date.strftime("%Y%m%d") + ".pdf"
+fig_name = pulse_type + "_" + str(dur) + "_" + str(comparison) + "_" + date.strftime("%Y%m%d") + "_" + date.strftime("%H%M%S") + ".pdf"
 plt.savefig(os.path.join(save_dir, fig_name), format="pdf")
 plt.show()
