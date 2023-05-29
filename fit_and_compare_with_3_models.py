@@ -126,9 +126,10 @@ durations = {
 area = "pi"
 backend_name = "perth"
 s = 96
-pulse_type = "gauss"
+pulse_type = "sech2"
 dur = get_closest_multiple_of_16(round(durations[pulse_type]))
-# pulse_type = pulse_type if dur is None else "_".join([pulse_type, str(s)])
+# pulse_type = pu
+# lse_type if dur is None else "_".join([pulse_type, str(s)])
 # dur_idx = durations [dur] if dur is not None else 0
 date = times[pulse_type][0]
 time = times[pulse_type][1]
@@ -416,7 +417,7 @@ else:
 ax0.legend([handles[idx] for idx in order], [labels[idx] for idx in order])
 
 major_interval = -np.round(scaled_ef[0]/10)*10 / 4 # 42.5
-minor_interval = major_interval / 4
+minor_interval = major_interval / 5
 # minor_interval = 0.5 if pulse_type=="rabi" else 2.5
 major_xticks = np.round(np.arange(np.round(scaled_ef[0]/10)*10, -np.round(scaled_ef[0]/10)*10 + 1e-1, major_interval),1)
 # x_limit = np.floor(np.abs(extended_freq[0]) / 5) * 5
@@ -452,7 +453,10 @@ ax.spines['left'].set_color('none')
 ax.spines['right'].set_color('none')
 ax.tick_params(labelcolor='w', top=False, bottom=False, left=False,\
     right=False)
-fig.text(0.015, 0.2, 'Residuals', ha='center', va='center', rotation='vertical', fontsize=20)
+if second_fit:
+    fig.text(0.013, 0.25, 'Residuals', ha='center', va='center', rotation='vertical', fontsize=20)
+else:
+    fig.text(0.013, 0.222, 'Residuals', ha='center', va='center', rotation='vertical', fontsize=20)
 
 if comparison:
     limit_num = np.ceil(np.amax([max(baseline_y_fit - vals), np.abs(min(baseline_y_fit - vals))]) / 0.05) * 0.05
@@ -479,7 +483,7 @@ else:
     ax1.set_xticklabels(np.round(major_xticks, 1), fontsize=16)
 ax1.set_xticks(minor_xticks, minor="True")
 ax1.set_yticks(y_ticks_res)
-ax1.set_yticklabels(y_ticks_res, fontsize=13)
+ax1.set_yticklabels(y_ticks_res, fontsize=10)
 if limit_num > 0.1:
     ax1.set_yticks(y_ticks_res_minor, minor=True)
     ax1.grid(which='minor', alpha=0.3)
@@ -497,7 +501,7 @@ if second_fit:
     else:
         ax2.set_xticklabels(np.round(major_xticks, 1), fontsize=16)
     ax2.set_xticks(minor_xticks, minor="True")
-    ax2.set_yticklabels(y_ticks_res, fontsize=13)
+    ax2.set_yticklabels(y_ticks_res, fontsize=10)
     ax2.errorbar(scaled_det, second_y_fit - vals, yerr=second_err_res * np.ones(scaled_det.shape), fmt="+", color="g")
     if limit_num > 0.1:
         ax2.set_yticks(y_ticks_res_minor, minor=True)
@@ -514,7 +518,7 @@ if comparison:
     ax3.set_xticks(major_xticks)
     ax3.set_xticklabels(np.round(major_xticks, 1), fontsize=16)
     ax3.set_xticks(minor_xticks, minor="True")
-    ax3.set_yticklabels(y_ticks_res, fontsize=13)
+    ax3.set_yticklabels(y_ticks_res, fontsize=10)
     ax3.errorbar(scaled_det, baseline_y_fit - vals, yerr=baseline_err_res * np.ones(scaled_det.shape), fmt="+", color="b")
     if limit_num > 0.1:
         ax3.set_yticks(y_ticks_res_minor, minor=True)
