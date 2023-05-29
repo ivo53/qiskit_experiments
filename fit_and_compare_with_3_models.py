@@ -126,7 +126,7 @@ durations = {
 area = "pi"
 backend_name = "perth"
 s = 96
-pulse_type = "demkov"
+pulse_type = "gauss"
 dur = get_closest_multiple_of_16(round(durations[pulse_type]))
 # pulse_type = pulse_type if dur is None else "_".join([pulse_type, str(s)])
 # dur_idx = durations [dur] if dur is not None else 0
@@ -333,8 +333,8 @@ q_freq_model = fit_params[0] / (2 * np.pi)
 q_freq_err_model = err[0] / (2 * np.pi)
 if second_fit:
     print("Second Model MAE:", second_similarity_idx)
-    q_freq_sec = second_fit_params[-2] / (2 * np.pi)
-    q_freq_err_sec = second_err[-2] / (2 * np.pi)
+    q_freq_sec = second_fit_params[0] / (2 * np.pi)
+    q_freq_err_sec = second_err[0] / (2 * np.pi)
 if comparison:
     print("Lorentzian MAE:", baseline_similarity_idx)
     q_freq_bl = baseline_fit_params[-2] / (2 * np.pi)
