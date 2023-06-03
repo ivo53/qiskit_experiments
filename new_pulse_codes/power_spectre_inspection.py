@@ -158,7 +158,7 @@ if __name__ == "__main__":
         "plots",
         f"{backend_name}",
         "power_broadening (narrowing)",
-        "lorentz_pulses",
+        f"{pulse_type}_pulses",
         current_date
     )
     folder_name = os.path.join(
@@ -170,7 +170,7 @@ if __name__ == "__main__":
         "data",
         f"{backend_name}",
         "power_broadening (narrowing)",
-        "lorentz_pulses",
+        f"{pulse_type}_pulses",
         current_date,
         date.strftime("%H%M%S")
     ).replace("\\", "/")
@@ -189,18 +189,6 @@ if __name__ == "__main__":
         if backend_name in ["perth", "lagos", "nairobi", "oslo"] \
             else "ibmq_" + backend_name
 
-
-    # # Drive pulse parameters (us = microseconds)
-
-    # G = duration / (2 * np.sqrt((100 / cut_param) - 1)) # 400
-    # G_02 = duration / (2 * np.sqrt((100 / 0.2) - 1)) # gamma factor at cut param 0.2
-
-    # a_02 = 0.901 # max amp at cut param 0.2
-    # a_max = a_02 * (G_02 * np.arctan(duration / G_02)) / (G * np.arctan(duration / G))
-
-    # a_max = 0.5
-    # # a_step = np.round(a_max / resolution[0], 3)
-
     frequency_span_Hz = frequency_span * MHz #5 * MHz #if cut_param < 1 els e 1.25 * MHz
     frequency_step_Hz = np.round(frequency_span_Hz / resolution[1], 3) #(1/4) * MHz
 
@@ -212,7 +200,7 @@ if __name__ == "__main__":
                                 frequency_max / GHz, 
                                 resolution[1])
 
-    amplitudes = np.linspace(0., a_max + 1e-3, resolution[0]).round(3)
+    amplitudes = np.linspace(0.001, a_max + 1e-3, resolution[0]).round(3)
 
     assert len(amplitudes) == resolution[0], "amplitudes error"
     assert len(frequencies_GHz) == resolution[1], "frequencies error"
@@ -239,7 +227,7 @@ if __name__ == "__main__":
     transition_probability, job_ids = run_jobs(circs, backend, duration, num_shots_per_exp=num_shots)
 
     transition_probability = np.array(transition_probability).reshape(len(amplitudes), len(frequencies_GHz))
-    print("JobsID:", job_ids)
+    # print("JobsID:", job_ids)
 
     ## save final data
     freq_offset = (frequencies_Hz - center_frequency_Hz) / 10**6
@@ -255,7 +243,7 @@ if __name__ == "__main__":
 
     for i, am in enumerate(amplitudes):
         plt.figure(i)
-        plt.plot(freq_offset, transition_probability[:, i], "bx")
+        plt.plot(freq_offset, transition_probability[i], "bx")
         plt.xlabel("Detuning [MHz]")
         plt.ylabel("Transition Probability")
         plt.title(f"Lorentzian Freq Offset - Amplitude {am.round(3)}")
