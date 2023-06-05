@@ -42,7 +42,7 @@ pulse_dict = {
 
 def get_closest_multiple_of_16(num):
     return int(num + 8) - (int(num + 8) % 16)
-    
+
 def make_all_dirs(path):
     path = path.replace("\\", "/")
     folders = path.split("/")
@@ -130,11 +130,12 @@ def run_check(
     N_interval=2, max_exp_per_job=50,
     num_shots=1024, backend="manila",
     l=100, p=0.5, x0=0,
-    closest_amp=None
+    closest_amp=None,
+    eps=0.
 ):
     backend, drive_chan, num_qubits, q_freq = initialize_backend(backend)
     if closest_amp is None:
-        closest_amp = -np.log(1 - np.pi / (2 * l)) / p + x0
+        closest_amp = -np.log(1 - (np.pi / 2 - eps) / l) / p + x0
     # amplitudes = np.linspace(
     #     closest_amp - amp_span / 2,
     #     closest_amp + amp_span / 2,
@@ -255,32 +256,48 @@ if __name__ == "__main__":
     file_dir = os.path.split(file_dir)[0]
     date = datetime.now()
     current_date = date.strftime("%Y-%m-%d")
-    save_dir = os.path.join(file_dir, "plots", backend_name, "repeated_half_pi", current_date)
-    data_folder = os.path.join(file_dir, "data", backend_name, "repeated_half_pi", current_date)
+    save_dir = os.path.join(file_dir, "plots", backend, "repeated_half_pi", current_date)
+    data_folder = os.path.join(file_dir, "data", backend, "repeated_half_pi", current_date)
     make_all_dirs(save_dir)
     make_all_dirs(data_folder)
 
     fig = plt.figure(constrained_layout=True, figsize=(10,6))
     ax = fig.add_subplot()
     ax.plot(Ns, vals, color='black', marker="P", label="Transition Probability", linewidth=0.)
-    plt.savefig()
+    plt.savefig(os.path.join(save_dir, ))
+    plt.close()
 
-    m=2
-    four_k_plus_one = [Ns[1:4 * m + 1:4], vals[1:4 * m + 1:4]]
-    eps = np.arccos(np.sqrt(vals[4 * m + 1])) / (m * k + 1) - np.pi / (2 * k * (m * k + 1))
-    amp *= (1 - eps / (np.pi / 2))
-    # 0.0891267681315
+    k = 2
+    
+    while 42:
+        four_m_plus_one = [Ns[1::4], vals[1::4]]
+        four_m_minus_one = [Ns[3::4], vals[3::4]]
+        threshold = 0.15
+        is_bigger_threshold = np.abs(four_m_plus_one[1][1:] - four_m_minus_one[1][:-1]) > threshold
 
-    Ns, vals_corrected, amp = run_check(
-        duration, sigma, 
-        pulse_type, remove_bg,
-        num_exp=num_exp, N_max=N_max, N_interval=N_interval, 
-        max_exp_per_job=max_experiments_per_job,
-        num_shots=num_shots, backend=backend,
-        l=l, p=p, x0=x0, closest_amp=amp
-    )
+        idx = is_bigger_threshold.view(bool).argmax() // is_bigger_threshold.itemsize
+        idx = idx if is_bigger_threshold[idx] else -1
+
+        eps = np.arccos(np.sqrt(vals[4 * m + 1])) / (m * k + 1) - np.pi / (2 * k * (m * k + 1))
+
+        if eps / (np.pi / 2) < 0.001:
+            break
+
+        # amp *= (1 - eps / (np.pi / 2))
+
+        Ns, vals, amp = run_check(
+            duration, sigma, 
+            pulse_type, remove_bg,
+            num_exp=num_exp, N_max=N_max, N_interval=N_interval, 
+            max_exp_per_job=max_experiments_per_job,
+            num_shots=num_shots, backend=backend,
+            l=l, p=p, x0=x0, eps=eps
+        )
+
+        vals = 1 - vals
 
     fig = plt.figure(constrained_layout=True, figsize=(10,6))
     ax = fig.add_subplot()
     ax.plot(Ns, vals, color='black', marker="P", label="Transition Probability", linewidth=0.)
+    plt.savefig(save_dir)
     plt.show()
