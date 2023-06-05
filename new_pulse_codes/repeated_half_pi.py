@@ -42,6 +42,14 @@ pulse_dict = {
 
 def get_closest_multiple_of_16(num):
     return int(num + 8) - (int(num + 8) % 16)
+    
+def make_all_dirs(path):
+    path = path.replace("\\", "/")
+    folders = path.split("/")
+    for i in range(2, len(folders) + 1):
+        folder = "/".join(folders[:i])
+        if not os.path.isdir(folder):
+            os.mkdir(folder)
 
 def get_calib_params(
     backend, pulse_type, 
@@ -117,7 +125,6 @@ def initialize_backend(backend):
     return backend, drive_chan, num_qubits, q_freq
 
 def run_check(
-    amp_span,
     duration, sigma, pulse_type, remove_bg,
     num_exp=10, N_max=100,
     N_interval=2, max_exp_per_job=50,
@@ -173,7 +180,6 @@ def run_check(
         for _ in range(N):
             base_circ.append(custom_gate, [qubit])
         base_circ.measure(qubit, 0)
-        base_circ.reset(qubit)
         base_circ.add_calibration(custom_gate, (qubit,), sched, [])
         return base_circ
     circs = [add_circ(closest_amp, duration, sigma, q_freq[qubit], N) for N in range(N_max)]
@@ -181,7 +187,7 @@ def run_check(
     sweep_values, job_ids = run_jobs(circs, backend, duration, num_shots_per_exp=num_shots)
 
     print(np.arange(N_max), np.array(sweep_values))
-    return np.arange(N_max), np.array(sweep_values)
+    return np.arange(N_max), np.array(sweep_values), closest_amp
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -203,15 +209,13 @@ if __name__ == "__main__":
         help="Whether to drop the background (tail) of the pulse (0 or 1).")
     parser.add_argument("-epj", "--max_experiments_per_job", default=100, type=int,
         help="Maximum experiments per job")
-    parser.add_argument("-ns", "--num_shots", default=2048, type=int,
+    parser.add_argument("-ns", "--num_shots", default=4096, type=int,
         help="Number of shots per experiment (datapoint).")
     parser.add_argument("-ne", "--num_experiments", default=100, type=int,
         help="Number of experiments with different detuning each.")
     parser.add_argument("-b", "--backend", default="manila", type=str,
         help="The name of the backend to use in the experiment (one of perth, lagos, nairobi, \
         oslo, jakarta, manila, quito, belem, lima).")
-    parser.add_argument("-sp", "--span", default=0.01, type=float,
-        help="The span of the amplitude sweep as a fraction of the amplitude value.")
     parser.add_argument("-iter", "--num_iterations", default=3, type=int,
         help="The number of optimization iterations of the algorithm.")
     args = parser.parse_args()
@@ -228,7 +232,6 @@ if __name__ == "__main__":
     num_shots = args.num_shots
     num_exp = args.num_experiments
     backend = args.backend
-    amp_span = args.span
     num_iterations = args.num_iterations
 
     l, p, x0 = get_calib_params(
@@ -236,13 +239,45 @@ if __name__ == "__main__":
         sigma, duration,
         remove_bg
     )
-    Ns, vals = run_check(
-        amp_span, duration, sigma, 
+    Ns, vals, amp = run_check(
+        duration, sigma, 
         pulse_type, remove_bg,
         num_exp=num_exp, N_max=N_max, N_interval=N_interval, 
         max_exp_per_job=max_experiments_per_job,
         num_shots=num_shots, backend=backend,
         l=l, p=p, x0=x0
+    )
+
+    vals = 1 - vals
+
+    ## create folder where plots are saved
+    file_dir = os.path.dirname(__file__)
+    file_dir = os.path.split(file_dir)[0]
+    date = datetime.now()
+    current_date = date.strftime("%Y-%m-%d")
+    save_dir = os.path.join(file_dir, "plots", backend_name, "repeated_half_pi", current_date)
+    data_folder = os.path.join(file_dir, "data", backend_name, "repeated_half_pi", current_date)
+    make_all_dirs(save_dir)
+    make_all_dirs(data_folder)
+
+    fig = plt.figure(constrained_layout=True, figsize=(10,6))
+    ax = fig.add_subplot()
+    ax.plot(Ns, vals, color='black', marker="P", label="Transition Probability", linewidth=0.)
+    plt.savefig()
+
+    m=2
+    four_k_plus_one = [Ns[1:4 * m + 1:4], vals[1:4 * m + 1:4]]
+    eps = np.arccos(np.sqrt(vals[4 * m + 1])) / (m * k + 1) - np.pi / (2 * k * (m * k + 1))
+    amp *= (1 - eps / (np.pi / 2))
+    # 0.0891267681315
+
+    Ns, vals_corrected, amp = run_check(
+        duration, sigma, 
+        pulse_type, remove_bg,
+        num_exp=num_exp, N_max=N_max, N_interval=N_interval, 
+        max_exp_per_job=max_experiments_per_job,
+        num_shots=num_shots, backend=backend,
+        l=l, p=p, x0=x0, closest_amp=amp
     )
 
     fig = plt.figure(constrained_layout=True, figsize=(10,6))
