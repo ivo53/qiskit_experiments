@@ -267,9 +267,10 @@ if __name__ == "__main__":
     plt.savefig(os.path.join(save_dir, ))
     plt.close()
 
-    k = 2
-    
+    i, k = 0, 2
+
     while 42:
+        i += 1
         four_m_plus_one = [Ns[1::4], vals[1::4]]
         four_m_minus_one = [Ns[3::4], vals[3::4]]
         threshold = 0.15
@@ -282,7 +283,8 @@ if __name__ == "__main__":
 
         if eps / (np.pi / 2) < 0.001:
             break
-
+        
+        print(f"Iteration {i} over, fractional error is {eps / (np.pi / 2)}, still larger than the 0.001 threshold.")
         # amp *= (1 - eps / (np.pi / 2))
 
         Ns, vals, amp = run_check(
