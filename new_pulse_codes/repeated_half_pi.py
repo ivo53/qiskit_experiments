@@ -276,7 +276,7 @@ if __name__ == "__main__":
         is_bigger_threshold = np.abs(four_m_plus_one[1][1:] - four_m_minus_one[1][:-1]) > threshold
 
         idx = is_bigger_threshold.view(bool).argmax() // is_bigger_threshold.itemsize
-        idx = idx if is_bigger_threshold[idx] else -1
+        m = idx if is_bigger_threshold[idx] else -1
 
         eps = np.arccos(np.sqrt(vals[4 * m + 1])) / (m * k + 1) - np.pi / (2 * k * (m * k + 1))
 
