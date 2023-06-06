@@ -267,22 +267,24 @@ if __name__ == "__main__":
     plt.savefig(os.path.join(save_dir, ))
     plt.close()
 
-    k = 2
-    
+    i, k = 0, 2
+
     while 42:
+        i += 1
         four_m_plus_one = [Ns[1::4], vals[1::4]]
         four_m_minus_one = [Ns[3::4], vals[3::4]]
         threshold = 0.15
         is_bigger_threshold = np.abs(four_m_plus_one[1][1:] - four_m_minus_one[1][:-1]) > threshold
 
         idx = is_bigger_threshold.view(bool).argmax() // is_bigger_threshold.itemsize
-        idx = idx if is_bigger_threshold[idx] else -1
+        m = idx if is_bigger_threshold[idx] else -1
 
         eps = np.arccos(np.sqrt(vals[4 * m + 1])) / (m * k + 1) - np.pi / (2 * k * (m * k + 1))
 
         if eps / (np.pi / 2) < 0.001:
             break
-
+        
+        print(f"Iteration {i} over, fractional error is {eps / (np.pi / 2)}, still larger than the 0.001 threshold.")
         # amp *= (1 - eps / (np.pi / 2))
 
         Ns, vals, amp = run_check(
