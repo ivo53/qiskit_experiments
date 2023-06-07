@@ -530,7 +530,7 @@ plt.xlabel("Detuning [MHz]", fontsize=20)
 
 # fig2_name = date.strftime("%H%M%S") + f"_{pulse_type}_area_{area}_frequency_sweep_fitted.png" if pulse_type not in lorentz_pulses else \
 #     date.strftime("%H%M%S") + f"_{pulse_type}_cutoff_{cutoff}_{ctrl_param}_{c_p}_area_{area}_frequency_sweep_fitted.png"
-save_dir = os.path.join(file_dir, "paper_ready_plots")
+save_dir = os.path.join(file_dir, "paper_ready_plots", "pulse_shapes")
 
 fig_name = pulse_type + "_" + str(dur) + "_" + str(comparison) + "_" + date.strftime("%Y%m%d") + "_" + date.strftime("%H%M%S") + ".pdf"
 plt.savefig(os.path.join(save_dir, fig_name), format="pdf")

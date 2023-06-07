@@ -340,8 +340,8 @@ if __name__ == "__main__":
                 init_params, 
                 maxfev=100000, 
                 bounds=(
-                    [-0.6, 1, 0, -1, 0.4], 
-                    [-0.40, 1e4, 100, 1, 0.6]
+                    [-0.6, 1, 0, -0.025, 0.4], 
+                    [-0.40, 1e4, 100, 0.025, 0.6]
                 )
             )
         except ValueError:
@@ -388,7 +388,9 @@ if __name__ == "__main__":
 
     max_l = 1000
     mae_threshold = 2
-    for current_l in np.arange(1, 33)**2:
+    ls = np.arange(1, 33)**2
+    ls = ls[ls >= l]
+    for current_l in ls:
         if mae_function(
             amplitudes[: fit_crop_parameter], 
             np.real(values[: fit_crop_parameter]), 
