@@ -14,9 +14,9 @@ def make_all_dirs(path):
             os.mkdir(folder)
 
 backend_name = "manila"
-pulse_type = "lor3_4"
-sigma = 96
-dur = 5008
+pulse_type = "lor2_3"
+sigma = 48
+dur = 5104
 # times = {
 #     0.5: ["2023-06-03", "120038"],
 #     1: ["2023-06-03", "160754"],
@@ -30,8 +30,9 @@ dur = 5008
 # }
 
 # time = ["2023-06-06", "201236"] # lor 3/4, sigma = 96, dur = 4128
-time = ["2023-06-06", "201245"] # lor 3/4, sigma = 96, dur = 5008
+# time = ["2023-06-06", "201245"] # lor 3/4, sigma = 96, dur = 5008
 # time = ["2023-06-04", "011733"] # lor, sigma = 96, dur = 2704
+time = ["2023-06-07", "023054"] # lor2_3, sigma = 48, dur = 5104
 
 ## create folder where plots are saved
 file_dir = os.path.dirname(__file__)
@@ -81,10 +82,19 @@ colors = [
     "purple"
 ]
 
+markers = [
+    "o",
+    "*",
+    "X",
+    "D",
+    "P"
+]
+sizes = 15 * np.ones(5)
+
 # Create a 3x3 grid of subplots with extra space for the color bar
 fig, ax = plt.subplots(figsize=(6,5))
 for i, t in zip(np.arange(len(amp[1::2])), tr_prob[1::2]):
-    ax.scatter(det, t, c=colors[i],linewidth=0,marker=".", label=f"Pulse area {2*i+1}$\pi$")
+    ax.scatter(det, t, c=colors[i],linewidth=0,marker=markers[i], s=sizes[i], label=f"Pulse area {2*i+1}$\pi$")
 ax.set_yticks([0, 0.2, 0.4, 0.6, 0.8, 1])
 ax.set_xticks([-12, -9, -6, -3, 0, 3, 6, 9, 12])
 y_minor_ticks = np.arange(0, 1.01, 0.05)

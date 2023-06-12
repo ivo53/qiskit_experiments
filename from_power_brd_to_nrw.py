@@ -85,6 +85,9 @@ det[7] = det[7][20:-20]
 tr_prob[6] = tr_prob[6][:, 20:-20]
 det[6] = det[6][20:-20]
 
+# Set up the backend to use the EPS file format
+# plt.switch_backend('ps')
+
 # Create a 3x3 grid of subplots with extra space for the color bar
 fig = plt.figure(figsize=(12, 9))
 gs = fig.add_gridspec(3, 4, width_ratios=[1, 1, 1, 0.1])
@@ -101,7 +104,7 @@ for i in range(3):
         if i == 2:
             ax.set_xlabel('Detuning (MHz)')
         if j == 0:
-            ax.set_ylabel('Amplitude (MHz)')
+            ax.set_ylabel('Rabi Freq. Amplitude (MHz)')
 
 # Create a separate subplot for the color bar
 cax = fig.add_subplot(gs[:, 3])
@@ -120,8 +123,9 @@ date = datetime.now()
 # Set fig name
 fig_name = f"from_brd_to_nrw_{pulse_type}_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pdf"
 
+
 # Save the fig
-plt.savefig(os.path.join(save_folder, fig_name))
+plt.savefig(os.path.join(save_folder, fig_name), format="eps", dpi=5000)
 
 # Display the plot
 plt.show()

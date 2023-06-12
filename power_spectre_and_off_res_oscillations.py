@@ -14,11 +14,11 @@ def make_all_dirs(path):
             os.mkdir(folder)
 
 backend_name = "manila"
-pulse_type = "lorentz"
-sigma = 96
-dur = 2704
+pulse_type = "lor2_3"
+sigma = 48
+dur = 5104
 
-fixed_detuning = 1.8 # MHz
+fixed_detuning = 1.2 # MHz
 # times = {
 #     0.5: ["2023-06-03", "120038"],
 #     1: ["2023-06-03", "160754"],
@@ -31,9 +31,14 @@ fixed_detuning = 1.8 # MHz
 #     50: ["2023-06-03", "222957"],
 # }
 
-time = ["2023-06-06", "013505"] # lor3_4 sigma = 96,dur = 5008
-time = ["2023-06-03", "120038"] # lorentz sigma = 96,dur = 2704
+# time = ["2023-06-06", "013505"] # lor3_4 sigma = 96,dur = 5008
+# time = ["2023-06-03", "120038"] # lorentz sigma = 96,dur = 2704
+time = ["2023-06-06", "202254"] # lor2_3 sigma = 48, dur = 5104
 
+
+amp_end_idx = 84
+amp_map_end_idx = 72
+detuning_start_idx, detuning_end_idx = 0,100
 ## create folder where plots are saved
 file_dir = os.path.dirname(__file__)
 
@@ -76,7 +81,6 @@ with open(os.path.join(data_folder(time[0], time[1], pulse_type), files[1]), 'rb
 
 det_idx_0, det_idx_1 = np.argsort(np.abs(np.abs(det) - fixed_detuning))[[0,1]]
 
-print(det_idx_0, det_idx_1)
 
 # Generate datetime
 date = datetime.now()
@@ -86,14 +90,27 @@ save_folder = os.path.join(file_dir, "paper_ready_plots", "power_narrowing")
 fig0, ax0 = plt.subplots(figsize=(8, 6))
 cmap = plt.cm.get_cmap('cividis')  # Choose a colormap
 ax0.grid()
-ax0.scatter(amp[:], tr_prob[:, det_idx_0], linewidth=0, cmap=cmap)
-ax0.set_xlabel("Amplitude (MHz)")
+ax0.scatter(amp[:amp_end_idx], tr_prob[:amp_end_idx, det_idx_0], linewidth=0, cmap=cmap)
+ax0.set_xlabel("Rabi Freq. Amplitude (MHz)")
 ax0.set_ylabel("Transition Probability")
 # Set fig name
-fig_name = f"rabi_oscillations_detuning_{fixed_detuning}_{pulse_type}_sigma_{sigma}_duration_{dur}_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pdf"
+fig_name = f"rabi_oscillations_detuning_{(-1) ** (int(det_idx_0 < det_idx_1)) * fixed_detuning}_{pulse_type}_sigma_{sigma}_duration_{dur}_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pdf"
 
 # Save off-resonant Rabi oscillations
-# plt.savefig(os.path.join(save_folder, fig_name))
+plt.savefig(os.path.join(save_folder, fig_name))
+plt.show()
+plt.close()
+
+fig0, ax0 = plt.subplots(figsize=(8, 6))
+cmap = plt.cm.get_cmap('cividis')  # Choose a colormap
+ax0.grid()
+ax0.scatter(amp[:amp_end_idx], tr_prob[:amp_end_idx, det_idx_1], linewidth=0, cmap=cmap)
+ax0.set_xlabel("Rabi Freq. Amplitude (MHz)")
+ax0.set_ylabel("Transition Probability")
+# Set fig name
+fig_name = f"rabi_oscillations_detuning_{(-1) ** (-int(det_idx_1 < det_idx_0)) * fixed_detuning}_{pulse_type}_sigma_{sigma}_duration_{dur}_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pdf"
+# Save off-resonant Rabi oscillations
+plt.savefig(os.path.join(save_folder, fig_name))
 plt.show()
 plt.close()
 
@@ -101,9 +118,9 @@ plt.close()
 fig, ax = plt.subplots(figsize=(7,6))
 
 # Iterate over each subplot and plot the color map
-im = ax.pcolormesh(det, amp[:], tr_prob[:], vmin=0, vmax=1, cmap=cmap)
+im = ax.pcolormesh(det[detuning_start_idx:detuning_end_idx], amp[:amp_map_end_idx], tr_prob[:amp_map_end_idx, detuning_start_idx:detuning_end_idx], vmin=0, vmax=1, cmap=cmap)
 ax.set_xlabel('Detuning (MHz)')
-ax.set_ylabel('Amplitude (MHz)')
+ax.set_ylabel('Rabi Freq. Amplitude (MHz)')
 
 cbar = fig.colorbar(im, ax=ax)
 cbar.set_label('Transition Probability')
@@ -115,7 +132,7 @@ fig.tight_layout()
 fig_name = f"power_spectre_{pulse_type}_sigma_{sigma}_duration_{dur}_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pdf"
 
 # Save the fig
-plt.savefig(os.path.join(save_folder, fig_name))
+# plt.savefig(os.path.join(save_folder, fig_name))
 
 # Display the plot
 plt.show()
