@@ -18,7 +18,7 @@ backend_name = "manila"
 # pulse_type2 = "lorentz"
 
 times = {
-    "sq": ["2023-06-12", "230439"],
+    "rect": ["2023-03-12", "101213"],
     "lorentz": ["2023-06-03", "120038"],
     "lor3_4": ["2023-06-06", "013505"],
     "lor2_3": ["2023-06-06", "202254"],
@@ -66,10 +66,12 @@ for k, t in times.items():
     with open(os.path.join(data_folder(t[0], t[1], k), files[1]), 'rb') as f3:
         det.append(pickle.load(f3)/1e6)
 
-tr_prob[2] = tr_prob[2][:70]
-amp[2] = amp[2][:70]
-tr_prob[3] = tr_prob[3][:70]
-amp[3] = amp[3][:70]
+tr_prob[0] = tr_prob[0][:94]
+amp[0] = amp[0][:94]
+tr_prob[2] = tr_prob[2][:67]
+amp[2] = amp[2][:67]
+tr_prob[3] = tr_prob[3][:72]
+amp[3] = amp[3][:72]
 # Set up the backend to use the EPS file format
 # plt.switch_backend('ps')
 
@@ -107,7 +109,7 @@ fig_name = f"block_power_spectre_{','.join([k for k in times.keys()])}_{date.str
 
 
 # Save the fig
-# plt.savefig(os.path.join(save_folder, fig_name), format="pdf")
+plt.savefig(os.path.join(save_folder, fig_name), format="pdf")
 
 # Display the plot
 plt.show()
