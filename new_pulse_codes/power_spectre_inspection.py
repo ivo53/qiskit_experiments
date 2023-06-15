@@ -26,6 +26,7 @@ pulse_dict = {
     "lor3": [pt.Lorentzian3, pt.LiftedLorentzian3],
     "lor2_3": [pt.Lorentzian2_3, pt.LiftedLorentzian2_3],
     "lor3_4": [pt.Lorentzian3_4, pt.LiftedLorentzian3_4],
+    "lor3_5": [pt.Lorentzian3_5, pt.LiftedLorentzian3_5],
     "sq": [pt.Constant, pt.Constant],
     "sech": [pt.Sech, pt.LiftedSech],
     "sech2": [pt.Sech2, pt.LiftedSech2],
@@ -33,7 +34,7 @@ pulse_dict = {
     "sin2": [pt.Sine2, pt.Sine2],
     "sin3": [pt.Sine3, pt.Sine3],
     "sin4": [pt.Sine4, pt.Sine4],
-    "sin5": [pt.Sine5, pt.Sine5],
+    "sin5": [pt.Sine5, pt.Sine5], 
     "demkov": [pt.Demkov, pt.LiftedDemkov],
 }
 
