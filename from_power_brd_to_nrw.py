@@ -100,7 +100,7 @@ for i in range(3):
     for j in range(3):
         ax = fig.add_subplot(gs[i, j])
         cmap = plt.cm.get_cmap('cividis')  # Choose a colormap
-        im = ax.pcolormesh(det[3*i+j], amp[3*i+j], tr_prob[3*i+j], vmin=0, vmax=1, cmap=cmap)
+        im = ax.pcolormesh(det[::-1][3*i+j], amp[::-1][3*i+j], tr_prob[::-1][3*i+j], vmin=0, vmax=1, cmap=cmap)
         if i == 2:
             ax.set_xlabel('Detuning (MHz)')
         if j == 0:
@@ -125,7 +125,7 @@ fig_name = f"from_brd_to_nrw_{pulse_type}_{date.strftime('%Y%m%d')}_{date.strfti
 
 
 # Save the fig
-plt.savefig(os.path.join(save_folder, fig_name), format="eps", dpi=5000)
+plt.savefig(os.path.join(save_folder, fig_name), format="pdf")
 
 # Display the plot
 plt.show()

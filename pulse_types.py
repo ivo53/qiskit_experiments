@@ -273,6 +273,38 @@ def LiftedLorentzian3_4(duration, amp, sigma, name):
 
     return instance
 
+
+# a Lorentzian^3/5 pulse
+def Lorentzian3_5(duration, amp, sigma, name):
+    t, duration_sym, amp_sym, sigma_sym = sym.symbols("t, duration, amp, sigma")
+
+    instance = SymbolicPulse(
+        pulse_type="Lorentzian^(3/5)",
+        duration=duration,
+        parameters={"duration": duration, "amp": amp, "sigma": sigma},
+        envelope=amp_sym / (1 + ((t - duration_sym/2) / sigma_sym) ** 2) ** (3/5),
+        name=name,
+    )
+
+    return instance
+
+# a LiftedLorentzian^3/5 pulse
+def LiftedLorentzian3_5(duration, amp, sigma, name):
+    t, duration_sym, amp_sym, sigma_sym = sym.symbols("t, duration, amp, sigma")
+
+    envelope = amp_sym / (1 + ((t - duration_sym/2) / sigma_sym) ** 2) ** (3/5)
+    new_amp = amp_sym / (amp_sym - envelope.subs(t, 0))
+    lifted_envelope = new_amp * (envelope - envelope.subs(t, 0))
+    instance = SymbolicPulse(
+        pulse_type="LiftedLorentzian^(3/5)",
+        duration=duration,
+        parameters={"duration": duration, "amp": amp, "sigma": sigma},
+        envelope=lifted_envelope,
+        name=name,
+    )
+
+    return instance
+
 # a Gaussian pulse
 def Gaussian(duration, amp, sigma, name):
     t, duration_sym, amp_sym, sigma_sym = sym.symbols("t, duration, amp, sigma")
