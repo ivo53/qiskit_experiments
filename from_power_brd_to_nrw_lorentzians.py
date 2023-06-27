@@ -35,7 +35,17 @@ for ax, params in zip(axes.flat, parameters):
     ax.plot(x, y, color='black', linewidth=0.6)
     ax.axvline(-duration/2, color='r', linestyle='--', linewidth=0.6)
     ax.axvline(duration/2, color='r', linestyle='--', linewidth=0.6)
-    ax.set_title(f"duration={np.round(duration, 2)} ns")
+    # ax.set_title(f"duration={np.round(duration, 2)} ns")
+    param_box_text = f'duration={np.round(duration, 2)} ns'
+    ax.text(
+        0.58,
+        0.95,
+        param_box_text,
+        fontsize=8,
+        transform=ax.transAxes,
+        verticalalignment='top',
+        bbox=dict(facecolor='white', alpha=0.8)
+    )
 for ax in axes[-1]:
     ax.set_xlabel('Time [ns]')
 for ax in axes[:, 0]:
