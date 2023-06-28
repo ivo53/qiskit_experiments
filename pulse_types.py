@@ -313,7 +313,7 @@ def Gaussian(duration, amp, sigma, name):
         pulse_type="GaussianCustom",
         duration=duration,
         parameters={"duration": duration, "amp": amp, "sigma": sigma},
-        envelope=amp_sym * sym.exp(- 0.5 * ((t - duration_sym/2) / sigma_sym) ** 2),
+        envelope=amp_sym * sym.exp(- ((t - duration_sym/2) / sigma_sym) ** 2),
         name=name,
     )
 
@@ -323,7 +323,7 @@ def Gaussian(duration, amp, sigma, name):
 def LiftedGaussian(duration, amp, sigma, name):
     t, duration_sym, amp_sym, sigma_sym = sym.symbols("t, duration, amp, sigma")
 
-    envelope = amp_sym * sym.exp(- 0.5 * ((t - duration_sym/2) / sigma_sym) ** 2)
+    envelope = amp_sym * sym.exp(- ((t - duration_sym/2) / sigma_sym) ** 2)
     new_amp = amp_sym / (amp_sym - envelope.subs(t, 0))
     lifted_envelope = new_amp * (envelope - envelope.subs(t, 0))
     
@@ -345,7 +345,7 @@ def Gaussian2(duration, amp, sigma, name):
         pulse_type="Gaussian^2",
         duration=duration,
         parameters={"amp": amp, "sigma": sigma},
-        envelope=amp_sym * sym.exp(- 0.5 * ((t - duration_sym/2) / sigma_sym) ** 2) ** 2,
+        envelope=amp_sym * sym.exp(- ((t - duration_sym/2) / sigma_sym) ** 2) ** 2,
         name=name,
     )
 
@@ -355,7 +355,7 @@ def Gaussian2(duration, amp, sigma, name):
 def LiftedGaussian2(duration, amp, sigma, name):
     t, duration_sym, amp_sym, sigma_sym = sym.symbols("t, duration, amp, sigma")
 
-    envelope = amp_sym * sym.exp(- 0.5 * ((t - duration_sym/2) / sigma_sym) ** 2) ** 2
+    envelope = amp_sym * sym.exp(- ((t - duration_sym/2) / sigma_sym) ** 2) ** 2
     new_amp = amp_sym / (amp_sym - envelope.subs(t, 0))
     lifted_envelope = new_amp * (envelope - envelope.subs(t, 0))
     

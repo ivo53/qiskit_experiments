@@ -67,7 +67,7 @@ def gauss(
     T: float,
     sigma: float
 ):
-    f = np.heaviside(t, 1) * np.heaviside(T - t, 1) * np.exp(-0.5 * ((t - T/2) / sigma) ** 2)
+    f = np.heaviside(t, 1) * np.heaviside(T - t, 1) * np.exp(-((t - T/2) / sigma) ** 2)
     return f
 
 def demkov(
