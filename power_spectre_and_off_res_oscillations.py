@@ -15,10 +15,11 @@ def make_all_dirs(path):
 
 backend_name = "manila"
 pulse_type = "rect"
-sigma = 800
-dur = 800
+sigma = 96
+dur = 704
+save = 1
 
-fixed_detuning = 3 # MHz
+fixed_detuning = 7 # MHz
 # times = {
 #     0.5: ["2023-06-03", "120038"],
 #     1: ["2023-06-03", "160754"],
@@ -34,9 +35,9 @@ fixed_detuning = 3 # MHz
 # time = ["2023-06-06", "013505"] # lor3_4 sigma = 96,dur = 5008
 # time = ["2023-06-03", "120038"] # lorentz sigma = 96,dur = 2704
 # time = ["2023-06-06", "202254"] # lor2_3 sigma = 48, dur = 5104
-time = ["2023-03-12", "101213"] # rect sigma = 800, dur = 800
-
-amp_end_idx = 100
+# time = ["2023-03-12", "101213"] # rect sigma = 800, dur = 800
+time = ["2023-07-02", "002746"] # lor2 sigma = 96, dur = 704
+amp_end_idx = 94
 amp_map_end_idx = 100
 detuning_start_idx, detuning_end_idx = 0,100
 ## create folder where plots are saved
@@ -97,7 +98,8 @@ ax0.set_ylabel("Transition Probability")
 fig_name = f"rabi_oscillations_detuning_{(-1) ** (int(det_idx_0 < det_idx_1)) * fixed_detuning}_{pulse_type}_sigma_{sigma}_duration_{dur}_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pdf"
 
 # Save off-resonant Rabi oscillations
-# plt.savefig(os.path.join(save_folder, fig_name))
+if save:
+    plt.savefig(os.path.join(save_folder, fig_name))
 plt.show()
 plt.close()
 
@@ -110,7 +112,8 @@ ax0.set_ylabel("Transition Probability")
 # Set fig name
 fig_name = f"rabi_oscillations_detuning_{(-1) ** (-int(det_idx_1 < det_idx_0)) * fixed_detuning}_{pulse_type}_sigma_{sigma}_duration_{dur}_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pdf"
 # Save off-resonant Rabi oscillations
-# plt.savefig(os.path.join(save_folder, fig_name))
+if save:
+    plt.savefig(os.path.join(save_folder, fig_name))
 plt.show()
 plt.close()
 
@@ -132,7 +135,8 @@ fig.tight_layout()
 fig_name = f"power_spectre_{pulse_type}_sigma_{sigma}_duration_{dur}_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pdf"
 
 # Save the fig
-plt.savefig(os.path.join(save_folder, fig_name))
+if save:
+    plt.savefig(os.path.join(save_folder, fig_name))
 
 # Display the plot
 plt.show()
