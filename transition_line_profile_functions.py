@@ -325,7 +325,7 @@ def sin5(x, q_freq, delta, eps):
 #     return post_process(P2, eps, delta)
 
 def gauss(x, q_freq, delta, eps):
-    sigma = s * 2e-9 / 9 / np.sqrt(2)
+    sigma = s * 2e-9 / 9
     T = dur * 2e-9 / 9
     omega_0 = pulse_shapes.find_rabi_amp("gauss", T, sigma, rb=rb)
 
@@ -340,9 +340,9 @@ def gauss(x, q_freq, delta, eps):
             4 * np.log(m * alpha) ** 2 + np.pi ** 2
         ) \
             - 2 * np.log(m * alpha)
-    ) / np.sqrt(2)
+    ) #/ np.sqrt(2)
 
-    ReD = np.sqrt(2) * D * sigma * (
+    ReD =  D * sigma * (
         (np.sqrt(alpha ** 2 + 1) - 1) * \
             np.sqrt(
                 0.5 * np.log(
@@ -353,18 +353,18 @@ def gauss(x, q_freq, delta, eps):
                     np.log(alpha ** 2 / (mu * (2 - mu))) ** 2 + np.pi ** 2
                 ) + np.log(alpha ** 2 / (mu * (2 - mu)))
             )
-    )
+    ) #* np.sqrt(2)
     P2 = np.sin(ReD) ** 2 / np.cosh(ImD) ** 2
     return post_process(P2, eps, delta)
 
 def gauss_rzconj(x, q_freq, delta, eps):
-    sigma = s * 2e-9 / 9 / np.sqrt(2)
+    sigma = s * 2e-9 / 9 
     T = dur * 2e-9 / 9
     omega_0 = pulse_shapes.find_rabi_amp("gauss", T, sigma, rb=rb)
 
     D = (x - q_freq) * 1e6
     def f_(t):
-        return np.exp(-0.5 * (t / sigma)**2)
+        return np.exp(- (t / sigma)**2)
     def g_(t):
         return np.exp(1j * D * t)
     def fg_(t):

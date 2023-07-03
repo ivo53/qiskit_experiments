@@ -82,15 +82,25 @@ times = {
     # "lor2": ["2023-05-26", "003010"],
     # "lor3": ["2023-05-26", "003023"],
     #
-    "constant": ["2023-05-26", "021927"],
-    "rabi": ["2023-05-26", "021927"],
-    "rz": ["2023-05-26", "012657"],
-    "demkov": ["2023-05-26", "012735"],
-    "sech2": ["2023-05-26", "012710"],
-    "gauss": ["2023-05-26", "012723"],
-    "lor": ["2023-05-26", "003113"],
-    "lor2": ["2023-05-26", "012617"],
-    "lor3": ["2023-05-26", "012642"],
+    # "constant": ["2023-05-26", "021927"],
+    # "rabi": ["2023-05-26", "021927"],
+    # "rz": ["2023-05-26", "012657"],
+    # "demkov": ["2023-05-26", "012735"],
+    # "sech2": ["2023-05-26", "012710"],
+    # "gauss": ["2023-05-26", "012723"],
+    # "lor": ["2023-05-26", "003113"],
+    # "lor2": ["2023-05-26", "012617"],
+    # "lor3": ["2023-05-26", "012642"],
+    #
+    "constant": ["2023-07-02", "021116"],
+    "rabi": ["2023-07-02", "021116"],
+    "rz": ["2023-07-02", "020922"],
+    "demkov": ["2023-07-02", "021106"],
+    "sech2": ["2023-07-02", "021044"],
+    "gauss": ["2023-07-02", "021051"],
+    "lor": ["2023-07-02", "020831"],
+    "lor2": ["2023-07-02", "020726"],
+    "lor3": ["2023-07-02", "020857"],
 }
 
 # durations = {
@@ -126,7 +136,7 @@ durations = {
 area = "pi"
 backend_name = "perth"
 s = 96
-pulse_type = "sech2"
+pulse_type = "gauss"
 dur = get_closest_multiple_of_16(round(durations[pulse_type]))
 # pulse_type = pu
 # lse_type if dur is None else "_".join([pulse_type, str(s)])
@@ -137,8 +147,9 @@ fit_func = pulse_type
 second_fit = 1 # 0 or 1, whether to have both curves
 comparison = 1 # 0 or 1, whether to have a Lorentzian fit for comparison
 log_plot = 0 # 0 or 1, whether to plot transition probability in a logarithmic plot
-central_fraction = 1.
+central_fraction = .95
 every_nth = 1
+save = 0
 
 FIT_FUNCTIONS = {
     "lorentzian": [lorentzian],
@@ -533,5 +544,6 @@ plt.xlabel("Detuning [MHz]", fontsize=20)
 save_dir = os.path.join(file_dir, "paper_ready_plots", "pulse_shapes")
 
 fig_name = pulse_type + "_" + str(dur) + "_" + str(comparison) + "_" + date.strftime("%Y%m%d") + "_" + date.strftime("%H%M%S") + ".pdf"
-plt.savefig(os.path.join(save_dir, fig_name), format="pdf")
+if save:
+    plt.savefig(os.path.join(save_dir, fig_name), format="pdf")
 plt.show()
