@@ -14,9 +14,10 @@ def make_all_dirs(path):
             os.mkdir(folder)
 
 backend_name = "manila"
-pulse_type = "lor2_3"
-sigma = 48
-dur = 5104
+pulse_type = "lor3_4"
+sigma = 96
+dur = 5008
+save = 1
 # times = {
 #     0.5: ["2023-06-03", "120038"],
 #     1: ["2023-06-03", "160754"],
@@ -30,9 +31,11 @@ dur = 5104
 # }
 
 # time = ["2023-06-06", "201236"] # lor 3/4, sigma = 96, dur = 4128
-# time = ["2023-06-06", "201245"] # lor 3/4, sigma = 96, dur = 5008
+time = ["2023-06-06", "201245"] # lor 3/4, sigma = 96, dur = 5008
 # time = ["2023-06-04", "011733"] # lor, sigma = 96, dur = 2704
-time = ["2023-06-07", "023054"] # lor2_3, sigma = 48, dur = 5104
+# time = ["2023-06-07", "023054"] # lor2_3, sigma = 48, dur = 5104
+# time = ["2023-07-02", "002750"] # lor2, sigma = 96, dur = 704
+# time = ["2023-03-12", "101213"] # rect sigma = 800, dur = 800
 
 ## create folder where plots are saved
 file_dir = os.path.dirname(__file__)
@@ -76,7 +79,7 @@ with open(os.path.join(data_folder(time[0], time[1], pulse_type), files[1]), 'rb
 
 colors = [
     "red",
-    "orange",
+    "brown",
     "green",
     "blue",
     "purple"
@@ -90,19 +93,23 @@ markers = [
     "P"
 ]
 sizes = 15 * np.ones(5)
+det_limits = 12
 
 # Create a 3x3 grid of subplots with extra space for the color bar
 fig, ax = plt.subplots(figsize=(6,5))
 for i, t in zip(np.arange(len(amp[1::2])), tr_prob[1::2]):
     ax.scatter(det, t, c=colors[i],linewidth=0,marker=markers[i], s=sizes[i], label=f"Pulse area {2*i+1}$\pi$")
 ax.set_yticks([0, 0.2, 0.4, 0.6, 0.8, 1])
-ax.set_xticks([-12, -9, -6, -3, 0, 3, 6, 9, 12])
+# ax.set_xticks([-12, -9, -6, -3, 0, 3, 6, 9, 12])
+ax.set_xticks(np.arange(-det_limits, det_limits+0.001, 3))
 y_minor_ticks = np.arange(0, 1.01, 0.05)
-x_minor_ticks = np.arange(-12, 12+0.001, 1)
+# x_minor_ticks = np.arange(-12, 12+0.001, 1)
+x_minor_ticks = np.arange(-det_limits, det_limits+0.001, 1)
 ax.set_yticks(y_minor_ticks, minor="True")
 ax.set_xticks(x_minor_ticks, minor="True")
 ax.set_ylim((-0.025,1))
-ax.set_xlim((-13,13))
+# ax.set_xlim((-13,13))
+ax.set_xlim((-det_limits - 1, det_limits + 1))
 ax.grid(which='minor', alpha=0.2)
 ax.grid(which='major', alpha=0.6)
 ax.set_ylabel("Transition Probability")
@@ -119,7 +126,8 @@ date = datetime.now()
 fig_name = f"first_5_{pulse_type}_sigma_{sigma}_duration_{dur}_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pdf"
 
 # Save the fig
-plt.savefig(os.path.join(save_folder, fig_name))
+if save:
+    plt.savefig(os.path.join(save_folder, fig_name))
 
 # Display the plot
 plt.show()
