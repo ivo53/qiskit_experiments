@@ -335,7 +335,7 @@ def gauss(x, q_freq, delta, eps):
     # print(alpha)
     m, mu, nu = (1.311468, 0.316193, 0.462350)
 
-    ImD = D * sigma * np.sqrt(
+    ImD = 0.5 * D * sigma * np.sqrt(
         np.sqrt(
             4 * np.log(m * alpha) ** 2 + np.pi ** 2
         ) \

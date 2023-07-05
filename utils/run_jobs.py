@@ -2,6 +2,7 @@ SIZE_LIMIT = 250000
 CIRC_LIMIT = 100
 def run_jobs(circs, backend, duration, num_shots_per_exp=1024):
     num_exp = len(circs)
+    num_shots_per_exp = 1024
     size = duration * num_exp * num_shots_per_exp
 
     job_ids = []

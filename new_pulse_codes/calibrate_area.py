@@ -215,7 +215,7 @@ if __name__ == "__main__":
                     duration=dur_dt,
                     amp=amp,
                     name=pulse_type,
-                    sigma=sigma / np.sqrt(2)
+                    sigma=sigma
                 )
             elif pulse_type in ["lor", "lor2", "lor3"]:
                 pulse_played = pulse_dict[pulse_type][remove_bg](
@@ -230,7 +230,7 @@ if __name__ == "__main__":
                     amp=amp,
                     beta=1,
                     name=pulse_type,
-                    sigma=sigma / np.sqrt(2),
+                    sigma=sigma,
                 )
             else:
                 pulse_played = pulse_dict[pulse_type][remove_bg](
