@@ -18,10 +18,10 @@ backend_name = "manila"
 # pulse_type2 = "lorentz"
 
 times = {
-    "rect": ["2023-03-12", "101213"],
-    "lorentz": ["2023-06-03", "120038"],
-    "lor3_4": ["2023-06-06", "013505"],
-    "lor2_3": ["2023-06-06", "202254"],
+    "lor2": ["2023-07-04", "192920"],
+    "lor": ["2023-07-04", "024124"],
+    "lor3_4": ["2023-07-04", "193308"],
+    "lor2_3": ["2023-07-04", "193649"],
 }
 
 ## create folder where plots are saved
@@ -66,14 +66,29 @@ for k, t in times.items():
     with open(os.path.join(data_folder(t[0], t[1], k), files[1]), 'rb') as f3:
         det.append(pickle.load(f3)/1e6)
 
-tr_prob[0] = tr_prob[0][:94]
-amp[0] = amp[0][:94]
-tr_prob[2] = tr_prob[2][:67]
-amp[2] = amp[2][:67]
-tr_prob[3] = tr_prob[3][:72]
-amp[3] = amp[3][:72]
+# tr_prob[0] = tr_prob[0][:94]
+# amp[0] = amp[0][:94]
+tr_prob[1] = tr_prob[1][:62]
+amp[1] = amp[1][:62]
+# tr_prob[2] = tr_prob[2][:67]
+# amp[2] = amp[2][:67]
+# tr_prob[3] = tr_prob[3][:72]
+# amp[3] = amp[3][:72]
 # Set up the backend to use the EPS file format
 # plt.switch_backend('ps')
+start_idx, end_idx = [], []
+for i in range(4):
+    start_idx.append(np.argmin(np.abs(det[i] - det[1][0])))
+    end_idx.append(np.argmin(np.abs(det[i] - det[1][-1])))
+for i in range(4):
+    if i == 1:
+        continue
+    tr_prob[i] = tr_prob[i][:, start_idx[i]:end_idx[i]]
+    det[i] = det[i][start_idx[i]:end_idx[i]]
+
+fig0 = plt.figure(figsize=(12, 9))
+gs0 = fig0.add_gridspec(2, 3, width_ratios=[1, 1, 0.1])
+
 
 # Create a 3x3 grid of subplots with extra space for the color bar
 fig = plt.figure(figsize=(12, 9))
