@@ -36,6 +36,7 @@ pulse_dict = {
     "sin4": [pt.Sine4, pt.Sine4],
     "sin5": [pt.Sine5, pt.Sine5], 
     "demkov": [pt.Demkov, pt.LiftedDemkov],
+    "drag": [pt.Drag, pt.LiftedDrag],
 }
 
 def make_all_dirs(path):
