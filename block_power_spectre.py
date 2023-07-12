@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
+from transition_line_profile_functions import *
 
 def make_all_dirs(path):
     folders = path.split("/")
@@ -18,7 +19,7 @@ backend_name = "manila"
 # pulse_type2 = "lorentz"
 fixed_detuning = [5, 2, 2, 2] # MHz
 intervals = [200, 100, 100, 100]
-save_osc, save_map = 1, 1
+save_osc, save_map = 0,0
 times = {
     "lor2": ["2023-07-04", "192920"],
     "lor": ["2023-07-04", "024124"],
@@ -106,9 +107,17 @@ gs0 = fig0.add_gridspec(2, 2, width_ratios=[1, 1])
 fig0.tight_layout()
 # Generate datetime
 date = datetime.now()
-
+initial, initial_min, initial_max = [], [], []
 for i in range(2):
     for j in range(2):
+        fit_params, y_fit, err = fit_function(
+            amp[2*i+j],
+            tr_prob[2*i+j][:, det_indices_0[2*i+j]],
+            list(times.keys())[2*i+j],
+            initial, initial_min, initial_max,
+            s, dur
+        )
+
         ax0 = fig0.add_subplot(gs0[i, j])
         cmap0 = plt.cm.get_cmap('cividis')  # Choose a colormap
         ax0.scatter(amp[2*i+j], tr_prob[2*i+j][:, det_indices_0[2*i+j]], marker="p", cmap=cmap0)

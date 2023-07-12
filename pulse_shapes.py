@@ -46,6 +46,30 @@ def lorentz3(
     f = np.heaviside(t, 1) * np.heaviside(T - t, 1) / (1 + ((t - T/2) / sigma) ** 2) ** 3
     return f
 
+def lorentz3_4(
+    t, 
+    T: float,
+    sigma: float
+):
+    f = np.heaviside(t, 1) * np.heaviside(T - t, 1) / (1 + ((t - T/2) / sigma) ** 2) ** (3/4)
+    return f
+
+def lorentz2_3(
+    t, 
+    T: float,
+    sigma: float
+):
+    f = np.heaviside(t, 1) * np.heaviside(T - t, 1) / (1 + ((t - T/2) / sigma) ** 2) ** (2/3)
+    return f
+
+def lorentz3_5(
+    t, 
+    T: float,
+    sigma: float
+):
+    f = np.heaviside(t, 1) * np.heaviside(T - t, 1) / (1 + ((t - T/2) / sigma) ** 2) ** (3/5)
+    return f
+
 def sech(
     t, 
     T: float,
@@ -123,6 +147,9 @@ pulse_shapes = {
     "lor": lorentz,
     "lor2": lorentz2,
     "lor3": lorentz3,
+    "lor3_4": lorentz3_4,
+    "lor2_3": lorentz2_3,
+    "lor3_5": lorentz3_5,
     "sech": sech,
     "rz": sech,
     "sech2": sech2,

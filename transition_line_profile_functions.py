@@ -47,7 +47,8 @@ ALPHA = {
     "sin4": 0.74, # speculative
     "sin5": 0.72, # speculative
     "gauss": 0.6758103186913479,
-    "demkov": 0.15786564335245298
+    "demkov": 0.15786564335245298,
+    "lor": 0.5
 }
 
 def fit_function(x_values, y_values, function, init_params, lower, higher, sigma=None, duration=None, remove_bg=True):
@@ -392,6 +393,40 @@ def demkov_rzconj(x, q_freq, delta, eps):
     P2 = np.sin(0.5 * tau * np.sqrt(omega_0 ** 2 + ALPHA["demkov"] * D ** 2)) ** 2 * np.abs(G / tau) ** 2
     return post_process(P2, eps, delta)
 
+
+def lor_rzconj_amp(x, D, delta, eps):
+    sigma = s * 2e-9 / 9
+    T = dur * 2e-9 / 9
+    omega_0 = x # pulse_shapes.find_rabi_amp("lor", T, sigma, rb=rb)
+
+    # D = (x - q_freq) * 1e6
+    def f_(t):
+        return 1 / (1 + (t / sigma) ** 2)
+    def g_(t):
+        return np.exp(1j * D * t)
+    def fg_(t):
+        return f_(t) * g_(t)
+    tau = quad(f_, -1e-5, 1e-5, epsabs=1e-13, epsrel=1e-5)[0]
+    G = quad_vec(fg_, -1e-5, 1e-5, epsabs=1e-13, epsrel=1e-5)[0]
+    P2 = np.sin(0.5 * tau * np.sqrt(omega_0 ** 2 + ALPHA["lor"] * D ** 2)) ** 2 * np.abs(G / tau) ** 2
+    return post_process(P2, eps, delta)
+
+def lor_rzconj(x, q_freq, delta, eps, D):
+    sigma = s * 2e-9 / 9
+    T = dur * 2e-9 / 9
+    omega_0 = pulse_shapes.find_rabi_amp("lor", T, sigma, rb=rb)
+
+    # D = (x - q_freq) * 1e6
+    def f_(t):
+        return 1 / (1 + (t / sigma) ** 2)
+    def g_(t):
+        return np.exp(1j * D * t)
+    def fg_(t):
+        return f_(t) * g_(t)
+    tau = quad(f_, -1e-5, 1e-5, epsabs=1e-13, epsrel=1e-5)[0]
+    G = quad_vec(fg_, -1e-5, 1e-5, epsabs=1e-13, epsrel=1e-5)[0]
+    P2 = np.sin(0.5 * tau * np.sqrt(omega_0 ** 2 + ALPHA["lor"] * D ** 2)) ** 2 * np.abs(G / tau) ** 2
+    return post_process(P2, eps, delta)
 
 def sinc2(x, s, A, q_freq, c):
     return A * (np.sinc((x - q_freq) / s)) ** 2 + c
