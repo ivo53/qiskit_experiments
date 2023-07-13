@@ -2,50 +2,130 @@ import matplotlib.pyplot as plt
 import numpy as np
 import qutip
 from scipy.integrate import quad
-from scipy.integrate import solve_ivp
 
-def omega(t, omega_0, sigma, lamb=1):
-    return omega_0 / (1 + (t / sigma) ** 2) ** lamb
+def ndsolve_lorentz_spectre(   
+    sigma, T,
+    d_start, d_num,
+    d_end=None,
+    num_t=1000,
+    pulse_area=np.pi,
+    lor_power=1
+):
+    d_end = d_end or -d_start
+    
+    pulse_type = "lorentz"
 
-def omega_dot(t, omega_0, sigma, lamb=1):
-    return - lamb * omega_0 / (1 + (t / sigma) ** 2) ** (lamb + 1) * 2 * t / sigma
+    def omega(t, args):
+        return args["O"] / (1 + ((t) / args["sigma"]) ** 2) ** args["lor_power"]
 
-sigma = 24.8888888889e-9
-T = 704e-9
-omega_0 = np.pi / quad(lambda t: omega(t, 1, sigma), -T/2, T/2)[0]
-# print(omega_0)
-# def c2(t, y, d, omega_0, sigma, lamb):
-#     # Define the second-order differential equation
-#     dc2_2dt_2 = (omega_dot(t, omega_0, sigma, lamb=lamb) /\
-#                  omega(t, omega_0, sigma, lamb=lamb) - 1j * d) * y[1] + \
-#                  (1j * omega_dot(t, omega_0, sigma, lamb=lamb) * \
-#                  d / omega(t, omega_0, sigma, lamb=lamb) - \
-#                  omega(t, omega_0, sigma, lamb=lamb) ** 2 / 4) * y[0]
-#     return y[2], np.array(dc2_2dt_2)
+    
+    O = pulse_area / quad(lambda t: omega(t, {"O": 1, "sigma": sigma, "lor_power": lor_power}), -T/2, T/2)[0]
 
- 
+    tlist = np.linspace(-T/2, T/2, num_t)
+    options = qutip.Options()
+    options.nsteps = 5000
+    d_range = np.linspace(d_start, d_end, d_num) 
+    total_num_exp = len(d_range)
+    percentage = 0
+    values = []
+    for n_d, d in enumerate(d_range):
+        last_percentage = percentage
+        funcvalues = omega(tlist, {"O": O, "sigma": sigma, "lor_power": lor_power})
+        n_exp = n_d + 1
+        percentage = np.round(n_exp / total_num_exp, 3)
+        if percentage > last_percentage:
+            print(
+                "[" + "-" * int(np.floor(percentage * 100)) + " " * int(np.ceil(100-percentage*100)) + "]",
+                np.round(percentage * 100, 1), 
+                "%"
+            )
+        H0 = - (d / 2) * qutip.sigmaz()
+        H1 = qutip.sigmax() / 2
+        output = qutip.sesolve(
+            [
+                H0, 
+                [H1, omega]
+            ],
+            psi0=qutip.basis(2,0),
+            args={"O": O, "sigma": sigma, "lor_power": lor_power},
+            tlist=tlist,
+            options=options
+        )
+        values.append(qutip.expect(qutip.sigmaz(), output.states)[-1])
 
-# Define the initial conditions
-y0 = [0, 1]  # Example initial conditions: y(0) = 0, y'(0) = 1
-l = 1
+    tr_probs = -0.5 * (np.array(values) - 1.)
 
-det = np.linspace(-100e6, 100e6, 100)
-# Solve the second-order differential equation
-c2_values = np.empty((len(det)), dtype=np.ndarray)
-c2dt_values = np.empty((len(det)), dtype=np.ndarray)
-c2dt2_values = np.empty((len(det)), dtype=np.ndarray)
-t_values = np.empty((len(det)), dtype='float')
-for i, d in enumerate(det):
-    y = solve_ivp(lambda t, y: c2(t, y, d, omega_0, sigma, l), (-T/2, T/2), [0, 0, 0], max_step=1e-8)
-    c2_values[i] = y.y[0][-1]
-    c2dt_values[i] = y.y[1][-1]
-    # c2dt2_values[i] = y.y[2][-1]
-    t_values[i] = y.t[-1]
+    # # Plot the solution
+    # plt.plot(d_range, tr_probs, 'r', label='y(t)')  # Plotting y(t)
+    # plt.xlabel('Time')
+    # plt.ylabel('Transition probability')
+    # plt.legend()
+    # plt.show()
+    return d_range, tr_probs
+    
+def ndsolve_lorentz_rabi_osc(   
+    sigma, T,
+    A_start,
+    A_num, d,
+    A_end=None,
+    num_t=1000,
+    lor_power=1
+):
+    A_end = A_end or -A_start
+    
+    pulse_type = "lorentz"
 
-print(c2_values)
-# Plot the solution
-plt.plot(det, np.abs(c2_values) ** 2, 'r', label='y(t)')  # Plotting y(t)
-plt.xlabel('Time')
-plt.ylabel('Transition probability')
-plt.legend()
-plt.show()
+    def omega(t, args):
+        return args["O"] / (1 + ((t) / args["sigma"]) ** 2) ** args["lor_power"]
+
+    
+    tlist = np.linspace(-T/2, T/2, num_t)
+    options = qutip.Options()
+    options.nsteps = 5000
+    A_range = np.linspace(A_start, A_end, A_num) 
+    total_num_exp = len(A_range)
+    percentage = 0
+    values = []
+    for n_A, A in enumerate(A_range):
+        last_percentage = percentage
+        funcvalues = omega(tlist, {"O": A, "sigma": sigma, "lor_power": lor_power})
+        n_exp = n_A + 1
+        percentage = np.round(n_exp / total_num_exp, 3)
+        if percentage > last_percentage:
+            print(
+                "[" + "-" * int(np.floor(percentage * 100)) + " " * int(np.ceil(100-percentage*100)) + "]",
+                np.round(percentage * 100, 1), 
+                "%"
+            )
+        H0 = - (d / 2) * qutip.sigmaz()
+        H1 = qutip.sigmax() / 2
+        output = qutip.sesolve(
+            [
+                H0, 
+                [H1, omega]
+            ],
+            psi0=qutip.basis(2,0),
+            args={"O": A, "sigma": sigma, "lor_power": lor_power},
+            tlist=tlist,
+            options=options
+        )
+        values.append(qutip.expect(qutip.sigmaz(), output.states)[-1])
+
+    tr_probs = -0.5 * (np.array(values) - 1.)
+
+    # # Plot the solution
+    # plt.plot(A_range, tr_probs, 'r', label='y(t)')  # Plotting y(t)
+    # plt.xlabel('Time')
+    # plt.ylabel('Transition probability')
+    # plt.legend()
+    # plt.show()
+    return A_range, tr_probs
+
+# ndsolve_lorentz_rabi_osc(   
+#     (24 + 8/9) * 1e-9, (704) * 1e-9,
+#     0,
+#     100, 2e6,
+#     A_end=800e6,
+#     num_t=1000,
+#     lor_power=1
+# )

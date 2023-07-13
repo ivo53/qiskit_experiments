@@ -4,7 +4,7 @@ from datetime import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
-
+from numerical_solutions import ndsolve_lorentz_rabi_osc
 from transition_line_profile_functions import *
 
 def make_all_dirs(path):
@@ -19,13 +19,20 @@ backend_name = "manila"
 # pulse_type2 = "lorentz"
 fixed_detuning = [5, 2, 2, 2] # MHz
 intervals = [200, 100, 100, 100]
-save_osc, save_map = 0,0
+save_osc, save_map = 1,1
 times = {
     "lor2": ["2023-07-04", "192920"],
     "lor": ["2023-07-04", "024124"],
     "lor3_4": ["2023-07-04", "193308"],
     "lor2_3": ["2023-07-04", "193649"],
 }
+params = {
+    "lor2": [(24 + 8/9) * 1e-9, (181 + 2/3) * 1e-9],
+    "lor": [(24 + 8/9) * 1e-9, (704) * 1e-9],
+    "lor3_4": [(10 + 2/3) * 1e-9, (728 + 8/9) * 1e-9],
+    "lor2_3": [(10 + 2/3) * 1e-9, (1134 + 2/9) * 1e-9],
+}
+powers = [2, 1, 3/4, 2/3]
 
 ## create folder where plots are saved
 file_dir = os.path.dirname(__file__)
@@ -86,7 +93,27 @@ start_idx, end_idx = [], []
 for i in range(4):
     start_idx.append(np.argmin(np.abs(det[i] - det[1][0])))
     end_idx.append(np.argmin(np.abs(det[i] - det[1][-1])))
+
+numerical_amps, numerical_tr_probs = [], []
 for i in range(4):
+    A_range_minus, numerical_tr_prob_minus = ndsolve_lorentz_rabi_osc(
+        params[list(times.keys())[i]][0],
+        params[list(times.keys())[i]][1],
+        0, 100, -fixed_detuning[i] * 2 * np.pi * 1e6,
+        A_end=amp[i][-1] * 1e6,
+        num_t=1000,
+        lor_power=powers[i]
+    )
+    A_range_plus, numerical_tr_prob_plus = ndsolve_lorentz_rabi_osc(
+        params[list(times.keys())[i]][0],
+        params[list(times.keys())[i]][1],
+        0, 100, fixed_detuning[i] * 2 * np.pi * 1e6,
+        A_end=amp[i][-1] * 1e6,
+        num_t=1000,
+        lor_power=powers[i]
+    )
+    numerical_amps.append([A_range_minus * 1e-6, A_range_plus * 1e-6])
+    numerical_tr_probs.append([numerical_tr_prob_minus, numerical_tr_prob_plus])
     if i == 1:
         continue
     tr_prob[i] = tr_prob[i][:, start_idx[i]:end_idx[i]]
@@ -110,17 +137,18 @@ date = datetime.now()
 initial, initial_min, initial_max = [], [], []
 for i in range(2):
     for j in range(2):
-        fit_params, y_fit, err = fit_function(
-            amp[2*i+j],
-            tr_prob[2*i+j][:, det_indices_0[2*i+j]],
-            list(times.keys())[2*i+j],
-            initial, initial_min, initial_max,
-            s, dur
-        )
+        # fit_params, y_fit, err = fit_function(
+        #     amp[2*i+j],
+        #     tr_prob[2*i+j][:, det_indices_0[2*i+j]],
+        #     list(times.keys())[2*i+j],
+        #     initial, initial_min, initial_max,
+        #     s, dur
+        # )
 
         ax0 = fig0.add_subplot(gs0[i, j])
         cmap0 = plt.cm.get_cmap('cividis')  # Choose a colormap
         ax0.scatter(amp[2*i+j], tr_prob[2*i+j][:, det_indices_0[2*i+j]], marker="p", cmap=cmap0)
+        ax0.plot(numerical_amps[2*i+j][0], numerical_tr_probs[2*i+j][0])
         ax0.set_xticks(np.round(np.arange(0, max_amp[2*i+j] + 1e-3, intervals[2*i+j])).astype(int))
         ax0.set_xticks(np.round(np.arange(0, max_amp_minor[2*i+j] + 1e-3, intervals[2*i+j] / 4)).astype(int), minor=True)
         ax0.set_xticklabels(np.round(np.arange(0, max_amp[2*i+j] + 1e-3, intervals[2*i+j])).astype(int), fontsize=15)
@@ -133,11 +161,12 @@ for i in range(2):
             ax0.set_xlabel('Detuning (MHz)', fontsize=15)
         if j == 0:
             ax0.set_ylabel('Transition Probability', fontsize=15)
-        # Set fig name
+# Set fig name
 fig_name = f"rabi_oscillations_detuning_{(-1) * fixed_detuning}_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pdf"
 if save_osc:
     plt.savefig(os.path.join(save_folder, fig_name))
 plt.show()
+
 
 fig1 = plt.figure(figsize=(12, 9))
 gs1 = fig1.add_gridspec(2, 2, width_ratios=[1, 1])
@@ -149,6 +178,7 @@ for i in range(2):
         ax1 = fig1.add_subplot(gs1[i, j])
         cmap1 = plt.cm.get_cmap('cividis')  # Choose a colormap
         ax1.scatter(amp[2*i+j], tr_prob[2*i+j][:, det_indices_1[2*i+j]], marker="p", cmap=cmap1)
+        ax1.plot(numerical_amps[2*i+j][1], numerical_tr_probs[2*i+j][1])
         ax1.set_xticks(np.round(np.arange(0, max_amp[2*i+j] + 1e-3, intervals[2*i+j])).astype(int))
         ax1.set_xticks(np.round(np.arange(0, max_amp_minor[2*i+j] + 1e-3, intervals[2*i+j] / 4)).astype(int), minor=True)
         ax1.set_xticklabels(np.round(np.arange(0, max_amp[2*i+j] + 1e-3, intervals[2*i+j])).astype(int), fontsize=15)
