@@ -82,15 +82,15 @@ times = {
     # "lor2": ["2023-05-26", "003010"],
     # "lor3": ["2023-05-26", "003023"],
     #
-    # "constant": ["2023-05-26", "021927"],
-    # "rabi": ["2023-05-26", "021927"],
-    # "rz": ["2023-05-26", "012657"],
-    # "demkov": ["2023-05-26", "012735"],
-    # "sech2": ["2023-05-26", "012710"],
-    # "gauss": ["2023-05-26", "012723"],
-    # "lor": ["2023-05-26", "003113"],
-    # "lor2": ["2023-05-26", "012617"],
-    # "lor3": ["2023-05-26", "012642"],
+    "constant": ["2023-05-26", "021927"],
+    "rabi": ["2023-05-26", "021927"],
+    "rz": ["2023-05-26", "012657"],
+    "demkov": ["2023-05-26", "012735"],
+    "sech2": ["2023-05-26", "012710"],
+    "gauss": ["2023-05-26", "012723"],
+    "lor": ["2023-05-26", "003113"],
+    "lor2": ["2023-05-26", "012617"],
+    "lor3": ["2023-05-26", "012642"],
     #
     # "constant": ["2023-07-02", "021116"],
     # "rabi": ["2023-07-02", "021116"],
@@ -102,12 +102,12 @@ times = {
     # "lor2": ["2023-07-02", "020726"],
     # "lor3": ["2023-07-02", "020857"],
     #
-    "constant": ["2023-07-04", "172415"],
-    "rabi": ["2023-07-04", "172415"],
-    "rz": ["2023-07-04", "172425"],
-    "demkov": ["2023-07-04", "172422"],
-    "sech2": ["2023-07-04", "172427"],
-    "gauss": ["2023-07-04", "173319"],
+    # "constant": ["2023-07-04", "172415"],
+    # "rabi": ["2023-07-04", "172415"],
+    # "rz": ["2023-07-04", "172425"],
+    # "demkov": ["2023-07-04", "172422"],
+    # "sech2": ["2023-07-04", "172427"],
+    # "gauss": ["2023-07-04", "173319"],
 }
 
 # durations = {
@@ -143,7 +143,7 @@ durations = {
 area = "pi"
 backend_name = "perth"
 s = 96
-pulse_type = "rabi"
+pulse_type = "sech2"
 dur = get_closest_multiple_of_16(round(durations[pulse_type]))
 # pulse_type = pu
 # lse_type if dur is None else "_".join([pulse_type, str(s)])
@@ -342,6 +342,7 @@ print(fit_params)
 # print(baseline_fit_params)
 # print(err)
 # print(baseline_err)
+
 dof = len(vals) - len(fit_params)
 residuals = y_fit - vals
 err_res = np.sqrt(np.sum(residuals ** 2) / dof)
@@ -350,10 +351,14 @@ print(model_name_dict[fit_func][0])
 print("Model MAE:", similarity_idx)
 q_freq_model = fit_params[0] / (2 * np.pi)
 q_freq_err_model = err[0] / (2 * np.pi)
+eps0_model = fit_params[2] - fit_params[1]
+eps1_model = 2 * fit_params[1]
 if second_fit:
     print("Second Model MAE:", second_similarity_idx)
     q_freq_sec = second_fit_params[0] / (2 * np.pi)
     q_freq_err_sec = second_err[0] / (2 * np.pi)
+    eps0_sec = second_fit_params[2] - second_fit_params[1]
+    eps1_sec = 2 * second_fit_params[1]
 if comparison:
     print("Lorentzian MAE:", baseline_similarity_idx)
     q_freq_bl = baseline_fit_params[-2] / (2 * np.pi)
@@ -380,14 +385,15 @@ with open(os.path.join(data_folder, txt_name), "w") as file:
     if comparison:
         file.write(f"{model_name_dict[fit_func][2]} MAE: " + str(baseline_similarity_idx) + "\n")
     file.write(str(q_freq_model) + "+-" + str(q_freq_err_model) + "\n")
+    file.write(f"Eps0, Eps1 = {eps0_model}, {eps1_model} \n")
     if second_fit:
         file.write(str(q_freq_sec) + "+-" + str(q_freq_err_sec) + "\n")
         file.write("deviation with 2nd fit: " + str(q_freq_model - q_freq_sec) + "+-" + str(np.sqrt(q_freq_err_model ** 2 + q_freq_err_sec ** 2)) + "\n")
+        file.write(f"Second Eps0, Eps1 = {eps0_sec}, {eps1_sec} \n")
     if comparison:
         file.write(str(q_freq_bl) + "+-" + str(q_freq_err_bl) + "\n")
         file.write("deviation with Lorentzian: " + str(q_freq_model - q_freq_bl) + "+-" + str(np.sqrt(q_freq_err_model ** 2 + q_freq_err_bl ** 2)) + "\n")
     file.write(f"Error on residuals: {str(err_res)}" + "\n")
-
 
 if second_fit:
     second_dof = len(vals) - len(second_fit_params)
