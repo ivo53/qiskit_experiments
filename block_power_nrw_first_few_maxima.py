@@ -87,7 +87,7 @@ det_limits = 15
 numerical_dets, numerical_tr_probs = [], []
 for i in range(4):
     area_dets, area_probs = [], []
-    for j in range(5):
+    for j in [0,1,3]:
         numer_det, numerical_tr_prob = ndsolve_lorentz_spectre(
             params[list(times.keys())[i]][0],
             params[list(times.keys())[i]][1],
@@ -143,9 +143,9 @@ date = datetime.now()
 for i in range(2):
     for j in range(2):
         ax = fig.add_subplot(gs0[i, j])
-        for idx, t in zip(np.arange(len(amp[1::2])), tr_probs[2*i+j][1::2]):
-            ax.scatter(dets[2*i+j], t, c=colors[idx],linewidth=0,marker=markers[idx], s=sizes[idx], label=f"Pulse area {2*idx+1}$\pi$")
-            ax.plot(numerical_dets[2*i+j][idx], numerical_tr_probs[2*i+j][idx], c=colors[idx],linewidth=0.2, label=f"Simulation - area {2*idx+1}$\pi$")
+        for idx, order, t in zip([0,1,2], [0,1,3], tr_probs[2*i+j][1::2][[0,1,3]]):
+            ax.scatter(dets[2*i+j], t, c=colors[idx],linewidth=0,marker=markers[idx], s=sizes[idx], label=f"Pulse area {2*order+1}$\pi$")
+            ax.plot(numerical_dets[2*i+j][idx], numerical_tr_probs[2*i+j][idx], c=colors[idx],linewidth=0.2, label=f"Simulation - area {2*order+1}$\pi$")
         ax.set_yticks([0, 0.2, 0.4, 0.6, 0.8, 1])
         # ax.set_xticks([-12, -9, -6, -3, 0, 3, 6, 9, 12])
         ax.set_xticks(np.arange(-det_limits, det_limits+0.001, 3))
@@ -170,7 +170,7 @@ save_folder = os.path.join(file_dir, "paper_ready_plots", "power_narrowing")
 date = datetime.now()
 
 # Set fig name
-fig_name = f"block_first_5_{list(times.keys())}_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pdf"
+fig_name = f"block_1,3,7pi_{list(times.keys())}_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pdf"
 
 # Save the fig
 if save:
