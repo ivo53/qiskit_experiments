@@ -84,23 +84,23 @@ l, p, x0 = 419.1631352890144, 0.0957564968883284, 0.0003302995697281
 T = 192 * 2/9 * 1e-9
 
 det_limits = 15
-numerical_dets, numerical_tr_probs = [], []
-for i in range(4):
-    area_dets, area_probs = [], []
-    for j in [0,1,3]:
-        numer_det, numerical_tr_prob = ndsolve_lorentz_spectre(
-            params[list(times.keys())[i]][0],
-            params[list(times.keys())[i]][1],
-            -det_limits * 1e6 * 2 * np.pi, 100,
-            d_end=det_limits * 1e6 * 2 * np.pi,
-            num_t=1000,
-            pulse_area=(2*j+1) * np.pi,
-            lor_power=powers[i]
-        )
-        area_dets.append(numer_det / (1e6 * 2 * np.pi))
-        area_probs.append(numerical_tr_prob)
-    numerical_dets.append(area_dets)
-    numerical_tr_probs.append(area_probs)
+# numerical_dets, numerical_tr_probs = [], []
+# for i in range(4):
+#     area_dets, area_probs = [], []
+#     for j in [0,1,3]:
+#         numer_det, numerical_tr_prob = ndsolve_lorentz_spectre(
+#             params[list(times.keys())[i]][0],
+#             params[list(times.keys())[i]][1],
+#             -det_limits * 1e6 * 2 * np.pi, 100,
+#             d_end=det_limits * 1e6 * 2 * np.pi,
+#             num_t=1000,
+#             pulse_area=(2*j+1) * np.pi,
+#             lor_power=powers[i]
+#         )
+#         area_dets.append(numer_det / (1e6 * 2 * np.pi))
+#         area_probs.append(numerical_tr_prob)
+#     numerical_dets.append(area_dets)
+#     numerical_tr_probs.append(area_probs)
 
 tr_probs, amps, dets = [], [], []
 for i, k in times.items():
@@ -117,9 +117,9 @@ for i, k in times.items():
 
 colors = [
     "red",
-    "brown",
-    "green",
     "blue",
+    "green",
+    "brown",
     "purple"
 ]
 
@@ -145,7 +145,7 @@ for i in range(2):
         ax = fig.add_subplot(gs0[i, j])
         for idx, order, t in zip([0,1,2], [0,1,3], tr_probs[2*i+j][1::2][[0,1,3]]):
             ax.scatter(dets[2*i+j], t, c=colors[idx],linewidth=0,marker=markers[idx], s=sizes[idx], label=f"Pulse area {2*order+1}$\pi$")
-            ax.plot(numerical_dets[2*i+j][idx], numerical_tr_probs[2*i+j][idx], c=colors[idx],linewidth=0.2, label=f"Simulation - area {2*order+1}$\pi$")
+            # ax.plot(numerical_dets[2*i+j][idx], numerical_tr_probs[2*i+j][idx], c=colors[idx],linewidth=0.2, label=f"Simulation - area {2*order+1}$\pi$")
         ax.set_yticks([0, 0.2, 0.4, 0.6, 0.8, 1])
         # ax.set_xticks([-12, -9, -6, -3, 0, 3, 6, 9, 12])
         ax.set_xticks(np.arange(-det_limits, det_limits+0.001, 3))
