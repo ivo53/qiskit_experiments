@@ -4,6 +4,7 @@ from datetime import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+from matplotlib.patches import Rectangle
 
 from numerical_solutions import ndsolve_lorentz_spectre
 
@@ -13,6 +14,30 @@ def make_all_dirs(path):
         folder = "/".join(folders[:i])
         if not os.path.isdir(folder):
             os.mkdir(folder)
+
+def fwhm(data_points, x_vals):
+    # Find the maximum value and its index in the data
+    max_value = max(data_points)
+
+    # Normalize the data so that the maximum value is 1
+    normalized_data = np.array(data_points) / max_value
+
+    # Find indices where the data crosses the half-max threshold
+    half_max = max_value / 2
+    crossing_indices = []
+    for i in range(1, len(normalized_data)):
+        if normalized_data[i - 1] >= half_max and normalized_data[i] < half_max:
+            crossing_indices.append(i - 1)
+        elif normalized_data[i - 1] < half_max and normalized_data[i] >= half_max:
+            crossing_indices.append(i)
+
+    # Calculate the FWHM as the difference between the two closest half-max points
+    fwhm = None
+    if len(crossing_indices) >= 2:
+        if len(crossing_indices) > 2:
+            print("Warning: More than 2 crossing indices!")
+        fwhm = (x_vals[crossing_indices[-1]] - x_vals[crossing_indices[0]])
+    return fwhm
 
 backend_name = "manila"
 save = 1
@@ -50,6 +75,8 @@ params = {
     "lor2_3": [(10 + 2/3) * 1e-9, (1134 + 2/9) * 1e-9],
 }
 powers = [2, 1, 3/4, 2/3]
+powers_latex = [" $L^2$", " $L$", "$L^{3/4}$", "$L^{2/3}$"]
+pulse_names = list(params.keys())
 
 ## create folder where plots are saved
 file_dir = os.path.dirname(__file__)
@@ -83,7 +110,7 @@ def data_folder(date, time, pulse_type):
 l, p, x0 = 419.1631352890144, 0.0957564968883284, 0.0003302995697281
 T = 192 * 2/9 * 1e-9
 
-det_limits = 15
+# det_limits = 15 * sigma_temp
 # numerical_dets, numerical_tr_probs = [], []
 # for i in range(4):
 #     area_dets, area_probs = [], []
@@ -118,7 +145,7 @@ for i, k in times.items():
 colors = [
     "red",
     "blue",
-    "green",
+    "#9D7725",
     "brown",
     "purple"
 ]
@@ -135,34 +162,59 @@ sizes = 15 * np.ones(5)
 # Create a 3x3 grid of subplots with extra space for the color bar
 fig = plt.figure(figsize=(12, 9))
 gs0 = fig.add_gridspec(2, 2, width_ratios=[1, 1])
-# Adjust the layout
-fig.tight_layout()
 # Generate datetime
 date = datetime.now()
 
+fwhms, fwhms_abs = [], []
 for i in range(2):
     for j in range(2):
+        sigma_temp = params[pulse_names[2*i+j]][0] * 10**6
+        det_limit = 0.18
         ax = fig.add_subplot(gs0[i, j])
-        for idx, order, t in zip([0,1,2], [0,1,3], tr_probs[2*i+j][1::2][[0,1,3]]):
-            ax.scatter(dets[2*i+j], t, c=colors[idx],linewidth=0,marker=markers[idx], s=sizes[idx], label=f"Pulse area {2*order+1}$\pi$")
+        plots_fwhm, plots_fwhm_abs = [], []
+        for idx, order, t in zip([0,1,2], [0,1,4], tr_probs[2*i+j][1::2][[0,1,4]]):
+            ax.scatter(dets[2*i+j] * sigma_temp, t, c=colors[idx],linewidth=0,marker=markers[idx], s=sizes[idx], label=f"Pulse area {2*order+1}$\pi$")
             # ax.plot(numerical_dets[2*i+j][idx], numerical_tr_probs[2*i+j][idx], c=colors[idx],linewidth=0.2, label=f"Simulation - area {2*order+1}$\pi$")
+            plots_fwhm.append(fwhm(t, dets[2*i+j] * sigma_temp))
+            plots_fwhm_abs.append(fwhm(t, dets[2*i+j]))
         ax.set_yticks([0, 0.2, 0.4, 0.6, 0.8, 1])
-        # ax.set_xticks([-12, -9, -6, -3, 0, 3, 6, 9, 12])
-        ax.set_xticks(np.arange(-det_limits, det_limits+0.001, 3))
+        ax.set_xticks(np.round(np.arange(-det_limit, det_limit+0.001, 0.06), 2))
+        # Add a rectangle in the top right corner
+        rect = Rectangle((0.8, 0.85), 0.12, 0.1, transform=ax.transAxes,
+                        color='white', alpha=0.4)
+        ax.add_patch(rect)
+        
+        # Add text inside the rectangle
+        text = powers_latex[2*i+j]
+        ax.text(0.82, 0.86, text, transform=ax.transAxes,
+            color='black', fontsize=15)
+        if i == 1:
+            ax.set_xlabel('Detuning (in units of $1/\\tau$)', fontsize=15)
+            ax.set_xticklabels(np.round(np.arange(-det_limit, det_limit+0.001, 0.06), 2))
+        else:
+            ax.set_xticklabels([])
+        if j == 0:
+            ax.set_yticklabels([0, 0.2, 0.4, 0.6, 0.8, 1])
+            ax.set_ylabel('Transition Probability', fontsize=15)
+        else:
+            ax.set_yticklabels([])
         y_minor_ticks = np.arange(0, 1.01, 0.05)
-        # x_minor_ticks = np.arange(-12, 12+0.001, 1)
-        x_minor_ticks = np.arange(-det_limits, det_limits+0.001, 1)
+        x_minor_ticks = np.round(np.arange(-det_limit, det_limit+0.001, 0.02), 2)
         ax.set_yticks(y_minor_ticks, minor="True")
         ax.set_xticks(x_minor_ticks, minor="True")
         ax.set_ylim((-0.025,1))
         # ax.set_xlim((-13,13))
-        ax.set_xlim((-det_limits - 1, det_limits + 1))
+        ax.set_xlim((-det_limit - 1e-3, det_limit + 1e-3))
         ax.grid(which='minor', alpha=0.2)
         ax.grid(which='major', alpha=0.6)
-        ax.set_ylabel("Transition Probability")
-        ax.set_xlabel("Detuning (MHz)")
-        # ax.legend()
 
+        ax.legend()
+        fwhms.append(plots_fwhm)
+        fwhms_abs.append(plots_fwhm_abs)
+
+fig.tight_layout()
+print(np.array(fwhms))
+print(np.array(fwhms_abs))
 # Set save folder
 save_folder = os.path.join(file_dir, "paper_ready_plots", "power_narrowing")
 
@@ -170,7 +222,7 @@ save_folder = os.path.join(file_dir, "paper_ready_plots", "power_narrowing")
 date = datetime.now()
 
 # Set fig name
-fig_name = f"block_1,3,7pi_{list(times.keys())}_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pdf"
+fig_name = f"block_1,3,9pi_{list(times.keys())}_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pdf"
 
 # Save the fig
 if save:
