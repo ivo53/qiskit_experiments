@@ -20,7 +20,7 @@ backend_name = "manila"
 # pulse_type2 = "lorentz"
 fixed_detuning = [5, 2, 2, 2] # MHz
 intervals = [200, 100, 100, 100]
-save_osc, save_map = 0,1
+save_osc, save_map = 1,1
 times = {
     "lor2": ["2023-07-04", "192920"],
     "lor": ["2023-07-04", "024124"],
@@ -154,13 +154,13 @@ for i in range(2):
         # ax0.plot(numerical_amps[2*i+j][0], numerical_tr_probs[2*i+j][0])
 
         # Add a rectangle in the top right corner
-        rect = Rectangle((0.8, 0.85), 0.12, 0.1, transform=ax0.transAxes,
+        rect = Rectangle((0.8, 0.79), 0.12, 0.1, transform=ax0.transAxes,
                         color='white', alpha=0.7)
         ax0.add_patch(rect)
         
         # Add text inside the rectangle
         text = powers_latex[2*i+j]
-        ax0.text(0.84, 0.86, text, transform=ax0.transAxes,
+        ax0.text(0.84, 0.78, text, transform=ax0.transAxes,
             color='black', fontsize=15)
 
         ax0.set_xticks(np.round(np.arange(0, max_amp[2*i+j] + 1e-3, intervals[2*i+j])).astype(int))
@@ -195,13 +195,13 @@ for i in range(2):
         # ax1.plot(numerical_amps[2*i+j][1], numerical_tr_probs[2*i+j][1])
 
         # Add a rectangle in the top right corner
-        rect = Rectangle((0.8, 0.85), 0.12, 0.1, transform=ax1.transAxes,
+        rect = Rectangle((0.8, 0.79), 0.12, 0.1, transform=ax1.transAxes,
                         color='white', alpha=0.7)
         ax1.add_patch(rect)
         
         # Add text inside the rectangle
         text = powers_latex[2*i+j]
-        ax1.text(0.84, 0.86, text, transform=ax1.transAxes,
+        ax1.text(0.84, 0.78, text, transform=ax1.transAxes,
             color='black', fontsize=15)
 
         ax1.set_xticks(np.round(np.arange(0, max_amp[2*i+j] + 1e-3, intervals[2*i+j])).astype(int))
@@ -221,7 +221,7 @@ fig_name = f"rabi_oscillations_detuning_{fixed_detuning}_{date.strftime('%Y%m%d'
 if save_osc:
     plt.savefig(os.path.join(save_folder, fig_name))
 # plt.show()
-
+exit()
 # Create a 2x2 grid of subplots with extra space for the color bar
 fig_sim = plt.figure(figsize=(12, 9))
 gs_sim = fig_sim.add_gridspec(2, 3, width_ratios=[1, 1, 0.1])
