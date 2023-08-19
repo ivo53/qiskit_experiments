@@ -216,7 +216,7 @@ def find_pulse_width(pulse_type: str, T: float, sigma: float=None, rb: bool=True
     return tau
 
 def find_rabi_amp(pulse_type: str, T: float, sigma: float=None, pulse_area: float=np.pi, rb: bool=True):
-    if "_" in pulse_type:
+    if "_" in pulse_type and len(pulse_type.split("_")[1]) > 2:
         pulse_type = pulse_type.split("_")[0]
     tau = find_pulse_width(pulse_type, T, sigma, rb)
     return pulse_area / tau
