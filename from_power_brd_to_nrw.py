@@ -2,8 +2,10 @@ import os
 import pickle
 from datetime import datetime
 import numpy as np
+import matplotlib; matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+from matplotlib.patches import Rectangle
 
 
 def make_all_dirs(path):
@@ -16,6 +18,7 @@ def make_all_dirs(path):
 backend_name = "manila"
 pulse_type = "lor"
 pulse_type2 = "lorentz"
+save_fig = 1
 
 times = {
     0.5: ["2023-06-03", "120038"],
@@ -85,11 +88,13 @@ det[7] = det[7][20:-20]
 tr_prob[6] = tr_prob[6][:, 20:-20]
 det[6] = det[6][20:-20]
 
+intervals_amp = [200, 100, 100, 100, 100, 100, 100, 100, 100]
+intervals_det = [50, 20, 15, 10, 10, 10, 10, 10, 10]
 # Set up the backend to use the EPS file format
 # plt.switch_backend('ps')
 
 # Create a 3x3 grid of subplots with extra space for the color bar
-fig = plt.figure(figsize=(12, 9))
+fig = plt.figure(figsize=(12,10), layout="constrained")
 gs = fig.add_gridspec(3, 4, width_ratios=[1, 1, 1, 0.1])
 
 # Generate some random data for the color maps
@@ -98,21 +103,60 @@ data = np.random.rand(10, 10)
 # Iterate over each subplot and plot the color map
 for i in range(3):
     for j in range(3):
+        max_amp = intervals_amp[3*i+j] * np.floor(amp[::-1][3*i+j][-1] / intervals_amp[3*i+j])
+        max_det = intervals_det[3*i+j] * np.floor(det[::-1][3*i+j][-1] / intervals_det[3*i+j])
+        # max_amp_minor = intervals[3*i+j] / 4 * np.ceil(amp[3*i+j][-1] / (intervals[3*i+j] / 4))
+
         ax = fig.add_subplot(gs[i, j])
-        cmap = plt.cm.get_cmap('cividis')  # Choose a colormap
-        im = ax.pcolormesh(det[::-1][3*i+j], amp[::-1][3*i+j], tr_prob[::-1][3*i+j], vmin=0, vmax=1, cmap=cmap)
+        # cmap = plt.cm.get_cmap('cividis')  # Choose a colormap
+        # im = ax.pcolormesh(det[::-1][3*i+j], amp[::-1][3*i+j], tr_prob[::-1][3*i+j], vmin=0, vmax=1, cmap=cmap)
+        cmap = plt.get_cmap('cividis')
+        
+        # Plot the color map
+        im = ax.imshow(tr_prob[::-1][3*i+j], cmap=cmap, aspect="auto", origin="lower", vmin=0, vmax=1)
+
+        # Add a rectangle in the top right corner
+        rect = Rectangle((0.775, 0.85), 0.21, 0.15, transform=ax.transAxes,
+                        color='#DEDA8D', alpha=0.7)
+        ax.add_patch(rect)
+        
+        # Add text inside the rectangle
+        text = str(list(times.keys())[::-1][3*i+j]) + "%"
+        if (i==2 and j!=2) or (i==1 and j!=0):
+            text = " "+text
+        ax.text(0.78, 0.875, text, transform=ax.transAxes,
+            color='black', fontsize=18)
+
+        xticks = np.linspace(
+            len(tr_prob[::-1][3*i+j][0])-int(np.round(max_det / det[::-1][3*i+j][-1] * (len(tr_prob[::-1][3*i+j][0]) / 2 - 1) + len(tr_prob[::-1][3*i+j][0]) / 2)), 
+            int(np.round(max_det / det[::-1][3*i+j][-1] * (len(tr_prob[::-1][3*i+j][0]) / 2 - 1) + len(tr_prob[::-1][3*i+j][0]) / 2)), 
+            int(2 * max_det / intervals_det[3*i+j] + 1)
+        )
+        xticklabels = np.round(np.arange(-max_det, max_det + 1e-2, intervals_det[3*i+j]), 1).astype(int)
+        ax.set_xticks(xticks)
+        ax.set_xticklabels(xticklabels, fontsize=18)
+
+        yticks = np.linspace(
+            0, 
+            int(np.round(max_amp / amp[::-1][3*i+j][-1] * (len(tr_prob[::-1][3*i+j]) - 1))), 
+            int(max_amp / intervals_amp[3*i+j] + 1)
+        )
+        yticklabels = np.round(np.arange(0, max_amp + 1, intervals_amp[3*i+j]), 0).astype(int)
+        ax.set_yticks(yticks)
+        ax.set_yticklabels((yticklabels / 100).astype(int), fontsize=18)
         if i == 2:
-            ax.set_xlabel('Detuning (MHz)')
+            ax.set_xlabel('Detuning (MHz)', fontsize=18)
         if j == 0:
-            ax.set_ylabel('Rabi Freq. Amplitude (MHz)')
+            ax.set_ylabel('Peak Rabi Freq. (100 MHz)', fontsize=16)
 
 # Create a separate subplot for the color bar
 cax = fig.add_subplot(gs[:, 3])
 cbar = fig.colorbar(im, cax=cax)
-cbar.set_label('Transition probability')
+# cbar.set_label('Transition probability', fontsize=15)
+cbar.ax.tick_params(labelsize=18)
 
 # Adjust the layout
-fig.tight_layout()
+# fig.tight_layout()
 
 # Set save folder
 save_folder = os.path.join(file_dir, "paper_ready_plots", "power_narrowing")
@@ -124,8 +168,9 @@ date = datetime.now()
 fig_name = f"from_brd_to_nrw_{pulse_type}_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pdf"
 
 
-# Save the fig
-plt.savefig(os.path.join(save_folder, fig_name), format="pdf")
+if save_fig:
+    # Save the fig
+    plt.savefig(os.path.join(save_folder, fig_name), format="pdf")
 
 # Display the plot
-plt.show()
+# plt.show()

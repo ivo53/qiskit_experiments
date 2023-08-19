@@ -2,6 +2,7 @@ import os
 import pickle
 from datetime import datetime
 import numpy as np
+import matplotlib; matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.patches import Rectangle
@@ -20,7 +21,7 @@ backend_name = "manila"
 # pulse_type2 = "lorentz"
 fixed_detuning = [5, 2, 2, 2] # MHz
 intervals = [200, 100, 100, 100]
-save_osc, save_map = 1,1
+save_osc, save_map = 1,0
 times = {
     "lor2": ["2023-07-04", "192920"],
     "lor": ["2023-07-04", "024124"],
@@ -35,7 +36,7 @@ params = {
 }
 pulse_names = list(params.keys())
 powers = [2, 1, 3/4, 2/3]
-powers_latex = [" $L^2$", " $L$", "$L^{3/4}$", "$L^{2/3}$"]
+powers_latex = [" $L^2$", "  $L$", "$L^{3/4}$", "$L^{2/3}$"]
 
 ## create folder where plots are saved
 file_dir = os.path.dirname(__file__)
@@ -131,12 +132,13 @@ for i in range(4):
     max_amp.append(intervals[i] * np.floor(amp[i][-1] / intervals[i]))
     max_amp_minor.append(intervals[i] / 4 * np.ceil(amp[i][-1] / (intervals[i] / 4)))
 
-fig0 = plt.figure(figsize=(12, 9))
+fig0 = plt.figure(figsize=(12, 10), layout="constrained")
 gs0 = fig0.add_gridspec(2, 2, width_ratios=[1, 1])
 # Adjust the layout
-fig0.tight_layout()
+# fig0.tight_layout()
 # Generate datetime
 date = datetime.now()
+marker_size = 85
 initial, initial_min, initial_max = [], [], []
 for i in range(2):
     for j in range(2):
@@ -150,137 +152,139 @@ for i in range(2):
 
         ax0 = fig0.add_subplot(gs0[i, j])
         cmap0 = plt.cm.get_cmap('cividis')  # Choose a colormap
-        ax0.scatter(amp[2*i+j], tr_prob[2*i+j][:, det_indices_0[2*i+j]], marker="p", cmap=cmap0)
+        ax0.scatter(amp[2*i+j], tr_prob[2*i+j][:, det_indices_0[2*i+j]], marker="p", s=marker_size, cmap=cmap0)
         # ax0.plot(numerical_amps[2*i+j][0], numerical_tr_probs[2*i+j][0])
 
         # Add a rectangle in the top right corner
-        rect = Rectangle((0.8, 0.79), 0.12, 0.1, transform=ax0.transAxes,
-                        color='white', alpha=0.7)
+        rect = Rectangle((0.85, 0.89), 0.13, 0.11, transform=ax0.transAxes,
+                        color='#003399', alpha=0.7)
         ax0.add_patch(rect)
         
         # Add text inside the rectangle
         text = powers_latex[2*i+j]
-        ax0.text(0.84, 0.78, text, transform=ax0.transAxes,
-            color='black', fontsize=15)
+        ax0.text(0.87, 0.91, text, transform=ax0.transAxes,
+            color='white', fontsize=18)
 
         ax0.set_xticks(np.round(np.arange(0, max_amp[2*i+j] + 1e-3, intervals[2*i+j])).astype(int))
         ax0.set_xticks(np.round(np.arange(0, max_amp_minor[2*i+j] + 1e-3, intervals[2*i+j] / 4)).astype(int), minor=True)
-        ax0.set_xticklabels(np.round(np.arange(0, max_amp[2*i+j] + 1e-3, intervals[2*i+j])).astype(int), fontsize=15)
+        ax0.set_xticklabels(np.round(np.arange(0, max_amp[2*i+j] + 1e-3, intervals[2*i+j])).astype(int), fontsize=18)
         ax0.set_yticks(np.round(np.arange(0, .8 + 1e-3, 0.2), 1))
         ax0.set_yticks(np.round(np.arange(0, .8 + 1e-3, 0.1), 1), minor=True)
-        ax0.set_yticklabels(np.round(np.arange(0, .8 + 1e-3, 0.2), 1), fontsize=15)
+        ax0.set_yticklabels(np.round(np.arange(0, .8 + 1e-3, 0.2), 1), fontsize=18)
+        ax0.set_ylim(0, 0.8)
         ax0.grid(which='minor', alpha=0.2)
         ax0.grid(which='major', alpha=0.6)
         if i == 1:
-            ax0.set_xlabel('Peak Rabi Frequency (MHz)', fontsize=15)
+            ax0.set_xlabel('Peak Rabi Frequency (MHz)', fontsize=18)
         if j == 0:
-            ax0.set_ylabel('Transition Probability', fontsize=15)
+            ax0.set_ylabel('Transition Probability', fontsize=18)
 # Set fig name
 fig_name = f"rabi_oscillations_detuning_{(-1) * fixed_detuning}_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pdf"
 if save_osc:
-    plt.savefig(os.path.join(save_folder, fig_name))
+    plt.savefig(os.path.join(save_folder, fig_name), format="pdf")
 # plt.show()
 
 
-fig1 = plt.figure(figsize=(12, 9))
+fig1 = plt.figure(figsize=(12, 10), layout="constrained")
 gs1 = fig1.add_gridspec(2, 2, width_ratios=[1, 1])
 # Adjust the layout
-fig1.tight_layout()
+# fig1.tight_layout()
 
 for i in range(2):
     for j in range(2):
         ax1 = fig1.add_subplot(gs1[i, j])
         cmap1 = plt.cm.get_cmap('cividis')  # Choose a colormap
-        ax1.scatter(amp[2*i+j], tr_prob[2*i+j][:, det_indices_1[2*i+j]], marker="p", cmap=cmap1)
+        ax1.scatter(amp[2*i+j], tr_prob[2*i+j][:, det_indices_1[2*i+j]], marker="p", s=marker_size, cmap=cmap1)
         # ax1.plot(numerical_amps[2*i+j][1], numerical_tr_probs[2*i+j][1])
 
         # Add a rectangle in the top right corner
-        rect = Rectangle((0.8, 0.79), 0.12, 0.1, transform=ax1.transAxes,
-                        color='white', alpha=0.7)
+        rect = Rectangle((0.85, 0.89), 0.13, 0.11, transform=ax1.transAxes,
+                        color='#003399', alpha=0.7)
         ax1.add_patch(rect)
         
         # Add text inside the rectangle
         text = powers_latex[2*i+j]
-        ax1.text(0.84, 0.78, text, transform=ax1.transAxes,
-            color='black', fontsize=15)
+        ax1.text(0.87, 0.91, text, transform=ax1.transAxes,
+            color='white', fontsize=18)
 
         ax1.set_xticks(np.round(np.arange(0, max_amp[2*i+j] + 1e-3, intervals[2*i+j])).astype(int))
         ax1.set_xticks(np.round(np.arange(0, max_amp_minor[2*i+j] + 1e-3, intervals[2*i+j] / 4)).astype(int), minor=True)
-        ax1.set_xticklabels(np.round(np.arange(0, max_amp[2*i+j] + 1e-3, intervals[2*i+j])).astype(int), fontsize=15)
+        ax1.set_xticklabels(np.round(np.arange(0, max_amp[2*i+j] + 1e-3, intervals[2*i+j])).astype(int), fontsize=18)
         ax1.set_yticks(np.round(np.arange(0, .8 + 1e-3, 0.2), 1))
         ax1.set_yticks(np.round(np.arange(0, .8 + 1e-3, 0.1), 1), minor=True)
-        ax1.set_yticklabels(np.round(np.arange(0, .8 + 1e-3, 0.2), 1), fontsize=15)
+        ax1.set_yticklabels(np.round(np.arange(0, .8 + 1e-3, 0.2), 1), fontsize=18)
+        ax1.set_ylim(0, 0.8)
         ax1.grid(which='minor', alpha=0.2)
         ax1.grid(which='major', alpha=0.6)
         if i == 1:
-            ax1.set_xlabel('Peak Rabi Frequency (MHz)', fontsize=15)
+            ax1.set_xlabel('Peak Rabi Frequency (MHz)', fontsize=18)
         if j == 0:
-            ax1.set_ylabel('Transition Probability', fontsize=15)
+            ax1.set_ylabel('Transition Probability', fontsize=18)
         # Set fig name
 fig_name = f"rabi_oscillations_detuning_{fixed_detuning}_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pdf"
 if save_osc:
-    plt.savefig(os.path.join(save_folder, fig_name))
+    plt.savefig(os.path.join(save_folder, fig_name), format="pdf")
 # plt.show()
-exit()
-# Create a 2x2 grid of subplots with extra space for the color bar
-fig_sim = plt.figure(figsize=(12, 9))
-gs_sim = fig_sim.add_gridspec(2, 3, width_ratios=[1, 1, 0.1])
-tr_probss, A_ranges, d_ranges = [], [], []
-for i in range(2):
-    for j in range(2):
-        sigma_temp = params[pulse_names[2*i +j]][0] * 10**6
-        d_range, A_range, tr_probs = ndsolve_lorentz_map(   
-            params[list(times.keys())[2 * i + j]][0],
-            params[list(times.keys())[2 * i + j]][1],
-            det[2*i+j][0]*1e6, 100, det[2*i+j][-1]*1e6,    
-            num_t=1000,
-            A_num=100,
-            max_pulse_area=10 * np.pi,
-            lor_power=powers[2 * i + j]
-        )
-        tr_probss.append(tr_probs)
-        A_ranges.append(A_range)
-        d_ranges.append(d_range)
-        ax_sim = fig_sim.add_subplot(gs_sim[i, j])
-        cmap_sim = plt.cm.get_cmap('cividis')  # Choose a colormap
-        im_sim = ax_sim.pcolormesh(d_range, A_range, tr_probs, vmin=0, vmax=1, cmap=cmap_sim)
+# exit()
+#  # Create a 2x2 grid of subplots with extra space for the color bar
+# fig_sim = plt.figure(figsize=(12, 9))
+# gs_sim = fig_sim.add_gridspec(2, 3, width_ratios=[1, 1, 0.1])
+# tr_probss, A_ranges, d_ranges = [], [], []
+# for i in range(2):
+#     for j in range(2):
+#         sigma_temp = params[pulse_names[2*i +j]][0] * 10**6
+#         d_range, A_range, tr_probs = ndsolve_lorentz_map(
+#             params[list(times.keys())[2 * i + j]][0],
+#             params[list(times.keys())[2 * i + j]][1],
+#             det[2*i+j][0]*2*np.pi*1e6, 100, det[2*i+j][-1]*2*np.pi*1e6,    
+#             num_t=1000,
+#             A_num=100,
+#             max_pulse_area=10 * np.pi,
+#             lor_power=powers[2 * i + j]
+#         )
+#         tr_probss.append(tr_probs)
+#         A_ranges.append(A_range)
+#         d_ranges.append(d_range)
+#         ax_sim = fig_sim.add_subplot(gs_sim[i, j])
+#         cmap_sim = plt.cm.get_cmap('cividis')  # Choose a colormap
+#         im_sim = ax_sim.pcolormesh(d_range, A_range, tr_probs, vmin=0, vmax=1, cmap=cmap_sim)
 
-        # Add a rectangle in the top right corner
-        rect = Rectangle((0.8, 0.85), 0.12, 0.1, transform=ax_sim.transAxes,
-                        color='#DEDA8D', alpha=0.7)
-        ax_sim.add_patch(rect)
+#         # Add a rectangle in the top right corner
+#         rect = Rectangle((0.8, 0.85), 0.12, 0.1, transform=ax_sim.transAxes,
+#                         color='#DEDA8D', alpha=0.7)
+#         ax_sim.add_patch(rect)
         
-        # Add text inside the rectangle
-        text = powers_latex[2*i+j]
-        ax_sim.text(0.82, 0.86, text, transform=ax_sim.transAxes,
-            color='black', fontsize=15)
+#         # Add text inside the rectangle
+#         text = powers_latex[2*i+j]
+#         ax_sim.text(0.82, 0.86, text, transform=ax_sim.transAxes,
+#             color='black', fontsize=18)
 
-        ax_sim.set_yticks(np.round(np.arange(0, max_amp[2*i+j] * 1e6 + 1e-3, intervals[2*i+j] * 1e6)).astype(int))
-        ax_sim.set_yticks(np.round(np.arange(0, max_amp_minor[2*i+j] * 1e6 - intervals[2*i+j] * 1e6 / 4 + 1e-3, intervals[2*i+j] * 1e6 / 4)).astype(int), minor=True)
-        ax_sim.set_yticklabels(np.round(np.arange(0, max_amp[2*i+j] * 1e6 + 1e-3, intervals[2*i+j] * 1e6)).astype(int), fontsize=15)
+#         ax_sim.set_yticks(np.round(np.arange(0, max_amp[2*i+j] * 1e6 + 1e-3, intervals[2*i+j] * 1e6)).astype(int))
+#         ax_sim.set_yticks(np.round(np.arange(0, max_amp_minor[2*i+j] * 1e6 - intervals[2*i+j] * 1e6 / 4 + 1e-3, intervals[2*i+j] * 1e6 / 4)).astype(int), minor=True)
+#         ax_sim.set_yticklabels(np.round(np.arange(0, max_amp[2*i+j] * 1e6 + 1e-3, intervals[2*i+j] * 1e6)).astype(int), fontsize=18)
 
-        tick_locations = np.arange(-15, 15.01, 5)
-        tick_locations = np.arange(-0.15, 0.1501, 0.05)
-        # ax_sim.set_xlim(tick_locations[0], tick_locations[-1])
-        tick_locations[-1] = 14.85
-        ax_sim.set_xticks(tick_locations)
-        ax_sim.set_xticks(np.arange(-15, 14.9, 1).astype(int), minor=True)
-        ax_sim.set_xticklabels(np.round(tick_locations * sigma_temp,2), fontsize=15)
-        if i == 1:
-            ax_sim.set_xlabel('Detuning (in units of $1/\\tau$)', fontsize=15)
-        if j == 0:
-            ax_sim.set_ylabel('Rabi Freq. Amplitude (MHz)', fontsize=15)
+#         tick_locations = np.arange(-15, 15.01, 5)
+#         tick_locations = np.arange(-0.15, 0.1501, 0.05)
+#         # ax_sim.set_xlim(tick_locations[0], tick_locations[-1])
+#         tick_locations[-1] = 14.85
+#         ax_sim.set_xticks(tick_locations)
+#         ax_sim.set_xticks(np.arange(-15, 14.9, 1).astype(int), minor=True)
+#         ax_sim.set_xticklabels(np.round(tick_locations * sigma_temp,2), fontsize=18)
+#         if i == 1:
+#             ax_sim.set_xlabel('Detuning (in units of $1/\\tau$)', fontsize=18)
+#         if j == 0:
+#             ax_sim.set_ylabel('Rabi Freq. Amplitude (MHz)', fontsize=18)
 
 
 
-# Create a separate subplot for the color bar
-cax_sim = fig_sim.add_subplot(gs_sim[:, 2])
-cbar_sim = fig_sim.colorbar(im_sim, cax=cax_sim)
-cbar_sim.set_label('\nSimulated Transition probability', fontsize=15)
-cbar_sim.ax.tick_params(labelsize=14)
+# # Create a separate subplot for the color bar
+# cax_sim = fig_sim.add_subplot(gs_sim[:, 2])
+# cbar_sim = fig_sim.colorbar(im_sim, cax=cax_sim)
+# cbar_sim.set_label('\nSimulated Transition probability', fontsize=18)
+# cbar_sim.ax.tick_params(labelsize=14)
 
-# Adjust the layout
-fig_sim.tight_layout()
+# # Adjust the layout
+# fig_sim.tight_layout()
 
 # Set save folder
 save_folder = os.path.join(file_dir, "paper_ready_plots", "power_narrowing")
@@ -292,69 +296,120 @@ date = datetime.now()
 data_save_folder = os.path.join(file_dir, "paper_ready_plots", "power_narrowing", "data")
 make_all_dirs(data_save_folder)
 
-# Set fig name
-fig_name_sim = f"sim_block_power_spectre_{','.join([k for k in times.keys()])}_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pdf"
-tr_probs_name_sim = f"tr_probs_sim_block_power_spectre_{','.join([k for k in times.keys()])}_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pkl"
-dets_name_sim = f"det_sim_block_power_spectre_{','.join([k for k in times.keys()])}_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pkl"
-amps_name_sim = f"amp_sim_block_power_spectre_{','.join([k for k in times.keys()])}_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pkl"
+# # Set fig name
+# fig_name_sim = f"sim_block_power_spectre_{','.join([k for k in times.keys()])}_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pdf"
+# tr_probs_name_sim = f"tr_probs_sim_block_power_spectre_{','.join([k for k in times.keys()])}_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pkl"
+# dets_name_sim = f"det_sim_block_power_spectre_{','.join([k for k in times.keys()])}_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pkl"
+# amps_name_sim = f"amp_sim_block_power_spectre_{','.join([k for k in times.keys()])}_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pkl"
 
 
-# Save the simulation
-if save_map:
-    plt.savefig(os.path.join(save_folder, fig_name_sim), format="pdf")
+# # Save the simulation
+# if save_map:
+#     plt.savefig(os.path.join(save_folder, fig_name_sim), format="pdf")
 
-with open(os.path.join(data_save_folder, tr_probs_name_sim), mode="wb") as f:
-    pickle.dump(tr_probss, f)
-with open(os.path.join(data_save_folder, dets_name_sim), mode="wb") as g:
-    pickle.dump(d_ranges, g)
-with open(os.path.join(data_save_folder, amps_name_sim), mode="wb") as h:
-    pickle.dump(A_ranges, h)
+# with open(os.path.join(data_save_folder, tr_probs_name_sim), mode="wb") as f:
+#     pickle.dump(tr_probss, f)
+# with open(os.path.join(data_save_folder, dets_name_sim), mode="wb") as g:
+#     pickle.dump(d_ranges, g)
+# with open(os.path.join(data_save_folder, amps_name_sim), mode="wb") as h:
+#     pickle.dump(A_ranges, h)
+
+# Set intervals
+
+intervals_det = [2.5, 2.5, 5, 5]
 
 # Create a 2x2 grid of subplots with extra space for the color bar
-fig = plt.figure(figsize=(12, 9))
+fig = plt.figure(figsize=(12,10), layout="constrained")
 gs = fig.add_gridspec(2, 3, width_ratios=[1, 1, 0.1])
 
 # Iterate over each subplot and plot the color map
 for i in range(2):
     for j in range(2):
+        max_det = intervals_det[2*i+j] * np.floor(det[2*i+j][-1] / intervals_det[2*i+j])
         sigma_temp = params[pulse_names[2*i+j]][0] * 10**6
+        d = det[2*i+j] * sigma_temp
+        a = amp[2*i+j]
         ax = fig.add_subplot(gs[i, j])
         cmap = plt.cm.get_cmap('cividis')  # Choose a colormap
-        im = ax.pcolormesh(det[2*i+j] * sigma_temp, amp[2*i+j], tr_prob[2*i+j], vmin=0, vmax=1, cmap=cmap)
+        im = ax.imshow(tr_prob[2*i+j], cmap=cmap, aspect="auto", origin="lower", vmin=0, vmax=1)
         # Add a rectangle in the top right corner
-        rect = Rectangle((0.8, 0.85), 0.12, 0.1, transform=ax.transAxes,
+        rect = Rectangle((0.8, 0.86), 0.15, 0.14, transform=ax.transAxes,
                         color='#DEDA8D', alpha=0.7)
         ax.add_patch(rect)
         
         # Add text inside the rectangle
         text = powers_latex[2*i+j]
-        ax.text(0.82, 0.86, text, transform=ax.transAxes,
-            color='black', fontsize=15)
+        ax.text(0.82, 0.885, text, transform=ax.transAxes,
+            color='black', fontsize=18)
 
-        ax.set_yticks(np.round(np.arange(0, max_amp[2*i+j] + 1e-3, intervals[2*i+j])).astype(int))
-        ax.set_yticks(np.round(np.arange(0, max_amp_minor[2*i+j] - intervals[2*i+j] / 4 + 1e-3, intervals[2*i+j] / 4)).astype(int), minor=True)
-        ax.set_yticklabels(np.round(np.arange(0, max_amp[2*i+j] + 1e-3, intervals[2*i+j])).astype(int), fontsize=15)
+        yticks = np.linspace(
+            0, 
+            int(np.round(max_amp[2*i+j] / a[-1] * (len(tr_prob[2*i+j]) - 1))), 
+            int(max_amp[2*i+j] / intervals[2*i+j] + 1)
+        )
+        # ax_sim.set_yticks(np.round(np.arange(0, max_amp + 1e-3, intervals[2*i+j])).astype(int))
+        # ax_sim.set_yticks(np.round(np.arange(0, max_amp_minor - intervals[2*i+j] / 4 + 1e-3, intervals[2*i+j] / 4)).astype(int), minor=True)
+        ax.set_yticks(np.round(yticks).astype(int))
+        ax.set_yticklabels(np.round(np.arange(0, max_amp[2*i+j] + 1e-3, intervals[2*i+j])/100).astype(int), fontsize=18)
+        
+        tick_labels = np.arange(
+            -max_det, 
+            max_det + 0.01, 
+            intervals_det[2*i+j]
+        )
 
-        # tick_locations = np.arange(-15 * sigma_temp, 15.01* sigma_temp, 5* sigma_temp)
-        tick_locations = np.arange(-0.15, 0.1501, 0.05)
-        ax.set_xlim(tick_locations[0], tick_locations[-1])
-        # tick_locations[-1] = 14.85 * sigma_temp
+        tick_locations = np.linspace(
+            len(tr_prob[2*i+j][0]) - int(np.round(max_det / det[2*i+j][-1] * (len(tr_prob[2*i+j][0]) / 2 - 1) + len(tr_prob[2*i+j][0]) / 2)),
+            int(np.round(max_det / det[2*i+j][-1] * (len(tr_prob[2*i+j][0]) / 2 - 1) + len(tr_prob[2*i+j][0]) / 2)),
+            len(tick_labels)
+        )
         ax.set_xticks(tick_locations)
-        ax.set_xticks(np.arange(-14.9* sigma_temp, 15.01* sigma_temp, 1 * sigma_temp).astype(int), minor=True)
-        ax.set_xticklabels(np.round(tick_locations,2), fontsize=15)
+        ax.set_xticklabels(tick_labels, fontsize=18)
+
         if i == 1:
-            ax.set_xlabel('Detuning (in units of $1/\\tau$)', fontsize=15)
+            ax.set_xlabel("Detuning (MHz)", fontsize=18)
+        
+        ax2nd = ax.secondary_xaxis('top')
+        tick_labels2 = np.arange(-0.15, 0.1501, 0.05)
+        # ax_sim.set_xlim(tick_locations[0], tick_locations[-1])
+        # tick_locations[-1] = 14.85
+        tick_locations2 = np.linspace(
+            len(tr_prob[2*i+j][0]) - int(np.round(0.15 / d[-1] * (len(tr_prob[2*i+j][0]) / 2 - 1) + len(tr_prob[2*i+j][0]) / 2)), 
+            int(np.round(0.15 / d[-1] * (len(tr_prob[2*i+j][0]) / 2 - 1) + len(tr_prob[2*i+j][0]) / 2)), 
+            len(tick_labels2)
+        )
+
+        ax2nd.set_xticks(tick_locations2)
+        ax.set_xlim(tick_locations2[0], tick_locations2[-1])
+
+        if i == 0:
+            ax2nd.set_xlabel('Detuning (in units of $1/\\tau$)', fontsize=18)
+            ax2nd.set_xticklabels(np.round(tick_labels2,3), fontsize=18)
+            # if j==0:
+            #     ax2nd.set_xticklabels(np.round(tick_labels2,3), fontsize=18)
+            # else:
+            #     tick_labels2 = np.round(tick_labels2,3).tolist()
+            #     tick_labels2[0] = ""
+            #     ax2nd.set_xticklabels(tick_labels2, fontsize=18)
+        else:
+            ax2nd.set_xticklabels([])
+
         if j == 0:
-            ax.set_ylabel('Rabi Freq. Amplitude (MHz)', fontsize=15)
+            ax.set_ylabel('Peak Rabi Freq. (100 MHz)', fontsize=18)
 
 # Create a separate subplot for the color bar
 cax = fig.add_subplot(gs[:, 2])
+# Adjust the position of the colorbar
+# divider = plt.make_axes_locatable(ax)
+# cax = divider.append_axes("right", size="5%", pad=0.05)  # Adjust 'size' and 'pad' as needed
+# cbar = plt.colorbar(im, cax=cax)
+
 cbar = fig.colorbar(im, cax=cax)
-cbar.set_label('\nTransition probability', fontsize=15)
-cbar.ax.tick_params(labelsize=14)
+# cbar.set_label('\nTransition probability', fontsize=18)
+cbar.ax.tick_params(labelsize=18)
 
 # Adjust the layout
-fig.tight_layout()
+# fig.tight_layout()
 
 # Set fig name
 fig_name = f"block_power_spectre_{','.join([k for k in times.keys()])}_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pdf"
@@ -364,4 +419,4 @@ if save_map:
     plt.savefig(os.path.join(save_folder, fig_name), format="pdf")
 
 # Display the plot
-plt.show()
+# plt.show()
