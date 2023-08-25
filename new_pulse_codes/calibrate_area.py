@@ -115,6 +115,7 @@ if __name__ == "__main__":
         "lor": [pt.Lorentzian, pt.LiftedLorentzian],
         "lor2": [pt.Lorentzian2, pt.LiftedLorentzian2],
         "lor3": [pt.Lorentzian3, pt.LiftedLorentzian3],
+        "lor3_2": [pt.Lorentzian3_2, pt.LiftedLorentzian3_2],
         "lor2_3": [pt.Lorentzian2_3, pt.LiftedLorentzian2_3],
         "lor3_4": [pt.Lorentzian3_4, pt.LiftedLorentzian3_4],
         "lor3_5": [pt.Lorentzian3_5, pt.LiftedLorentzian3_5],

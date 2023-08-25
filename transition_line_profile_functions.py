@@ -487,43 +487,83 @@ def lor2_3_rzconj(x, q_freq, delta, eps):
     P2 = np.sin(0.5 * tau * np.sqrt(omega_0 ** 2 + ALPHA["lor"] * D ** 2)) ** 2 * np.abs(G / tau) ** 2
     return post_process(P2, eps, delta)
 
-def lor_narrowing(x, q_freq, a, b, c, d, delta, eps):
+def lor_narrowing(x, q_freq, a, b, d, delta, eps):
     sigma = s * 2e-9 / 9
     T = dur * 2e-9 / 9
     omega_0 = pulse_shapes.find_rabi_amp("lor", T, sigma, rb=rb, pulse_area=a)
     D = (x - q_freq) * 1e6
     # print(sigma, T, omega_0, D[0], D[-1])
-    P2 = a * np.exp(-np.abs(D/b)) + c / (1 + (D/d)**2)
+    # P2 = a * np.abs(np.exp(-np.abs(D/b))) ** 2 + (1-a) / (1 + (D/d)**2)
+    P2 = a / np.cosh(np.abs(D/b)) + (1-a) / (1 + (D/d)**2)
 
     return post_process(P2, eps, delta)
 
-def lor2_narrowing(x, q_freq, a, b, c, d, delta, eps):
+def lor2_narrowing(x, q_freq, a, b, d, delta, eps):
     sigma = s * 2e-9 / 9
     T = dur * 2e-9 / 9
     omega_0 = pulse_shapes.find_rabi_amp("lor2", T, sigma, rb=rb, pulse_area=a)
     D = (x - q_freq) * 1e6
 
-    P2 = a * np.exp(-np.abs(D/b)) + c / (1 + (D/d)**2)
-
+    # P2 = a * np.exp(-np.abs(D/b)) + (1-a) / (1 + (D/d)**2)
+    # P2 = a * np.exp(-np.abs(D/b)**2) + (1-a) / (1 + (D/d)**2)
+    P2 = a / np.cosh(np.abs(D/b)) + (1-a) / (1 + (D/d)**2)
+    # P2 = a * np.abs(np.exp(-D/b) * (-np.exp(2*D/b) * (-1 + D) * \
+    #     np.heaviside(-D, 1) + (1 + D) * np.heaviside(D, 1))) ** 2 \
+    #         + (1-a) / (1 + (D/d)**2)
+    # 1/2 E^-w Sqrt[\[Pi]/2] (-E^(
+    #  2 w) (-1 + w) HeavisideTheta[-w] + (1 + w) HeavisideTheta[w])
     return post_process(P2, eps, delta)
 
-def lor3_4_narrowing(x, q_freq, a, b, c, d, delta, eps):
+def lor3_2_narrowing(x, q_freq, a, b, d, delta, eps):
+    sigma = s * 2e-9 / 9
+    T = dur * 2e-9 / 9
+    omega_0 = pulse_shapes.find_rabi_amp("lor3_2", T, sigma, rb=rb, pulse_area=a)
+    D = (x - q_freq) * 1e6
+
+    P2 = a / np.cosh(np.abs(D/b)) + (1-a) / (1 + (D/d)**2)
+    return post_process(P2, eps, delta)
+
+def lor3_4_narrowing(x, q_freq, a, b, d, delta, eps):
     sigma = s * 2e-9 / 9
     T = dur * 2e-9 / 9
     omega_0 = pulse_shapes.find_rabi_amp("lor3_4", T, sigma, rb=rb, pulse_area=a)
     D = (x - q_freq) * 1e6
 
-    P2 = a * np.exp(-np.abs(D/b)) + c / (1 + (D/d)**2)
+    # P2 = a * np.exp(-np.abs(D/b)) + (1-a) / (1 + (D/d)**2)
+    # P2 = a * np.exp(-np.abs(D/b)**2) + (1-a) / (1 + (D/d)**2)
+    P2 = a / np.cosh(np.abs(D/b)) + (1-a) / (1 + (D/d)**2)
+    # P2 = a * np.abs(np.abs(D/b)**(1/4) * sp.kv(-1/4, np.abs(D/b)) / sp.gamma(3/4)) ** 2 + \
+    #     + (1-a) / (1 + (D/d)**2)
 
+    # (2^(1/4) Abs[w]^(1/4) BesselK[-(1/4), Abs[w]])/Gamma[3/4]
     return post_process(P2, eps, delta)
 
-def lor2_3_narrowing(x, q_freq, a, b, c, d, delta, eps):
+def lor2_3_narrowing(x, q_freq, a, b, d, delta, eps):
     sigma = s * 2e-9 / 9
     T = dur * 2e-9 / 9
     omega_0 = pulse_shapes.find_rabi_amp("lor2_3", T, sigma, rb=rb, pulse_area=a)
     D = (x - q_freq) * 1e6
 
-    P2 = a * np.exp(-np.abs(D/b)) + c / (1 + (D/d)**2)
+    # P2 = a * np.exp(-np.abs(D/b)) + (1-a) / (1 + (D/d)**2)
+    # P2 = a * np.exp(-np.abs(D/b)**2) + (1-a) / (1 + (D/d)**2)
+    P2 = a / np.cosh(np.abs(D/b)) + (1-a) / (1 + (D/d)**2)
+    # P2 = a * np.abs(np.abs(D/b)**(1/6) * sp.kv(-1/6, np.abs(D/b)) / sp.gamma(2/3)) ** 2 + \
+    #     + (1-a) / (1 + (D/d)**2)
+    # (2^(1/3) Abs[w]^(1/6) BesselK[-(1/6), Abs[w]])/Gamma[2/3]
+    return post_process(P2, eps, delta)
+
+def lor3_5_narrowing(x, q_freq, a, b, d, delta, eps):
+    sigma = s * 2e-9 / 9
+    T = dur * 2e-9 / 9
+    omega_0 = pulse_shapes.find_rabi_amp("lor3_5", T, sigma, rb=rb, pulse_area=a)
+    D = (x - q_freq) * 1e6
+
+    # P2 = a * np.exp(-np.abs(D/b)) + (1-a) / (1 + (D/d)**2)
+    # P2 = a * np.exp(-np.abs(D/b)**2) + (1-a) / (1 + (D/d)**2)
+    P2 = a / np.cosh(np.abs(D/b)) + (1-a) / (1 + (D/d)**2)
+    # P2 = a * np.abs(np.abs(D/b)**(1/10) * sp.kv(-1/10, np.abs(D/b)) / sp.gamma(3/5)) ** 2 + \
+    #     + (1-a) / (1 + (D/d)**2)
+    # (2^(2/5) Abs[w]^(1/10) BesselK[-(1/10), Abs[w]])/Gamma[3/5]
 
     return post_process(P2, eps, delta)
 
@@ -540,4 +580,3 @@ def rabi(x, q_freq, delta, eps):
     P2 = (omega_0 ** 2 / (omega_0**2 + (D) ** 2)) * \
         np.sin(0.5 * T * np.sqrt(omega_0**2 + (D) ** 2)) ** 2
     return post_process(P2, eps, delta)
-

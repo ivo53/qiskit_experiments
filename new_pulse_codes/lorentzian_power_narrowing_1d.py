@@ -24,6 +24,7 @@ pulse_dict = {
     "gauss": [pt.Gaussian, pt.LiftedGaussian],
     "lor": [pt.Lorentzian, pt.LiftedLorentzian],
     "lor2": [pt.Lorentzian2, pt.LiftedLorentzian2],
+    "lor3_2": [pt.Lorentzian3_2, pt.LiftedLorentzian3_2],
     "lor3": [pt.Lorentzian3, pt.LiftedLorentzian3],
     "lor2_3": [pt.Lorentzian2_3, pt.LiftedLorentzian2_3],
     "lor3_4": [pt.Lorentzian3_4, pt.LiftedLorentzian3_4],
@@ -90,7 +91,7 @@ def add_circ(backend, drive_chan, pulse_type, amp, duration, sigma, remove_bg, f
                 name=pulse_type,
                 sigma=sigma / np.sqrt(2)
             )
-        elif pulse_type in ["lor", "lor2", "lor3"]:
+        elif "lor" in pulse_type:
             pulse_played = pulse_dict[pulse_type][remove_bg](
                 duration=duration,
                 amp=amp,
