@@ -9,8 +9,9 @@ from matplotlib.patches import Rectangle
 
 from numerical_solutions import ndsolve_lorentz_spectre
 from transition_line_profile_functions import \
-fit_function, lor_rzconj, lor2_rzconj, lor2_3_rzconj, lor3_4_rzconj,\
-lor_narrowing, lor2_narrowing, lor3_4_narrowing, lor2_3_narrowing
+fit_function, lor_narrowing, lor2_narrowing, \
+lor3_2_narrowing, lor3_4_narrowing, lor2_3_narrowing, lor3_5_narrowing
+
 def make_all_dirs(path):
     folders = path.split("/")
     for i in range(2, len(folders) + 1):
@@ -18,6 +19,14 @@ def make_all_dirs(path):
         if not os.path.isdir(folder):
             os.mkdir(folder)
 
+def exponential_moving_average(data, alpha, beta):
+    ema = [data[0]]  # Initialize with the first data point
+    
+    for i in range(1, len(data) - 1):
+        ema_value = alpha * data[i] + (1 - alpha - beta) * ema[i-1] + beta * data[i+1]
+        ema.append(ema_value)
+    ema.append(data[-1])
+    return np.array(ema)
 
 
 def fwhm(data_points, x_vals):
@@ -70,21 +79,44 @@ save = 1
 
 times = {
     "lor2": ["2023-07-04", "192453"],
+    "lor3_2": ["2023-08-24", "101751"],
     "lor": ["2023-07-04", "192414"],
     "lor3_4": ["2023-07-04", "192347"],
     "lor2_3": ["2023-07-04", "192350"], 
+    "lor3_5": ["2023-07-03", "085956"], 
 }
 params = {
     "lor2": [(24 + 8/9) * 1e-9, (181 + 2/3) * 1e-9],
+    "lor3_2": [(24 + 8/9) * 1e-9, (286.81 + 5/900) * 1e-9],
     "lor": [(24 + 8/9) * 1e-9, (704) * 1e-9],
     "lor3_4": [(10 + 2/3) * 1e-9, (728 + 8/9) * 1e-9],
     "lor2_3": [(10 + 2/3) * 1e-9, (1134 + 2/9) * 1e-9],
+    "lor3_5": [(7 + 1/9) * 1e-9, (1176 + 8/9) * 1e-9], 
 }
-fit_funcs = [lor2_narrowing, lor_narrowing, lor3_4_narrowing, lor2_3_narrowing]
+fit_funcs = [lor2_narrowing, lor3_2_narrowing, lor_narrowing, lor3_4_narrowing, lor2_3_narrowing, lor3_5_narrowing]
 # fit_funcs = [lor2_rzconj, lor_rzconj, lor3_4_rzconj, lor2_3_rzconj]
-powers = [2, 1, 3/4, 2/3]
-powers_latex = [" $L^2$", "  $L$", "$L^{3/4}$", "$L^{2/3}$"]
+powers = [2, 3/2, 1, 3/4, 2/3, 3/5]
+powers_latex = [" $L^2$", "$L^{3/2}$", "  $L$", "$L^{3/4}$", "$L^{2/3}$", "$L^{3/5}$"]
 pulse_names = list(params.keys())
+
+colors = [
+    "red",
+    "blue",
+    "#9D7725",
+    "brown",
+    "purple"
+]
+
+markers = [
+    "o",
+    "*",
+    "X",
+    "D",
+    "P"
+]
+sizes = 1.2 * np.array([30,35,35,35,35])
+intervals_det = [3.5, 3.5, 3.5, 8, 8, 8]
+intervals_det_minor = [0.5, 0.5, 0.5, 1, 1, 1]
 
 ## create folder where plots are saved
 file_dir = os.path.dirname(__file__)
@@ -132,13 +164,25 @@ for i, k in times.items():
     amps.append(amp)
     dets.append(det)
 
+include_35 = False
+if include_35:
+    tr_probs.pop(0)
+    amps.pop(0)
+    dets.pop(0)
+    intervals_det.pop(0)
+    intervals_det_minor.pop(0)
+    powers_latex.pop(0)
+    pulse_names.pop(0)
+    fit_funcs.pop(0)
+    powers.pop(0)
+
 # FITS (num/analytical)
 # det_limits = 15 * sigma_temp
 # numerical_dets, numerical_tr_probs = [], []
-all_y_fits, all_ext_y_fits, all_efs = [], [], []
-for i in range(4):
+all_y_fits, all_ext_y_fits, all_efs, moving_averages = [], [], [], []
+for i in range(6):
     # area_dets, area_probs = [], []
-    y_fits, extended_y_fits, efs = [], [], []
+    y_fits, extended_y_fits, efs, mavg = [], [], [], []
     for j in [0,1,3]:
         # numer_det, numerical_tr_prob = ndsolve_lorentz_spectre(
         #     params[list(times.keys())[i]][0],
@@ -149,12 +193,12 @@ for i in range(4):
         #     pulse_area=(2*j+1) * np.pi,
         #     lor_power=powers[i]
         # ) 
-        initial = [0, 1, 1e7, 1, 1e7, 0.5, 0.5]
-        initial_min = [-5, -1e9, 0, -1e9, 0, 0, 0]
-        initial_max = [5, 1e9, 1e9, 1e9, 1e9, 1, 1]
+        initial = [0.1, 1, 1e6, 1e7, 0.5, 0.5]
+        initial_min = [-5, -5, 0, 0, 0, 0]
+        initial_max = [5, 5, 1e9, 1e9, 1, 1]
         fit_params, y_fit, err = fit_function(
             dets[i],
-            tr_probs[i][j], 
+            tr_probs[i][1::2][j], 
             fit_funcs[i],
             initial, initial_min, initial_max,
             params[pulse_names[i]][0] / (2e-9/9),
@@ -162,60 +206,61 @@ for i in range(4):
             area=(2 * j + 1) * np.pi,
             remove_bg=False
         )
-        y_fit = fit_funcs[i](dets[i], *fit_params)
-        print(y_fit)
+        # window_size = 3
+        # moving_average = np.convolve(tr_probs[i][1::2][j], np.ones(window_size), mode='valid')/window_size
         ef = np.linspace(dets[i][0], dets[i][-1], 5000)
+        moving_average = exponential_moving_average(
+            tr_probs[i][1::2][j], 
+            0.8, 0.1)
+        moving_average = np.interp(np.linspace(dets[i][:][0], dets[i][:][-1], 5000), dets[i][:], tr_probs[i][1::2][j])
+        # print(fit_params)
+        y_fit = fit_funcs[i](dets[i], *fit_params)
+        # print(y_fit)
         extended_y_fit = fit_funcs[i](ef, *fit_params)
         # area_dets.append(numer_det / (1e6 * 2 * np.pi))
         # area_probs.append(numerical_tr_prob)
+        mavg.append(moving_average)
         y_fits.append(y_fit)
         efs.append(ef)
         extended_y_fits.append(extended_y_fit)
+    moving_averages.append(mavg)
     all_y_fits.append(y_fits)
     all_efs.append(efs)
     all_ext_y_fits.append(extended_y_fits)
     # numerical_dets.append(area_dets)
     # numerical_tr_probs.append(area_probs)
 
-colors = [
-    "red",
-    "blue",
-    "#9D7725",
-    "brown",
-    "purple"
-]
-
-markers = [
-    "o",
-    "*",
-    "X",
-    "D",
-    "P"
-]
-sizes = 1.2 * np.array([30,35,35,35,35])
-intervals_det = [3.5, 3.5, 8, 8]
-intervals_det_minor = [0.5, 0.5, 1, 1]
 # Create a 3x3 grid of subplots with extra space for the color bar
-fig = plt.figure(figsize=(12,10), layout="constrained")
-gs0 = fig.add_gridspec(2, 2, width_ratios=[1, 1])
+fig = plt.figure(figsize=(12,15), layout="constrained")
+gs0 = fig.add_gridspec(3, 2, width_ratios=[1, 1])
 # Generate datetime
 date = datetime.now()
 
 fwhms, fwhms_abs = [], []
-for i in range(2):
+for i in range(3):
     for j in range(2):
+        ax = fig.add_subplot(gs0[i, j])
+        # if i == 0 and j == 0:
+        #     i = 2
         max_det = intervals_det[2*i+j] * np.floor(dets[2*i+j][-1] / intervals_det[2*i+j])        
         max_det_minor = intervals_det_minor[2*i+j] * np.floor(dets[2*i+j][-1] / intervals_det_minor[2*i+j])        
         sigma_temp = params[pulse_names[2*i+j]][0] * 10**6
-        det_limit = 0.18
-        ax = fig.add_subplot(gs0[i, j])
+        det_limit = 0.18 if 2 * i + j < 5 else 0.12
         plots_fwhm, plots_fwhm_abs = [], []
         for idx, order, t in zip([0,1,2], [0,1,3], tr_probs[2*i+j][1::2][[0,1,3]]):
-            ax.scatter(dets[2*i+j] * sigma_temp, t, c=colors[idx],linewidth=0,marker=markers[idx], s=sizes[idx], label=f"Pulse area {2*order+1}$\pi$")
-            ax.plot(all_efs[2*i+j][idx] * sigma_temp, all_ext_y_fits[2*i+j][idx], c=colors[idx],linewidth=0.2, label=f"Fit func - area {2*order+1}$\pi$")
+            ax.scatter(dets[2*i+j] * sigma_temp, t, c=colors[idx],linewidth=0,marker=markers[idx], s=sizes[idx], label=f"{2*order+1}$\pi$")
             # ax.plot(numerical_dets[2*i+j][idx], numerical_tr_probs[2*i+j][idx], c=colors[idx],linewidth=0.2, label=f"Simulation - area {2*order+1}$\pi$")
-            plots_fwhm.append(fwhm(t, dets[2*i+j] * sigma_temp))
-            plots_fwhm_abs.append(fwhm(t, dets[2*i+j]))
+            # plots_fwhm.append(fwhm(t, dets[2*i+j] * sigma_temp))
+            # plots_fwhm_abs.append(fwhm(t, dets[2*i+j]))
+            ## fit FWHM
+            ax.plot(all_efs[2*i+j][idx] * sigma_temp, all_ext_y_fits[2*i+j][idx], c=colors[idx],linewidth=0.2)
+            plots_fwhm.append(fwhm(all_ext_y_fits[2*i+j][idx], all_efs[2*i+j][idx] * sigma_temp))
+            plots_fwhm_abs.append(fwhm(all_ext_y_fits[2*i+j][idx], all_efs[2*i+j][idx]))
+            ## moving average FWHM
+            # ax.plot(all_efs[2*i+j][idx] * sigma_temp, moving_averages[2*i+j][idx], c=colors[idx],linewidth=0.2, label=f"Fit func - area {2*order+1}$\pi$")
+            # plots_fwhm.append(fwhm(moving_averages[2*i+j][idx], all_efs[2*i+j][idx] * sigma_temp))
+            # plots_fwhm_abs.append(fwhm(moving_averages[2*i+j][idx], all_efs[2*i+j][idx]))
+            
         ax.set_yticks([0, 0.2, 0.4, 0.6, 0.8, 1])
         # print("maxdet", max_det_minor)
         tick_labels = np.round(np.arange(
@@ -233,7 +278,6 @@ for i in range(2):
         ax.set_xticks(tick_locations)
         ax1 = ax.secondary_xaxis('top')
 
-        
         ax1.set_xticks(np.round(np.arange(-det_limit, det_limit+0.001, 0.06), 2))
         # Add a rectangle in the top right corner
         rect = Rectangle((0.8, 0.89), 0.12, 0.11, transform=ax.transAxes,
@@ -247,12 +291,12 @@ for i in range(2):
         if i == 0:
             ax1.set_xlabel('Detuning (in units of $1/\\tau$)', fontsize=18)
             ax1.set_xticklabels(np.round(np.arange(-det_limit, det_limit+0.001, 0.06), 2), fontsize=18)
-            ax.set_xticklabels(tick_labels,fontsize=18)
-        else:
-            ax.set_xlabel('Detuning (MHz)', fontsize=18)
-            ax.set_xticklabels(tick_labels, fontsize=18)
+        elif i == 1:
             ax1.set_xticklabels([])        
-            
+        elif i == 2:
+            ax.set_xlabel('Detuning (MHz)', fontsize=18)
+            ax1.set_xticklabels([])        
+        ax.set_xticklabels(tick_labels,fontsize=18)    
         if j == 0:
             ax.set_yticklabels([0, 0.2, 0.4, 0.6, 0.8, 1], fontsize=18)
             ax.set_ylabel('Transition Probability', fontsize=18)

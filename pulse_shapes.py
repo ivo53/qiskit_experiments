@@ -38,6 +38,14 @@ def lorentz2(
     f = np.heaviside(t, 1) * np.heaviside(T - t, 1) / (1 + ((t - T/2) / sigma) ** 2) ** 2
     return f
 
+def lorentz3_2(
+    t, 
+    T: float,
+    sigma: float
+):
+    f = np.heaviside(t, 1) * np.heaviside(T - t, 1) / (1 + ((t - T/2) / sigma) ** 2) ** (3/2)
+    return f
+
 def lorentz3(
     t, 
     T: float,
@@ -146,6 +154,7 @@ pulse_shapes = {
     "rabi": rabi,
     "lor": lorentz,
     "lor2": lorentz2,
+    "lor3_2": lorentz3_2,
     "lor3": lorentz3,
     "lor3_4": lorentz3_4,
     "lor2_3": lorentz2_3,

@@ -19,24 +19,28 @@ def make_all_dirs(path):
 backend_name = "manila"
 # pulse_type = "lor"
 # pulse_type2 = "lorentz"
-fixed_detuning = [5, 2, 2, 2] # MHz
-intervals = [200, 100, 100, 100]
-save_osc, save_map = 1,0
+fixed_detuning = [5, 4, 2, 2, 2, 2] # MHz
+intervals = [200, 150, 100, 100, 100, 100]
+save_osc, save_map = 0,1
 times = {
     "lor2": ["2023-07-04", "192920"],
+    "lor3_2": ["2023-08-24", "101937"],
     "lor": ["2023-07-04", "024124"],
     "lor3_4": ["2023-07-04", "193308"],
     "lor2_3": ["2023-07-04", "193649"],
+    "lor3_5": ["2023-07-03", "001114"], 
 }
 params = {
     "lor2": [(24 + 8/9) * 1e-9, (181 + 2/3) * 1e-9],
+    "lor3_2": [(24 + 8/9) * 1e-9, (286.81 + 5/900) * 1e-9],
     "lor": [(24 + 8/9) * 1e-9, (704) * 1e-9],
     "lor3_4": [(10 + 2/3) * 1e-9, (728 + 8/9) * 1e-9],
     "lor2_3": [(10 + 2/3) * 1e-9, (1134 + 2/9) * 1e-9],
+    "lor3_5": [(7 + 1/9) * 1e-9, (1176 + 8/9) * 1e-9], 
 }
+powers = [2, 3/2, 1, 3/4, 2/3, 3/5]
+powers_latex = [" $L^2$", "$L^{3/2}$", "  $L$", "$L^{3/4}$", "$L^{2/3}$", "$L^{3/5}$"]
 pulse_names = list(params.keys())
-powers = [2, 1, 3/4, 2/3]
-powers_latex = [" $L^2$", "  $L$", "$L^{3/4}$", "$L^{2/3}$"]
 
 ## create folder where plots are saved
 file_dir = os.path.dirname(__file__)
@@ -80,11 +84,10 @@ for k, t in times.items():
         amp.append(l * (1 - np.exp(-p * (pickle.load(f2) - x0))) / (1e6 * T))
     with open(os.path.join(data_folder(t[0], t[1], k), files[1]), 'rb') as f3:
         det.append(pickle.load(f3)/1e6)
-
 # tr_prob[0] = tr_prob[0][:94]
 # amp[0] = amp[0][:94]
-tr_prob[1] = tr_prob[1][:62]
-amp[1] = amp[1][:62]
+tr_prob[2] = tr_prob[2][:62] # was [1]
+amp[2] = amp[2][:62]
 # tr_prob[2] = tr_prob[2][:67]
 # amp[2] = amp[2][:67]
 # tr_prob[3] = tr_prob[3][:72]
@@ -92,14 +95,28 @@ amp[1] = amp[1][:62]
 # Set up the backend to use the EPS file format
 # plt.switch_backend('ps')
 
+# Set intervals
+intervals_det = [2.5, 2.5, 2.5, 5, 5, 5]
 
+include_35 = False
+if include_35:
+    tr_prob.pop(0)
+    amp.pop(0)
+    det.pop(0)
+    intervals_det.pop(0)
+    powers_latex.pop(0)
+    pulse_names.pop(0)
+    powers.pop(0)
+    fixed_detuning.pop(0)
+    intervals.pop(0)
+    params.pop(list(params.keys())[0])
 start_idx, end_idx = [], []
-for i in range(4):
+for i in range(6):
     start_idx.append(np.argmin(np.abs(det[i] - det[1][0])))
     end_idx.append(np.argmin(np.abs(det[i] - det[1][-1])))
 
 numerical_amps, numerical_tr_probs = [], []
-for i in range(4):
+for i in range(6):
     # A_range_minus, numerical_tr_prob_minus = ndsolve_lorentz_rabi_osc(
     #     params[list(times.keys())[i]][0],
     #     params[list(times.keys())[i]][1],
@@ -118,13 +135,13 @@ for i in range(4):
     # )
     # numerical_amps.append([A_range_minus * 1e-6, A_range_plus * 1e-6])
     # numerical_tr_probs.append([numerical_tr_prob_minus, numerical_tr_prob_plus])
-    if i == 1:
+    if i == 2:
         continue
     tr_prob[i] = tr_prob[i][:, start_idx[i]:end_idx[i]]
     det[i] = det[i][start_idx[i]:end_idx[i]]
 
 det_indices_0, det_indices_1, max_amp, max_amp_minor = [], [], [], []
-for i in range(4):
+for i in range(6):
     det_idx_0 = np.argsort(np.abs(det[i] + fixed_detuning[i]))[0]
     det_idx_1 = np.argsort(np.abs(det[i] - fixed_detuning[i]))[1]
     det_indices_0.append(det_idx_0)
@@ -132,15 +149,15 @@ for i in range(4):
     max_amp.append(intervals[i] * np.floor(amp[i][-1] / intervals[i]))
     max_amp_minor.append(intervals[i] / 4 * np.ceil(amp[i][-1] / (intervals[i] / 4)))
 
-fig0 = plt.figure(figsize=(12, 10), layout="constrained")
-gs0 = fig0.add_gridspec(2, 2, width_ratios=[1, 1])
+fig0 = plt.figure(figsize=(12, 15), layout="constrained")
+gs0 = fig0.add_gridspec(3, 2, width_ratios=[1, 1])
 # Adjust the layout
 # fig0.tight_layout()
 # Generate datetime
 date = datetime.now()
-marker_size = 85
+marker_size = 10
 initial, initial_min, initial_max = [], [], []
-for i in range(2):
+for i in range(3):
     for j in range(2):
         # fit_params, y_fit, err = fit_function(
         #     amp[2*i+j],
@@ -152,7 +169,7 @@ for i in range(2):
 
         ax0 = fig0.add_subplot(gs0[i, j])
         cmap0 = plt.cm.get_cmap('cividis')  # Choose a colormap
-        ax0.scatter(amp[2*i+j], tr_prob[2*i+j][:, det_indices_0[2*i+j]], marker="p", s=marker_size, cmap=cmap0)
+        ax0.plot(amp[2*i+j], tr_prob[2*i+j][:, det_indices_0[2*i+j]], marker="p", ms=marker_size)
         # ax0.plot(numerical_amps[2*i+j][0], numerical_tr_probs[2*i+j][0])
 
         # Add a rectangle in the top right corner
@@ -174,7 +191,7 @@ for i in range(2):
         ax0.set_ylim(0, 0.8)
         ax0.grid(which='minor', alpha=0.2)
         ax0.grid(which='major', alpha=0.6)
-        if i == 1:
+        if i == 2:
             ax0.set_xlabel('Peak Rabi Frequency (MHz)', fontsize=18)
         if j == 0:
             ax0.set_ylabel('Transition Probability', fontsize=18)
@@ -185,16 +202,16 @@ if save_osc:
 # plt.show()
 
 
-fig1 = plt.figure(figsize=(12, 10), layout="constrained")
-gs1 = fig1.add_gridspec(2, 2, width_ratios=[1, 1])
+fig1 = plt.figure(figsize=(12, 15), layout="constrained")
+gs1 = fig1.add_gridspec(3, 2, width_ratios=[1, 1])
 # Adjust the layout
 # fig1.tight_layout()
 
-for i in range(2):
+for i in range(3):
     for j in range(2):
         ax1 = fig1.add_subplot(gs1[i, j])
         cmap1 = plt.cm.get_cmap('cividis')  # Choose a colormap
-        ax1.scatter(amp[2*i+j], tr_prob[2*i+j][:, det_indices_1[2*i+j]], marker="p", s=marker_size, cmap=cmap1)
+        ax1.plot(amp[2*i+j], tr_prob[2*i+j][:, det_indices_1[2*i+j]], marker="p", ms=marker_size)
         # ax1.plot(numerical_amps[2*i+j][1], numerical_tr_probs[2*i+j][1])
 
         # Add a rectangle in the top right corner
@@ -216,7 +233,7 @@ for i in range(2):
         ax1.set_ylim(0, 0.8)
         ax1.grid(which='minor', alpha=0.2)
         ax1.grid(which='major', alpha=0.6)
-        if i == 1:
+        if i == 2:
             ax1.set_xlabel('Peak Rabi Frequency (MHz)', fontsize=18)
         if j == 0:
             ax1.set_ylabel('Transition Probability', fontsize=18)
@@ -314,16 +331,13 @@ make_all_dirs(data_save_folder)
 # with open(os.path.join(data_save_folder, amps_name_sim), mode="wb") as h:
 #     pickle.dump(A_ranges, h)
 
-# Set intervals
-
-intervals_det = [2.5, 2.5, 5, 5]
 
 # Create a 2x2 grid of subplots with extra space for the color bar
-fig = plt.figure(figsize=(12,10), layout="constrained")
-gs = fig.add_gridspec(2, 3, width_ratios=[1, 1, 0.1])
+fig = plt.figure(figsize=(12,15), layout="constrained")
+gs = fig.add_gridspec(3, 3, width_ratios=[1, 1, 0.1])
 
 # Iterate over each subplot and plot the color map
-for i in range(2):
+for i in range(3):
     for j in range(2):
         max_det = intervals_det[2*i+j] * np.floor(det[2*i+j][-1] / intervals_det[2*i+j])
         sigma_temp = params[pulse_names[2*i+j]][0] * 10**6
@@ -366,16 +380,16 @@ for i in range(2):
         ax.set_xticks(tick_locations)
         ax.set_xticklabels(tick_labels, fontsize=18)
 
-        if i == 1:
+        if i == 2:
             ax.set_xlabel("Detuning (MHz)", fontsize=18)
         
         ax2nd = ax.secondary_xaxis('top')
-        tick_labels2 = np.arange(-0.15, 0.1501, 0.05)
+        tick_labels2 = np.arange(-0.1, 0.1001, 0.05)
         # ax_sim.set_xlim(tick_locations[0], tick_locations[-1])
         # tick_locations[-1] = 14.85
         tick_locations2 = np.linspace(
-            len(tr_prob[2*i+j][0]) - int(np.round(0.15 / d[-1] * (len(tr_prob[2*i+j][0]) / 2 - 1) + len(tr_prob[2*i+j][0]) / 2)), 
-            int(np.round(0.15 / d[-1] * (len(tr_prob[2*i+j][0]) / 2 - 1) + len(tr_prob[2*i+j][0]) / 2)), 
+            len(tr_prob[2*i+j][0]) - int(np.round(0.1 / d[-1] * (len(tr_prob[2*i+j][0]) / 2 - 1) + len(tr_prob[2*i+j][0]) / 2)), 
+            int(np.round(0.1 / d[-1] * (len(tr_prob[2*i+j][0]) / 2 - 1) + len(tr_prob[2*i+j][0]) / 2)), 
             len(tick_labels2)
         )
 
