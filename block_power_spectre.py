@@ -19,9 +19,9 @@ def make_all_dirs(path):
 backend_name = "manila"
 # pulse_type = "lor"
 # pulse_type2 = "lorentz"
-fixed_detuning = [5, 4, 2, 2, 2, 2] # MHz
+fixed_detuning = [30, 25, 12.5, 12.5, 12.5, 12.5] # MHz
 intervals = [200, 150, 100, 100, 100, 100]
-save_osc, save_map = 0,1
+save_osc, save_map = 1,0
 times = {
     "lor2": ["2023-07-04", "192920"],
     "lor3_2": ["2023-08-24", "101937"],
@@ -83,11 +83,13 @@ for k, t in times.items():
     with open(os.path.join(data_folder(t[0], t[1], k), files[0]), 'rb') as f2:
         amp.append(l * (1 - np.exp(-p * (pickle.load(f2) - x0))) / (1e6 * T))
     with open(os.path.join(data_folder(t[0], t[1], k), files[1]), 'rb') as f3:
-        det.append(pickle.load(f3)/1e6)
+        det.append(pickle.load(f3) * 2 * np.pi / 1e6)
 # tr_prob[0] = tr_prob[0][:94]
 # amp[0] = amp[0][:94]
 tr_prob[2] = tr_prob[2][:62] # was [1]
 amp[2] = amp[2][:62]
+tr_prob[5] = tr_prob[5][:85] # was [1]
+amp[5] = amp[5][:85]
 # tr_prob[2] = tr_prob[2][:67]
 # amp[2] = amp[2][:67]
 # tr_prob[3] = tr_prob[3][:72]
@@ -96,7 +98,7 @@ amp[2] = amp[2][:62]
 # plt.switch_backend('ps')
 
 # Set intervals
-intervals_det = [2.5, 2.5, 2.5, 5, 5, 5]
+intervals_det = [8, 8, 8, 20, 20, 30]
 
 include_35 = False
 if include_35:
@@ -110,6 +112,7 @@ if include_35:
     fixed_detuning.pop(0)
     intervals.pop(0)
     params.pop(list(params.keys())[0])
+
 start_idx, end_idx = [], []
 for i in range(6):
     start_idx.append(np.argmin(np.abs(det[i] - det[1][0])))
@@ -344,7 +347,7 @@ for i in range(3):
         d = det[2*i+j] * sigma_temp
         a = amp[2*i+j]
         ax = fig.add_subplot(gs[i, j])
-        cmap = plt.cm.get_cmap('cividis')  # Choose a colormap
+        cmap = plt.cm.get_cmap('cividis') # Choose a colormap
         im = ax.imshow(tr_prob[2*i+j], cmap=cmap, aspect="auto", origin="lower", vmin=0, vmax=1)
         # Add a rectangle in the top right corner
         rect = Rectangle((0.8, 0.86), 0.15, 0.14, transform=ax.transAxes,
@@ -378,18 +381,19 @@ for i in range(3):
             len(tick_labels)
         )
         ax.set_xticks(tick_locations)
-        ax.set_xticklabels(tick_labels, fontsize=18)
+        ax.set_xticklabels(tick_labels.astype(int), fontsize=18)
 
         if i == 2:
             ax.set_xlabel("Detuning (MHz)", fontsize=18)
         
         ax2nd = ax.secondary_xaxis('top')
-        tick_labels2 = np.arange(-0.1, 0.1001, 0.05)
         # ax_sim.set_xlim(tick_locations[0], tick_locations[-1])
         # tick_locations[-1] = 14.85
+        lim_delta_tau = 0.5
+        tick_labels2 = np.arange(-lim_delta_tau, lim_delta_tau + 1e-3, lim_delta_tau / 2)
         tick_locations2 = np.linspace(
-            len(tr_prob[2*i+j][0]) - int(np.round(0.1 / d[-1] * (len(tr_prob[2*i+j][0]) / 2 - 1) + len(tr_prob[2*i+j][0]) / 2)), 
-            int(np.round(0.1 / d[-1] * (len(tr_prob[2*i+j][0]) / 2 - 1) + len(tr_prob[2*i+j][0]) / 2)), 
+            len(tr_prob[2*i+j][0]) - int(np.round(lim_delta_tau / d[-1] * (len(tr_prob[2*i+j][0]) / 2 - 1) + len(tr_prob[2*i+j][0]) / 2)), 
+            int(np.round(lim_delta_tau / d[-1] * (len(tr_prob[2*i+j][0]) / 2 - 1) + len(tr_prob[2*i+j][0]) / 2)), 
             len(tick_labels2)
         )
 

@@ -115,8 +115,8 @@ markers = [
     "P"
 ]
 sizes = 1.2 * np.array([30,35,35,35,35])
-intervals_det = [3.5, 3.5, 3.5, 8, 8, 8]
-intervals_det_minor = [0.5, 0.5, 0.5, 1, 1, 1]
+intervals_det = [15, 15, 15, 35, 35, 50]
+intervals_det_minor = [3, 3, 3, 7, 7, 10]
 
 ## create folder where plots are saved
 file_dir = os.path.dirname(__file__)
@@ -159,7 +159,7 @@ for i, k in times.items():
     with open(os.path.join(data_folder(k[0], k[1], i), files[0]), 'rb') as f2:
         amp = l * (1 - np.exp(-p * (pickle.load(f2) - x0))) / (1e6 * T)
     with open(os.path.join(data_folder(k[0], k[1], i), files[1]), 'rb') as f3:
-        det = pickle.load(f3) / 1e6
+        det = pickle.load(f3) * 2 * np.pi / 1e6
     tr_probs.append(tr_prob)
     amps.append(amp)
     dets.append(det)
@@ -176,6 +176,7 @@ if include_35:
     fit_funcs.pop(0)
     powers.pop(0)
 
+third_curve = 4
 # FITS (num/analytical)
 # det_limits = 15 * sigma_temp
 # numerical_dets, numerical_tr_probs = [], []
@@ -183,7 +184,7 @@ all_y_fits, all_ext_y_fits, all_efs, moving_averages = [], [], [], []
 for i in range(6):
     # area_dets, area_probs = [], []
     y_fits, extended_y_fits, efs, mavg = [], [], [], []
-    for j in [0,1,3]:
+    for j in [0,1,third_curve]:
         # numer_det, numerical_tr_prob = ndsolve_lorentz_spectre(
         #     params[list(times.keys())[i]][0],
         #     params[list(times.keys())[i]][1],
@@ -193,7 +194,7 @@ for i in range(6):
         #     pulse_area=(2*j+1) * np.pi,
         #     lor_power=powers[i]
         # ) 
-        initial = [0.1, 1, 1e6, 1e7, 0.5, 0.5]
+        initial = [0.1, 1, 6e6, 1e7, 0.5, 0.5]
         initial_min = [-5, -5, 0, 0, 0, 0]
         initial_max = [5, 5, 1e9, 1e9, 1, 1]
         fit_params, y_fit, err = fit_function(
@@ -245,9 +246,9 @@ for i in range(3):
         max_det = intervals_det[2*i+j] * np.floor(dets[2*i+j][-1] / intervals_det[2*i+j])        
         max_det_minor = intervals_det_minor[2*i+j] * np.floor(dets[2*i+j][-1] / intervals_det_minor[2*i+j])        
         sigma_temp = params[pulse_names[2*i+j]][0] * 10**6
-        det_limit = 0.18 if 2 * i + j < 5 else 0.12
+        det_limit = 0.8
         plots_fwhm, plots_fwhm_abs = [], []
-        for idx, order, t in zip([0,1,2], [0,1,3], tr_probs[2*i+j][1::2][[0,1,3]]):
+        for idx, order, t in zip([0,1,2], [0,1,third_curve], tr_probs[2*i+j][1::2][[0,1,third_curve]]):
             ax.scatter(dets[2*i+j] * sigma_temp, t, c=colors[idx],linewidth=0,marker=markers[idx], s=sizes[idx], label=f"{2*order+1}$\pi$")
             # ax.plot(numerical_dets[2*i+j][idx], numerical_tr_probs[2*i+j][idx], c=colors[idx],linewidth=0.2, label=f"Simulation - area {2*order+1}$\pi$")
             # plots_fwhm.append(fwhm(t, dets[2*i+j] * sigma_temp))
@@ -278,7 +279,7 @@ for i in range(3):
         ax.set_xticks(tick_locations)
         ax1 = ax.secondary_xaxis('top')
 
-        ax1.set_xticks(np.round(np.arange(-det_limit, det_limit+0.001, 0.06), 2))
+        ax1.set_xticks(np.round(np.arange(-det_limit, det_limit+0.001, 0.4), 2))
         # Add a rectangle in the top right corner
         rect = Rectangle((0.8, 0.89), 0.12, 0.11, transform=ax.transAxes,
                         color='#003399', alpha=0.7)
@@ -290,13 +291,13 @@ for i in range(3):
             color='white', fontsize=18)
         if i == 0:
             ax1.set_xlabel('Detuning (in units of $1/\\tau$)', fontsize=18)
-            ax1.set_xticklabels(np.round(np.arange(-det_limit, det_limit+0.001, 0.06), 2), fontsize=18)
+            ax1.set_xticklabels(np.round(np.arange(-det_limit, det_limit+0.001, 0.4), 2), fontsize=18)
         elif i == 1:
             ax1.set_xticklabels([])        
         elif i == 2:
             ax.set_xlabel('Detuning (MHz)', fontsize=18)
             ax1.set_xticklabels([])        
-        ax.set_xticklabels(tick_labels,fontsize=18)    
+        ax.set_xticklabels(tick_labels.astype(int),fontsize=18)    
         if j == 0:
             ax.set_yticklabels([0, 0.2, 0.4, 0.6, 0.8, 1], fontsize=18)
             ax.set_ylabel('Transition Probability', fontsize=18)
@@ -317,7 +318,7 @@ for i in range(3):
         fwhms_abs.append(plots_fwhm_abs)
 
 # fig.tight_layout()
-# print(np.array(fwhms))
+print(np.array(fwhms))
 print(np.array(fwhms_abs))
 # Set save folder
 save_folder = os.path.join(file_dir, "paper_ready_plots", "power_narrowing")
@@ -326,7 +327,7 @@ save_folder = os.path.join(file_dir, "paper_ready_plots", "power_narrowing")
 date = datetime.now()
 
 # Set fig name
-fig_name = f"block_1,3,9pi_{list(times.keys())}_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pdf"
+fig_name = f"block_1,3,{2 * third_curve + 1}pi_{list(times.keys())}_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pdf"
 
 # Save the fig
 if save:
