@@ -150,6 +150,22 @@ def sin5(
     f = np.heaviside(t, 1) * np.heaviside(T - t, 1) * np.sin(np.pi * t / T) ** 5
     return f
 
+def ipN(
+    t,
+    T: float,
+    N: float
+):
+    f = np.heaviside(t, 1) * np.heaviside(T - t, 1) * ((t - T/2) / (T/2)) ** (2*N)
+    return f
+
+def fcq(
+    t,
+    T: float,
+    beta: float
+):
+    f = np.heaviside(t, 1) * np.heaviside(T - t, 1) * (1 + beta * (((t - T/2) / T/2) ** 2 - 1))
+    return f
+
 pulse_shapes = {
     "rabi": rabi,
     "lor": lorentz,
@@ -169,6 +185,18 @@ pulse_shapes = {
     "sin3": sin3,
     "sin4": sin4,
     "sin5": sin5,
+    "ip1": lambda t, T: ipN(t, T, 1),
+    "ip2": lambda t, T: ipN(t, T, 2),
+    "ip3": lambda t, T: ipN(t, T, 3),
+    "ip4": lambda t, T: ipN(t, T, 4),
+    "ip5": lambda t, T: ipN(t, T, 5),
+    "ip6": lambda t, T: ipN(t, T, 6),
+    "ip7": lambda t, T: ipN(t, T, 7),
+    "ip8": lambda t, T: ipN(t, T, 8),
+    "ip9": lambda t, T: ipN(t, T, 9),
+    "ip10": lambda t, T: ipN(t, T, 10),
+    "ipN": ipN,
+    "fcq": fcq
 }
 
 def rabi_freq(t, omega_0, pulse_type: str, T: float, sigma: float=None, rb: bool=True):

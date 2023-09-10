@@ -59,6 +59,8 @@ pulse_dict = {
     "sin4": [pt.Sine4, pt.Sine4],
     "sin5": [pt.Sine5, pt.Sine5],
     "demkov": [pt.Demkov, pt.LiftedDemkov],
+    "ipN": [pt.InverseParabola, pt.InverseParabola],
+    "fcq": [pt.FaceChangingQuadratic, pt.FaceChangingQuadratic],
 }
 
 
@@ -95,6 +97,10 @@ if __name__ == "__main__":
         oslo, jakarta, manila, quito, belem, lima).")
     parser.add_argument("-sp", "--span", default=0.005, type=float,
         help="The span of the detuning sweep as a fraction of the driving frequency.")
+    parser.add_argument("-N", "--N", default=1, type=int,
+        help="The order of inverse parabola pulse(in case of inv. parabola).")
+    parser.add_argument("-be", "--beta", default=0, type=float,
+        help="The beta parameter for the face changing quadratic function.")
     args = parser.parse_args()
 
     pulse_type = args.pulse_type
@@ -111,6 +117,8 @@ if __name__ == "__main__":
     span = args.span
     num_experiments = args.num_experiments
     qubit = args.qubit
+    N = float(args.N)
+    beta = args.beta
     backend = args.backend
     backend_name = backend
     backend = "ibm_" + backend \
@@ -207,6 +215,13 @@ if __name__ == "__main__":
                     amp=amp,
                     name=pulse_type,
                     sigma=sigma,
+                )
+            elif pulse_type == "fcq":
+                pulse_played = pulse_dict[pulse_type][remove_bg](
+                    duration=dur_dt,
+                    amp=amp,
+                    beta=beta,
+                    name=pulse_type
                 )
             else:
                 pulse_played = pulse_dict[pulse_type][remove_bg](

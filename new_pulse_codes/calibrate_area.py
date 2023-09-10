@@ -86,6 +86,10 @@ if __name__ == "__main__":
         help="The initial value of the x0 fit param.")
     parser.add_argument("-q", "--qubit", default=0, type=int,
         help="Number of qubit to use.")
+    parser.add_argument("-N", "--N", default=1, type=int,
+        help="The order of inverse parabola pulse(in case of inv. parabola).")
+    parser.add_argument("-be", "--beta", default=0, type=float,
+        help="The beta parameter for the face changing quadratic function.")
     parser.add_argument("-sv", "--save", default=0, type=int,
         help="Whether to save the results from the fit (0 or 1).")
     args = parser.parse_args()
@@ -105,6 +109,8 @@ if __name__ == "__main__":
     p = args.p
     x0 = args.x0
     qubit = args.qubit
+    N = float(args.N)
+    beta = args.beta
     save = bool(args.save)
     backend_name = backend
     backend = "ibm_" + backend \
@@ -129,6 +135,8 @@ if __name__ == "__main__":
         "sin5": [pt.Sine5, pt.Sine5],
         "demkov": [pt.Demkov, pt.LiftedDemkov],
         "drag": [pt.Drag, pt.LiftedDrag],
+        "ipN": [pt.InverseParabola, pt.InverseParabola],
+        "fcq": [pt.FaceChangingQuadratic, pt.FaceChangingQuadratic],
     }
     ## create folder where plots are saved
     file_dir = os.path.dirname(__file__)
@@ -232,6 +240,20 @@ if __name__ == "__main__":
                     beta=1,
                     name=pulse_type,
                     sigma=sigma,
+                )
+            elif pulse_type == "ipN":
+                pulse_played = pulse_dict[pulse_type][remove_bg](
+                    duration=dur_dt,
+                    amp=amp,
+                    N=N,
+                    name=pulse_type
+                )
+            elif pulse_type == "fcq":
+                pulse_played = pulse_dict[pulse_type][remove_bg](
+                    duration=dur_dt,
+                    amp=amp,
+                    beta=beta,
+                    name=pulse_type
                 )
             else:
                 pulse_played = pulse_dict[pulse_type][remove_bg](
