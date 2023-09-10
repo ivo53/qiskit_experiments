@@ -33,6 +33,34 @@ def Sawtooth(duration, amp, freq, name):
 
     return instance
 
+# a t^{2N} pulse
+def InverseParabola(duration, amp, N, name):
+    t, duration_sym, amp_sym, N_sym = sym.symbols("t, duration, amp, N")
+    
+    instance = SymbolicPulse(
+        pulse_type="InverseParabola",
+        duration=duration,
+        parameters={"duration": duration, "amp": amp, "N": N},
+        envelope=amp_sym * ((t - duration_sym/2) / (duration_sym/2)) ** (2*N_sym),
+        name=name,
+    )
+
+    return instance
+
+# a 1 + beta * t^2 pulse
+def FaceChangingQuadratic(duration, amp, beta, name):
+    t, duration_sym, amp_sym, beta_sym = sym.symbols("t, duration, amp, beta")
+    
+    instance = SymbolicPulse(
+        pulse_type="FaceChangingQuadratic",
+        duration=duration,
+        parameters={"duration": duration, "amp": amp, "beta": beta},
+        envelope=amp_sym * (1 + beta_sym * (((t - duration_sym / 2) / (duration_sym / 2)) ** 2) - 1),
+        name=name,
+    )
+
+    return instance
+
 # a Sine pulse
 def Sine(duration, amp, name, freq=None):
     if freq is None:

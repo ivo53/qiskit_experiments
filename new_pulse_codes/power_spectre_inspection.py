@@ -38,6 +38,8 @@ pulse_dict = {
     "sin5": [pt.Sine5, pt.Sine5], 
     "demkov": [pt.Demkov, pt.LiftedDemkov],
     "drag": [pt.Drag, pt.LiftedDrag],
+    "ipN": [pt.InverseParabola, pt.InverseParabola],
+    "fcq": [pt.FaceChangingQuadratic, pt.FaceChangingQuadratic],
 }
 
 def make_all_dirs(path):
@@ -88,6 +90,20 @@ def add_circ(backend, drive_chan, pulse_type, amp, duration, sigma, remove_bg, f
                 name=pulse_type,
                 sigma=sigma / np.sqrt(2)
             )
+        elif pulse_type == "ipN":
+            pulse_played = pulse_dict[pulse_type][remove_bg](
+                duration=duration,
+                amp=amp,
+                N=N,
+                name=pulse_type
+            )
+        elif pulse_type == "fcq":
+            pulse_played = pulse_dict[pulse_type][remove_bg](
+                duration=duration,
+                amp=amp,
+                beta=beta,
+                name=pulse_type
+            )
         elif "lor" in pulse_type:
             pulse_played = pulse_dict[pulse_type][remove_bg](
                 duration=duration,
@@ -136,6 +152,10 @@ if __name__ == "__main__":
         help="Cutoff point as amp value as a fraction of maximum amplitude.")
     parser.add_argument("-a", "--max_amp", default=0.5, type=float,
         help="Maximum amplitude to reach in the sweep.")
+    parser.add_argument("-N", "--N", default=1, type=int,
+        help="The order of inverse parabola pulse(in case of inv. parabola).")
+    parser.add_argument("-be", "--beta", default=0, type=float,
+        help="The beta parameter for the face changing quadratic function.")
     parser.add_argument("-sp", "--frequency_span", default=18, type=float,
         help="Frequency span in MHz units.")
     args = parser.parse_args()
@@ -149,6 +169,8 @@ if __name__ == "__main__":
     resolution = (args.resolution_A, args.resolution_D)
     cut_param = args.cut_param
     a_max = args.max_amp
+    N = float(args.N)
+    beta = args.beta
     frequency_span = args.frequency_span
     backend = args.backend
     backend_name = backend
