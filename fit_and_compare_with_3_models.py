@@ -143,7 +143,7 @@ durations = {
 area = "pi"
 backend_name = "perth"
 s = 96
-pulse_type = "rz"
+pulse_type = "demkov"
 dur = get_closest_multiple_of_16(round(durations[pulse_type]))
 # pulse_type = pu
 # lse_type if dur is None else "_".join([pulse_type, str(s)])
@@ -524,6 +524,8 @@ if second_fit:
         ax2.set_xticklabels(np.round(major_xticks, 1), fontsize=16)
     ax2.set_xticks(minor_xticks, minor="True")
     ax2.set_yticklabels(y_ticks_res, fontsize=16)
+    ax2.tick_params(axis='x', pad=8)
+
     ax2.errorbar(scaled_det, second_y_fit - vals, yerr=second_err_res * np.ones(scaled_det.shape), fmt="+", color="g")
     if limit_num > 0.05:
         ax2.set_yticks(y_ticks_res_minor, minor=True)
@@ -539,6 +541,7 @@ if comparison:
     ax3.set_xlim(np.round(scaled_ef[0]/10)*10, -np.round(scaled_ef[0]/10)*10)
     ax3.set_xticks(major_xticks)
     ax3.set_xticklabels(np.round(major_xticks, 1), fontsize=16)
+    ax3.tick_params(axis='x', pad=8)
     ax3.set_xticks(minor_xticks, minor="True")
     ax3.set_yticklabels(y_ticks_res, fontsize=16)
     ax3.errorbar(scaled_det, baseline_y_fit - vals, yerr=baseline_err_res * np.ones(scaled_det.shape), fmt="+", color="b")
