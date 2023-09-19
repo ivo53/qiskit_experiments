@@ -55,7 +55,7 @@ def FaceChangingQuadratic(duration, amp, beta, name):
         pulse_type="FaceChangingQuadratic",
         duration=duration,
         parameters={"duration": duration, "amp": amp, "beta": beta},
-        envelope=amp_sym * (1 + beta_sym * (((t - duration_sym / 2) / (duration_sym / 2)) ** 2) - 1),
+        envelope=amp_sym * (1 + beta_sym * (((t - duration_sym / 2) / (duration_sym / 2)) ** 2 - 1)),
         name=name,
     )
 
