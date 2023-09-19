@@ -143,7 +143,7 @@ durations = {
 area = "pi"
 backend_name = "perth"
 s = 96
-pulse_type = "sech2"
+pulse_type = "demkov"
 dur = get_closest_multiple_of_16(round(durations[pulse_type]))
 # pulse_type = pu
 # lse_type if dur is None else "_".join([pulse_type, str(s)])
@@ -193,9 +193,9 @@ model_name_dict = {
     "rabi": ["Rabi", None, "Lorentzian"], 
     "rz": ["Rosen-Zener Exact Soln", None, "Lorentzian"], 
     "sech": ["Rosen-Zener Exact Soln", None, "Lorentzian"], 
-    "gauss": ["Gaussian DDP", "Gaussian RZConj", "Lorentzian"], 
-    "demkov": ["Demkov Exact Soln", "Demkov RZConj", "Lorentzian"], 
-    "sech2": ["Sech$^2$ RZConj", None, "Lorentzian"],
+    "gauss": ["Gaussian DDP", "Gaussian RZ conj.", "Lorentzian"], 
+    "demkov": ["Demkov Exact Soln", "Demkov RZ conj.", "Lorentzian"], 
+    "sech2": ["Sech$^2$ RZ conj.", None, "Lorentzian"],
     "sin": ["Sine rLZSM", "Double Approx"],
     "sin2": ["Sine$^2$", "Double Approx"],
     "sin3": ["Sine$^3$", "Double Approx"],
@@ -438,7 +438,7 @@ if comparison:
     order = [0, 3, 1, 2] if second_fit else [0, 2, 1] 
 else:
     order = [0, 2, 1] if second_fit else [0, 1] 
-ax0.legend([handles[idx] for idx in order], [labels[idx] for idx in order])
+ax0.legend([handles[idx] for idx in order], [labels[idx] for idx in order], prop={'size': 12})
 
 major_interval = -np.round(scaled_ef[0]/10)*10 / 4 # 42.5
 minor_interval = major_interval / 5
@@ -458,9 +458,9 @@ minor_yticks = np.arange(0, 1.01, 0.1).round(1)
 ax0.set_xticks(major_xticks)
 ax0.set_xticklabels([])
 ax0.set_xticks(minor_xticks, minor="True")
-# ax0.set_yticks(major_yticks)
-# ax0.set_yticklabels(major_yticks, fontsize=16)
-# ax0.set_yticks(minor_yticks, minor="True")
+ax0.set_yticks(major_yticks)
+ax0.set_yticklabels(major_yticks, fontsize=16)
+ax0.set_yticks(minor_yticks, minor="True")
 ax0.grid(which='minor', alpha=0.3)
 ax0.grid(which='major', alpha=0.6)
 
@@ -484,14 +484,12 @@ else:
 
 if comparison:
     limit_num = np.ceil(np.amax([max(baseline_y_fit - vals), np.abs(min(baseline_y_fit - vals))]) / 0.05) * 0.05
-    tick_interval = 0.1 if limit_num > 0.1 else 0.05
-    if limit_num > 0.1:
-        y_ticks_res_minor = np.arange(-limit_num, limit_num + 1e-3, 0.05).round(2)
+    tick_interval = 0.1 if limit_num >= 0.1 else 0.05
 else:
     limit_num = np.ceil(np.amax([max(y_fit - vals), np.abs(min(y_fit - vals))]) / 0.05) * 0.05
-    tick_interval = 0.1 if limit_num > 0.1 else 0.05
-    if limit_num > 0.1:
-        y_ticks_res_minor = np.arange(-limit_num, limit_num + 1e-3, 0.05).round(2)
+    tick_interval = 0.1 if limit_num >= 0.1 else 0.05
+if limit_num > 0.05:
+    y_ticks_res_minor = np.arange(-limit_num, limit_num + 1e-3, 0.05).round(2)
 
 
 y_ticks_res = np.arange(-limit_num, limit_num + 1e-3, tick_interval).round(2)
@@ -507,8 +505,8 @@ else:
     ax1.set_xticklabels(np.round(major_xticks, 1), fontsize=16)
 ax1.set_xticks(minor_xticks, minor="True")
 ax1.set_yticks(y_ticks_res)
-ax1.set_yticklabels(y_ticks_res, fontsize=10)
-if limit_num > 0.1:
+ax1.set_yticklabels(y_ticks_res, fontsize=16)
+if limit_num > 0.05:
     ax1.set_yticks(y_ticks_res_minor, minor=True)
     ax1.grid(which='minor', alpha=0.3)
     ax1.grid(which='major', alpha=0.6)
@@ -525,9 +523,11 @@ if second_fit:
     else:
         ax2.set_xticklabels(np.round(major_xticks, 1), fontsize=16)
     ax2.set_xticks(minor_xticks, minor="True")
-    ax2.set_yticklabels(y_ticks_res, fontsize=10)
+    ax2.set_yticklabels(y_ticks_res, fontsize=16)
+    ax2.tick_params(axis='x', pad=8)
+
     ax2.errorbar(scaled_det, second_y_fit - vals, yerr=second_err_res * np.ones(scaled_det.shape), fmt="+", color="g")
-    if limit_num > 0.1:
+    if limit_num > 0.05:
         ax2.set_yticks(y_ticks_res_minor, minor=True)
         ax2.grid(which='minor', alpha=0.3)
         ax2.grid(which='major', alpha=0.6)
@@ -541,16 +541,17 @@ if comparison:
     ax3.set_xlim(np.round(scaled_ef[0]/10)*10, -np.round(scaled_ef[0]/10)*10)
     ax3.set_xticks(major_xticks)
     ax3.set_xticklabels(np.round(major_xticks, 1), fontsize=16)
+    ax3.tick_params(axis='x', pad=8)
     ax3.set_xticks(minor_xticks, minor="True")
-    ax3.set_yticklabels(y_ticks_res, fontsize=10)
+    ax3.set_yticklabels(y_ticks_res, fontsize=16)
     ax3.errorbar(scaled_det, baseline_y_fit - vals, yerr=baseline_err_res * np.ones(scaled_det.shape), fmt="+", color="b")
-    if limit_num > 0.1:
+    if limit_num > 0.05:
         ax3.set_yticks(y_ticks_res_minor, minor=True)
         ax3.grid(which='minor', alpha=0.3)
         ax3.grid(which='major', alpha=0.6)
     else:
         ax3.grid()
-plt.xlabel("Detuning [MHz]", fontsize=20)
+plt.xlabel("Detuning (MHz)", fontsize=20)
 
 # fig2_name = date.strftime("%H%M%S") + f"_{pulse_type}_area_{area}_frequency_sweep_fitted.png" if pulse_type not in lorentz_pulses else \
 #     date.strftime("%H%M%S") + f"_{pulse_type}_cutoff_{cutoff}_{ctrl_param}_{c_p}_area_{area}_frequency_sweep_fitted.png"
