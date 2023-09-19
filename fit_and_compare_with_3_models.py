@@ -143,7 +143,7 @@ durations = {
 area = "pi"
 backend_name = "perth"
 s = 96
-pulse_type = "demkov"
+pulse_type = "sech2"
 dur = get_closest_multiple_of_16(round(durations[pulse_type]))
 # pulse_type = pu
 # lse_type if dur is None else "_".join([pulse_type, str(s)])
@@ -156,7 +156,8 @@ comparison = 1 # 0 or 1, whether to have a Lorentzian fit for comparison
 log_plot = 0 # 0 or 1, whether to plot transition probability in a logarithmic plot
 central_fraction = .95
 every_nth = 1
-save = 0
+pad_xticks = 6
+save = 1
 
 FIT_FUNCTIONS = {
     "lorentzian": [lorentzian],
@@ -438,7 +439,7 @@ if comparison:
     order = [0, 3, 1, 2] if second_fit else [0, 2, 1] 
 else:
     order = [0, 2, 1] if second_fit else [0, 1] 
-ax0.legend([handles[idx] for idx in order], [labels[idx] for idx in order], prop={'size': 12})
+ax0.legend([handles[idx] for idx in order], [labels[idx] for idx in order], prop={'size': 14})
 
 major_interval = -np.round(scaled_ef[0]/10)*10 / 4 # 42.5
 minor_interval = major_interval / 5
@@ -483,18 +484,22 @@ ax.tick_params(labelcolor='w', top=False, bottom=False, left=False,\
 #     fig.text(0.013, 0.222, 'Residuals', ha='center', va='center', rotation='vertical', fontsize=20)
 if comparison:
     limit_num = np.ceil(np.amax([max(baseline_y_fit - vals), np.abs(min(baseline_y_fit - vals))]) / 0.05) * 0.05
-    tick_interval = 0.1 if limit_num >= 0.1 else 0.05
+    tick_interval = limit_num
+    # tick_interval = 0.1 if limit_num >= 0.1 else 0.05
 else:
     limit_num = np.ceil(np.amax([max(y_fit - vals), np.abs(min(y_fit - vals))]) / 0.05) * 0.05
-    tick_interval = 0.1 if limit_num >= 0.1 else 0.05
+    tick_interval = limit_num
+    # tick_interval = 0.1 if limit_num >= 0.1 else 0.05
 if limit_num > 0.05:
     y_ticks_res_minor = np.arange(-limit_num, limit_num + 1e-3, 0.05).round(2)
 
 
 y_ticks_res = np.arange(-limit_num, limit_num + 1e-3, tick_interval).round(2)
 
+number_in_invisible_ticks = 0.175 if pulse_type in ["rabi", "demkov"] else 100
+invisible_ticks = [-number_in_invisible_ticks, 0, number_in_invisible_ticks]
 ax.set_ylabel('Residuals', fontsize=20)
-ax.set_yticks([-10000, 0, 10000])
+ax.set_yticks(invisible_ticks)
 
 ax1 = fig.add_subplot(gs[5:6, :])
 ax1.set_ylim(-limit_num, limit_num)
@@ -526,7 +531,7 @@ if second_fit:
         ax2.set_xticklabels(np.round(major_xticks, 1), fontsize=16)
     ax2.set_xticks(minor_xticks, minor="True")
     ax2.set_yticklabels(y_ticks_res, fontsize=16)
-    ax2.tick_params(axis='x', pad=8)
+    ax2.tick_params(axis='x', pad=pad_xticks)
 
     ax2.errorbar(scaled_det, second_y_fit - vals, yerr=second_err_res * np.ones(scaled_det.shape), fmt="+", color="g")
     if limit_num > 0.05:
@@ -543,7 +548,7 @@ if comparison:
     ax3.set_xlim(np.round(scaled_ef[0]/10)*10, -np.round(scaled_ef[0]/10)*10)
     ax3.set_xticks(major_xticks)
     ax3.set_xticklabels(np.round(major_xticks, 1), fontsize=16)
-    ax3.tick_params(axis='x', pad=8)
+    ax3.tick_params(axis='x', pad=pad_xticks)
     ax3.set_xticks(minor_xticks, minor="True")
     ax3.set_yticklabels(y_ticks_res, fontsize=16)
     ax3.errorbar(scaled_det, baseline_y_fit - vals, yerr=baseline_err_res * np.ones(scaled_det.shape), fmt="+", color="b")
