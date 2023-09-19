@@ -477,11 +477,10 @@ ax.spines['left'].set_color('none')
 ax.spines['right'].set_color('none')
 ax.tick_params(labelcolor='w', top=False, bottom=False, left=False,\
     right=False)
-if second_fit:
-    fig.text(0.013, 0.25, 'Residuals', ha='center', va='center', rotation='vertical', fontsize=20)
-else:
-    fig.text(0.013, 0.222, 'Residuals', ha='center', va='center', rotation='vertical', fontsize=20)
-
+# if second_fit:
+#     fig.text(0.013, 0.25, 'Residuals', ha='center', va='center', rotation='vertical', fontsize=20)
+# else:
+#     fig.text(0.013, 0.222, 'Residuals', ha='center', va='center', rotation='vertical', fontsize=20)
 if comparison:
     limit_num = np.ceil(np.amax([max(baseline_y_fit - vals), np.abs(min(baseline_y_fit - vals))]) / 0.05) * 0.05
     tick_interval = 0.1 if limit_num >= 0.1 else 0.05
@@ -493,6 +492,9 @@ if limit_num > 0.05:
 
 
 y_ticks_res = np.arange(-limit_num, limit_num + 1e-3, tick_interval).round(2)
+
+ax.set_ylabel('Residuals', fontsize=20)
+ax.set_yticks([-10000, 0, 10000])
 
 ax1 = fig.add_subplot(gs[5:6, :])
 ax1.set_ylim(-limit_num, limit_num)
