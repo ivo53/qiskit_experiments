@@ -350,7 +350,7 @@ if __name__ == "__main__":
     plt.xlabel("Amplitude [a.u.]")
     plt.ylabel("Transition Probability")
     if save:
-        plt.savefig(os.path.join(save_dir, date.strftime("%H%M%S") + f"_{pulse_type}_dur_{duration}_s_{int(sigma)}_areacal.png"))
+        plt.savefig(os.path.join(save_dir, date.strftime("%H%M%S") + f"_{pulse_type}_dur_{duration}_s_{int(sigma)}_N_{N}_beta_{beta}_areacal.png"))
     datapoints = np.vstack((amplitudes, np.real(values)))
     with open(os.path.join(data_folder, f"area_calibration_{date.strftime('%H%M%S')}.pkl"), "wb") as f:
         pickle.dump(datapoints, f)
@@ -444,6 +444,8 @@ if __name__ == "__main__":
         "date": [current_date],
         "time": [time],
         "pulse_type": [pulse_type],
+        "N": [N],
+        "beta": [beta],
         "A": [A],
         "l": [l],
         "p": [p],
@@ -481,6 +483,6 @@ if __name__ == "__main__":
     plt.ylabel("Transition Probability")
     # plt.ylabel("Measured Signal [a.u.]")
     if save:
-        plt.savefig(os.path.join(save_dir, date.strftime("%H%M%S") + f"_{pulse_type}_pi_amp_sweep_fitted.png"))
+        plt.savefig(os.path.join(save_dir, date.strftime("%H%M%S") + f"_{pulse_type}_N_{N}_beta_{beta}_pi_amp_sweep_fitted.png"))
 
     plt.show()
