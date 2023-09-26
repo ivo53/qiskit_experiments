@@ -211,11 +211,26 @@ if __name__ == "__main__":
     params_file = os.path.join(calib_dir, "actual_params.csv")
     if os.path.isfile(params_file):
         param_df = pd.read_csv(params_file)
-    df = param_df[param_df.apply(
+    if pulse_type not in ["ipN", "fcq"]:
+        df = param_df[param_df.apply(
             lambda row: row["pulse_type"] == pulse_type and \
                 row["duration"] == duration and \
                 row["sigma"] == sigma and \
                 row["rb"] == remove_bg, axis=1)]
+    elif pulse_type == "ipN":
+        df = param_df[param_df.apply(
+            lambda row: row["pulse_type"] == pulse_type and \
+                row["duration"] == duration and \
+                row["sigma"] == sigma and \
+                row["rb"] == remove_bg and \
+                row["N"] == N, axis=1)]
+    elif pulse_type == "fcq":
+        df = param_df[param_df.apply(
+            lambda row: row["pulse_type"] == pulse_type and \
+                row["duration"] == duration and \
+                row["sigma"] == sigma and \
+                row["rb"] == remove_bg and \
+                row["beta"] == beta, axis=1)]
     if df.shape[0] > 1:
         raise ValueError("More than one identical entry found!")
     elif df.shape[0] == 0:
@@ -311,7 +326,7 @@ if __name__ == "__main__":
     plt.savefig(
         os.path.join(
             save_dir,
-            f"{date.strftime('%H%M%S')}_{pulse_type}_pwr_nrw_duration-{duration}dt_g-{sigma}_cutparam-{cut_param}.png"
+            f"{date.strftime('%H%M%S')}_{pulse_type}_pwr_spctr_duration-{duration}dt_sigma-{sigma}_N-{N}_beta-{beta}.png"
         ).replace("\\","/")
     )
     plt.show()

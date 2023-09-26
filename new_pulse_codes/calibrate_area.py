@@ -34,7 +34,7 @@ def make_all_dirs(path):
 def get_closest_multiple_of_16(num):
     return int(num + 8) - (int(num + 8) % 16)
 
-def add_entry_and_remove_duplicates(df, new_entry, cols_to_check=["pulse_type", "duration", "sigma", "rb"]):
+def add_entry_and_remove_duplicates(df, new_entry, cols_to_check=["pulse_type", "duration", "sigma", "rb", "N", "beta"]):
     # Define a function to check if two rows have the same values in the specified columns
     def rows_match(row1, row2, cols):
         for col in cols:
@@ -78,7 +78,7 @@ if __name__ == "__main__":
         help="The final amplitude of the area sweep.")
     parser.add_argument("-ne", "--num_experiments", default=100, type=int,
         help="The number of amplitude datapoints to evaluate.")
-    parser.add_argument("-l", "--l", default=100, type=float,
+    parser.add_argument("-l", "--l", default=1, type=float,
         help="The initial value of the l fit param.")
     parser.add_argument("-p", "--p", default=0.5, type=float,
         help="The initial value of the p fit param.")
@@ -410,8 +410,8 @@ if __name__ == "__main__":
     # optimal_params = result.x
     # min_error = result.fun
 
-    max_l = 1000
-    mae_threshold = 2
+    max_l = 10000
+    mae_threshold = 0.6
     ls = np.arange(1, 33)**2
     ls = ls[ls >= l]
     for current_l in ls:
@@ -444,8 +444,6 @@ if __name__ == "__main__":
         "date": [current_date],
         "time": [time],
         "pulse_type": [pulse_type],
-        "N": [N],
-        "beta": [beta],
         "A": [A],
         "l": [l],
         "p": [p],
@@ -457,6 +455,8 @@ if __name__ == "__main__":
         "duration": [duration],
         "sigma": [sigma],
         "rb": [int(remove_bg)],
+        "N": [N],
+        "beta": [beta],  
         "job_id": [",".join(job_ids)]
     }
     print(param_dict)
