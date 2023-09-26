@@ -5,6 +5,7 @@ from datetime import datetime
 
 import argparse
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 # from qiskit.tools.jupyter import *
 from qiskit import QuantumCircuit
@@ -51,6 +52,47 @@ def make_all_dirs(path):
 
 def get_closest_multiple_of_16(num):
     return int(num + 8) - (int(num + 8) % 16)
+
+def get_calib_params(
+        calib_dir, 
+        pulse_type, 
+        duration, sigma, 
+        remove_bg, 
+        N, beta):
+    params_file = os.path.join(calib_dir, "actual_params.csv")
+    if os.path.isfile(params_file):
+        param_df = pd.read_csv(params_file)
+    if pulse_type not in ["ipN", "fcq"]:
+        df = param_df[param_df.apply(
+            lambda row: row["pulse_type"] == pulse_type and \
+                row["duration"] == duration and \
+                row["sigma"] == sigma and \
+                row["rb"] == remove_bg, axis=1)]
+    elif pulse_type == "ipN":
+        df = param_df[param_df.apply(
+            lambda row: row["pulse_type"] == pulse_type and \
+                row["duration"] == duration and \
+                row["sigma"] == sigma and \
+                row["rb"] == remove_bg and \
+                row["N"] == N, axis=1)]
+    elif pulse_type == "fcq":
+        df = param_df[param_df.apply(
+            lambda row: row["pulse_type"] == pulse_type and \
+                row["duration"] == duration and \
+                row["sigma"] == sigma and \
+                row["rb"] == remove_bg and \
+                row["beta"] == beta, axis=1)]
+    if df.shape[0] > 1:
+        raise ValueError("More than one identical entry found!")
+    elif df.shape[0] == 0:
+        raise ValueError("No entries found!")
+    ser = df.iloc[0]
+
+    return ser.at["l"], ser.at["p"], ser.at["x0"]
+
+
+def get_amp_for(area, l, p, x0):
+    return -np.log(1 - area / l) / p + x0
 
 def initialize_backend(backend):
     backend_full_name = "ibm_" + backend \
@@ -168,7 +210,7 @@ if __name__ == "__main__":
     qubit = args.qubit
     resolution = (args.resolution_A, args.resolution_D)
     cut_param = args.cut_param
-    a_max = args.max_amp
+    # a_max = args.max_amp
     N = float(args.N)
     beta = args.beta
     frequency_span = args.frequency_span
@@ -203,7 +245,9 @@ if __name__ == "__main__":
     ).replace("\\", "/")
     make_all_dirs(data_folder)
     make_all_dirs(folder_name)
-
+    calib_dir = os.path.join(file_dir, "calibrations", backend_name)
+    l, p, x0 = get_calib_params(calib_dir, pulse_type, duration, sigma, remove_bg, N, beta)
+    
     backend, drive_chan, num_qubits, q_freq =  initialize_backend(backend)
 
     center_frequency_Hz = q_freq[qubit]
@@ -227,7 +271,8 @@ if __name__ == "__main__":
                                 frequency_max / GHz, 
                                 resolution[1])
 
-    amplitudes = np.linspace(0.001, a_max + 1e-3, resolution[0]).round(3)
+    a_max = get_amp_for(9.5 * np.pi, l, p, x0)
+    amplitudes = np.linspace(0.001, a_max, resolution[0]).round(3)
 
     assert len(amplitudes) == resolution[0], "amplitudes error"
     assert len(frequencies_GHz) == resolution[1], "frequencies error"
@@ -290,7 +335,7 @@ if __name__ == "__main__":
     plt.savefig(
         os.path.join(
             save_dir,
-            f"{date.strftime('%H%M%S')}_lorentz_pwr_nrw_duration-{duration}dt_g-{sigma}_cutparam-{cut_param}.png"
+            f"{date.strftime('%H%M%S')}_{pulse_type}_pwr_spctr_duration-{duration}dt_sigma-{sigma}_N-{N}_beta-{beta}.png"
         ).replace("\\","/")
     )
     plt.show()

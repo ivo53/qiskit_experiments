@@ -22,7 +22,7 @@ def make_all_dirs(path):
 def get_closest_multiple_of_16(num):
     return int(num + 8) - (int(num + 8) % 16)
 
-def add_entry_and_remove_duplicates(df, new_entry, cols_to_check=["pulse_type", "duration", "sigma", "rb"]):
+def add_entry_and_remove_duplicates(df, new_entry, cols_to_check=["pulse_type", "duration", "sigma", "rb", "N", "beta"]):
     # Define a function to check if two rows have the same values in the specified columns
     def rows_match(row1, row2, cols):
         for col in cols:
@@ -76,6 +76,14 @@ if __name__ == "__main__":
         "-p", "--p_init", default=0.2, type=float,
         help="Initial value for p."
     )
+    parser.add_argument(
+        "-N", "--N", default=1, type=int,
+        help="N parameter for inverse parabolae."
+    )
+    parser.add_argument(
+        "-be", "--beta", default=0, type=float,
+        help="Beta parameter for fcq pulse."
+    )
     # parser.add_argument(
     #     "-t", "--time", default="180032", type=str,
     #     help="Date on which pulse area was calibrated."
@@ -93,6 +101,8 @@ if __name__ == "__main__":
     l_init = args.l_init
     p_init = args.p_init
     date = args.date
+    N = float(args.N)
+    beta = args.beta
     # time = args.time
     save = bool(args.save)
     
@@ -107,16 +117,24 @@ if __name__ == "__main__":
     current_date = curr_date.strftime("%Y-%m-%d")
     load_dir = os.path.join(file_dir, "data", backend_name, "calibration", date)
     calib_dir = os.path.join(file_dir, "calibrations")
-    save_dir = os.path.join(calib_dir, date)
+    save_dir = os.path.join(calib_dir, backend_name, date)
 
-    for calib_file in os.listdir(os.path.join(calib_dir, date)):
+    for calib_file in os.listdir(save_dir):
         split_calib_file = calib_file.split("_")
         if split_calib_file[-1] == "areacal.png":
             if pulse_type == split_calib_file[1] and \
                 duration == int(split_calib_file[3]) and \
                     int(sigma) == int(float(split_calib_file[5])):
-                time = split_calib_file[0]
-                break
+                if pulse_type == "ipN" and N == float(split_calib_file[7]):
+                    time = split_calib_file[0]
+                    break
+                elif pulse_type == "fcq" and beta == float(split_calib_file[9]):
+                    time = split_calib_file[0]
+                    break
+                elif pulse_type not in ["ipN", "fcq"]:
+                    time = split_calib_file[0]
+                    break
+
     print(time)
     with open(os.path.join(load_dir, f"area_calibration_{time}.pkl"), "rb") as f:
         rabi_data = pickle.load(f)
@@ -173,7 +191,9 @@ if __name__ == "__main__":
         "drive_freq": [resonant_frequencies[backend_name]],
         "duration": [duration],
         "sigma": [sigma],
-        "rb": [rb]
+        "rb": [rb],
+        "N": [N],
+        "beta": [beta]   
     }
     print(param_dict)
 
@@ -186,12 +206,12 @@ if __name__ == "__main__":
     plt.ylabel("Transition Probability")
     # plt.ylabel("Measured Signal [a.u.]")
     if save:
-        plt.savefig(os.path.join(save_dir, time + f"_{pulse_type}_pi_amp_sweep_fitted.png"))
+        plt.savefig(os.path.join(save_dir, time + f"_{pulse_type}_N_{N}_beta_{beta}_pi_amp_sweep_fitted.png"))
     plt.show()
     # exit()
     if save:
         new_entry = pd.DataFrame(param_dict)
-        params_file = os.path.join(calib_dir, "actual_params.csv")
+        params_file = os.path.join(calib_dir, backend_name, "actual_params.csv")
         if os.path.isfile(params_file):
             param_df = pd.read_csv(params_file)
             param_df = add_entry_and_remove_duplicates(param_df, new_entry)
