@@ -7,6 +7,52 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.patches import Rectangle
 
+from transition_line_profile_functions import *
+
+center_freqs = {
+    "armonk": 4971730000 * 1e-6,
+    "quito": 5300687845.108738 * 1e-6,
+    "manila": 4962287341.966912 * 1e-6,
+    "perth": 5157543429.014656 * 1e-6,
+    "lima": 5029749743.642724 * 1e-6
+}
+
+model_name_dict = {
+    "rabi": ["Rabi", "Sinc$^2$"], 
+    "rz": ["Rosen-Zener rLZSM", "Double Approx"], 
+    "sech": ["Rosen-Zener rLZSM", "Double Approx"], 
+    "gauss": ["Gaussian rLZSM", "Double Approx"], 
+    "demkov": ["Demkov rLZSM", "Double Approx"], 
+    "sech2": ["Sech$^2$ rLZSM", "Double Approx"],
+    "sin": ["Sine rLZSM", "Double Approx"],
+    "sin2": ["Sine$^2$", "Double Approx"],
+    "sin3": ["Sine$^3$", "Double Approx"],
+    "sin4": ["Sine$^4$", "Double Approx"],
+    "sin5": ["Sine$^5$", "Double Approx"],
+    "lor": ["Lorentzian rLZSM", "Double Approx"],
+    "lor2": ["Lorentzian$^2$ rLZSM", "Double Approx"],
+    "lor3": ["Lorentzian$^3$ rLZSM", "Double Approx"],
+}
+
+FIT_FUNCTIONS = {
+    "lorentzian": [lorentzian],
+    "constant": [rabi],
+    "rabi": [rabi],
+    "gauss": [gauss, gauss_rzconj], # [gauss_rlzsm, gauss_dappr], #gauss_rzconj,
+    "rz": [sech_rlzsm, sech_dappr], #rz,
+    "sech": [sech_rlzsm, sech_dappr], #rz,
+    "demkov": [demkov,],
+    "sech2": [sech2_rlzsm, sech2_dappr], #sech_sq,
+    "sinc2": [sinc2],
+    "sin": [sin_rlzsm, sin_dappr],
+    "sin2": [sin2,],
+    "sin3": [sin3,],
+    "sin4": [sin4,],
+    "sin5": [sin5,],
+    "lor": [lor_rlzsm, lor_dappr],
+    "lor2": [lor2_rlzsm, lor2_dappr],
+    "lor3": [lor3_rlzsm, lor3_dappr],
+}
 
 def make_all_dirs(path):
     folders = path.split("/")
@@ -14,25 +60,6 @@ def make_all_dirs(path):
         folder = "/".join(folders[:i])
         if not os.path.isdir(folder):
             os.mkdir(folder)
-
-backend_name = "manila"
-pulse_types = ["sin", "lor", "lor2", "lor3", "sech", "sech2", "gauss"]
-save_fig = 0
-
-times = {
-    0.5: ["2023-06-03", "120038"],
-    1: ["2023-06-03", "160754"],
-    2: ["2023-06-03", "161333"],
-    3: ["2023-06-03", "022027"],
-    5: ["2023-06-03", "022625"],
-    7.5: ["2023-06-03", "023608"],
-    15: ["2023-06-03", "120636"],
-    20: ["2023-06-03", "115516"],
-    50: ["2023-06-03", "222957"],
-}
-
-## create folder where plots are saved
-file_dir = os.path.dirname(__file__)
 
 def save_dir(date, time, pulse_type):
     save_dir = os.path.join(
@@ -60,24 +87,64 @@ def data_folder(date, time, pulse_type):
         time
     ).replace("\\", "/")
 
-l, p, x0 = 419.1631352890144, 0.0957564968883284, 0.0003302995697281
-T = 192 * 2/9 * 1e-9
+backend_name = "quito"
+pulse_types = ["sin", "sin2", "sin3", "lor", "lor2", "demkov", "sech", "sech2", "gauss"]
+save_fig = 0
 
-tr_prob, amp, det = [], [], []
-for k, t in times.items():
-    if int(t[1]) > 150000:
+times = {
+    "lor_192": [["2023-04-27", "135516"],["2023-04-27", "135524"],["2023-04-27", "135528"],["2023-04-27", "135532"]],
+    "lor2_192": [["2023-04-27", "135609"],["2023-04-27", "135613"],["2023-04-27", "135616"],["2023-04-27", "135619"]],
+    "lor3_192": [["2023-04-27", "135622"],["2023-04-27", "135625"],["2023-04-27", "135628"],["2023-04-27", "135631"]],
+    "sech_192": [["2023-04-27", "135702"],["2023-04-27", "135706"],["2023-04-27", "135710"],["2023-04-27", "135714"]],
+    "sech2_192": [["2023-04-27", "135730"],["2023-04-27", "135734"],["2023-04-27", "135736"],["2023-04-27", "135738"]],
+    "gauss_192": [["2023-04-27", "135639"],["2023-04-27", "135644"],["2023-04-27", "135648"],["2023-04-27", "135651"]],
+    "demkov_192": [["2023-04-27", "135803"],["2023-04-27", "135807"],["2023-04-27", "135811"],["2023-04-27", "135815"]],
+    "sin_192": [["2023-04-27", "135342"]],
+    "sin2_192": [["2023-04-27", "135402"]],
+    "sin3_192": [["2023-04-27", "135404"]],
+    "sin4_192": [["2023-04-27", "135406"]],
+    "sin5_192": [["2023-04-27", "135408"]],
+}
+
+durations = {
+    192: 0,
+    224: 1,
+    256: 2,
+    320: 3
+}
+
+s = 192
+dur = 192 # get_closest_multiple_of_16(round(957.28))
+
+for pulse_type in pulse_types:
+    full_pulse_name = pulse_type if dur is None else "_".join([pulse_type, str(s)])
+    print(full_pulse_name)
+    dur_idx = durations [dur] if dur is not None else 0
+    date = times[full_pulse_name][dur_idx][0]
+    time = times[full_pulse_name][dur_idx][1]
+    fit_func = pulse_type # full_pulse_name if "_" not in full_pulse_name else full_pulse_name.split("_")[0]
+    # baseline_fit_func = "sinc2" if pulse_type in ["rabi", "constant"] else "lorentzian"
+    comparison = 0 # 0 or 1, whether to have both curves
+    log_plot = 0
+
+    ## create folder where plots are saved
+    file_dir = os.path.dirname(__file__)
+
+
+    l, p, x0 = 419.1631352890144, 0.0957564968883284, 0.0003302995697281
+    T = 192 * 2/9 * 1e-9
+
+    tr_prob, amp, det = [], [], []
+    for k, t in times.items():
+        print(data_folder(t[0], t[1], pulse_type))
         files = os.listdir(data_folder(t[0], t[1], pulse_type))
+        print(files)
         with open(os.path.join(data_folder(t[0], t[1], pulse_type), files[2]).replace("\\","/"), 'rb') as f1:
             tr_prob.append(pickle.load(f1))
         with open(os.path.join(data_folder(t[0], t[1], pulse_type), files[0]), 'rb') as f2:
             amp.append(l * (1 - np.exp(-p * (pickle.load(f2) - x0))) / (1e6 * T))
         with open(os.path.join(data_folder(t[0], t[1], pulse_type), files[1]), 'rb') as f3:
             det.append(pickle.load(f3) * 2 * np.pi / 1e6)
-    else:
-        files = os.listdir(data_folder(t[0], t[1], pulse_type2))
-        with open(os.path.join(data_folder(t[0], t[1], pulse_type2), files[2]).replace("\\","/"), 'rb') as f1:
-            tr_prob.append(pickle.load(f1))
-        with open(os.path.join(data_folder(t[0], t[1], pulse_type2), files[0]), 'rb') as f2:
-            amp.append(l * (1 - np.exp(-p * (pickle.load(f2) - x0))) / (1e6 * T))
-        with open(os.path.join(data_folder(t[0], t[1], pulse_type2), files[1]), 'rb') as f3:
-            det.append(pickle.load(f3) * 2 * np.pi / 1e6)
+    tr_probs.append(tr_prob)
+    amps.append(amp)
+    dets.append(det)
