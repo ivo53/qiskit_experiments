@@ -2,6 +2,7 @@ import os
 import pickle
 from datetime import datetime
 import numpy as np
+import pandas as pd
 import matplotlib; matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
@@ -66,7 +67,7 @@ def save_dir(date, time, pulse_type):
         file_dir,
         "plots",
         f"{backend_name}",
-        "power_broadening (narrowing)",
+        "calibration",
         f"{pulse_type}_pulses",
         date
     )
@@ -76,15 +77,13 @@ def save_dir(date, time, pulse_type):
     ).replace("\\", "/")
     return save_dir, folder_name
 
-def data_folder(date, time, pulse_type):
+def data_folder(date):
     return os.path.join(
         file_dir,
         "data",
         f"{backend_name}",
-        "power_broadening (narrowing)",
-        f"{pulse_type}_pulses",
-        date,
-        time
+        "calibration",
+        date
     ).replace("\\", "/")
 
 backend_name = "quito"
@@ -116,6 +115,8 @@ durations = {
 s = 192
 dur = 192 # get_closest_multiple_of_16(round(957.28))
 
+tr_probs, amps, dets = [], [], []
+
 for pulse_type in pulse_types:
     full_pulse_name = pulse_type if dur is None else "_".join([pulse_type, str(s)])
     print(full_pulse_name)
@@ -135,16 +136,19 @@ for pulse_type in pulse_types:
     T = 192 * 2/9 * 1e-9
 
     tr_prob, amp, det = [], [], []
-    for k, t in times.items():
-        print(data_folder(t[0], t[1], pulse_type))
-        files = os.listdir(data_folder(t[0], t[1], pulse_type))
-        print(files)
-        with open(os.path.join(data_folder(t[0], t[1], pulse_type), files[2]).replace("\\","/"), 'rb') as f1:
-            tr_prob.append(pickle.load(f1))
-        with open(os.path.join(data_folder(t[0], t[1], pulse_type), files[0]), 'rb') as f2:
-            amp.append(l * (1 - np.exp(-p * (pickle.load(f2) - x0))) / (1e6 * T))
-        with open(os.path.join(data_folder(t[0], t[1], pulse_type), files[1]), 'rb') as f3:
-            det.append(pickle.load(f3) * 2 * np.pi / 1e6)
+    for k, dt in times.items():
+        tr, a, d = [], [], []
+        for t in dt:
+            files = os.listdir(data_folder(t[0]))
+            for file in files:
+                if file.startswith(t[1]) and file.endswith(".csv"):
+                    df = pd.read_csv(os.path.join(data_folder(t[0]), file))
+            tr.append(df["transition_probability"].to_numpy())
+            d.append(df["frequency_ghz"].to_numpy() / (1e6 * T))
+        tr_prob.append(tr)
+        amp.append(a)
+        det.append(d)
     tr_probs.append(tr_prob)
     amps.append(amp)
     dets.append(det)
+    
