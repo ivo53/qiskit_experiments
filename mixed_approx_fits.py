@@ -115,7 +115,7 @@ durations = {
 s = 192
 dur = 192 # get_closest_multiple_of_16(round(957.28))
 
-tr_probs, amps, dets = [], [], []
+tr_probs, dets = [], []
 
 for pulse_type in pulse_types:
     full_pulse_name = pulse_type if dur is None else "_".join([pulse_type, str(s)])
@@ -135,20 +135,23 @@ for pulse_type in pulse_types:
     l, p, x0 = 419.1631352890144, 0.0957564968883284, 0.0003302995697281
     T = 192 * 2/9 * 1e-9
 
-    tr_prob, amp, det = [], [], []
-    for k, dt in times.items():
-        tr, a, d = [], [], []
-        for t in dt:
-            files = os.listdir(data_folder(t[0]))
-            for file in files:
-                if file.startswith(t[1]) and file.endswith(".csv"):
-                    df = pd.read_csv(os.path.join(data_folder(t[0]), file))
-            tr.append(df["transition_probability"].to_numpy())
-            d.append(df["frequency_ghz"].to_numpy() / (1e6 * T))
-        tr_prob.append(tr)
-        amp.append(a)
-        det.append(d)
+    tr_prob, det = [], []
+    for t in times[full_pulse_name]:
+        files = os.listdir(data_folder(t[0]))
+        for file in files:
+            if file.startswith(t[1]) and file.endswith(".csv"):
+                df = pd.read_csv(os.path.join(data_folder(t[0]), file))
+        tr_prob.append(df["transition_probability"].to_numpy())
+        det.append(df["frequency_ghz"].to_numpy() / (1e6 * T))
     tr_probs.append(tr_prob)
-    amps.append(amp)
     dets.append(det)
-    
+
+# Create a 3x3 grid of subplots with extra space for the color bar
+fig = plt.figure(figsize=(12,15), layout="constrained")
+gs0 = fig.add_gridspec(3, 3, width_ratios=[1, 1])
+# Generate datetime
+date = datetime.now()
+
+for i in range(3):
+    for j in range(3):
+        pass
