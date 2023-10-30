@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.patches import Rectangle
 
-from numerical_solutions import ndsolve_lorentz_spectre
+# from numerical_solutions import ndsolve_lorentz_spectre
 from transition_line_profile_functions import \
 fit_function, lor_narrowing, lor2_narrowing, \
 lor3_2_narrowing, lor3_4_narrowing, lor2_3_narrowing, lor3_5_narrowing
@@ -176,7 +176,7 @@ if include_35:
     fit_funcs.pop(0)
     powers.pop(0)
 
-third_curve = 4
+third_curve = 3
 # FITS (num/analytical)
 # det_limits = 15 * sigma_temp
 # numerical_dets, numerical_tr_probs = [], []
