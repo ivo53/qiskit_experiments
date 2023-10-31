@@ -148,7 +148,7 @@ for pulse_type in pulse_types:
 
 # Create a 3x3 grid of subplots with extra space for the color bar
 fig = plt.figure(figsize=(12,15), layout="constrained")
-gs0 = fig.add_gridspec(3, 3, width_ratios=[1, 1])
+gs0 = fig.add_gridspec(3, 3, width_ratios=[1, 1, 1])
 # Generate datetime
 date = datetime.now()
 
