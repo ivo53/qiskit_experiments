@@ -73,7 +73,7 @@ for k, t in times.items():
         with open(os.path.join(data_folder(t[0], t[1], pulse_type), files[0]), 'rb') as f2:
             amp.append(l * (1 - np.exp(-p * (pickle.load(f2) - x0))) / (1e6 * T))
         with open(os.path.join(data_folder(t[0], t[1], pulse_type), files[1]), 'rb') as f3:
-            det.append(pickle.load(f3) * 2 * np.pi / 1e6)
+            det.append(pickle.load(f3) / 1e6)
     else:
         files = os.listdir(data_folder(t[0], t[1], pulse_type2))
         with open(os.path.join(data_folder(t[0], t[1], pulse_type2), files[2]).replace("\\","/"), 'rb') as f1:
@@ -81,7 +81,7 @@ for k, t in times.items():
         with open(os.path.join(data_folder(t[0], t[1], pulse_type2), files[0]), 'rb') as f2:
             amp.append(l * (1 - np.exp(-p * (pickle.load(f2) - x0))) / (1e6 * T))
         with open(os.path.join(data_folder(t[0], t[1], pulse_type2), files[1]), 'rb') as f3:
-            det.append(pickle.load(f3) * 2 * np.pi / 1e6)
+            det.append(pickle.load(f3) / 1e6)
 
 tr_prob[7] = tr_prob[7][:, 20:-20]
 det[7] = det[7][20:-20]
@@ -89,7 +89,7 @@ tr_prob[6] = tr_prob[6][:, 20:-20]
 det[6] = det[6][20:-20]
 
 intervals_amp = [200, 100, 100, 100, 100, 100, 100, 100, 100]
-intervals_det = [300, 125, 100, 60, 40, 35, 35, 35, 35]
+intervals_det = [50, 20, 16, 10, 6, 6, 6, 6, 6]
 # Set up the backend to use the EPS file format
 # plt.switch_backend('ps')
 
@@ -132,6 +132,8 @@ for i in range(3):
             int(np.round(max_det / det[::-1][3*i+j][-1] * (len(tr_prob[::-1][3*i+j][0]) / 2 - 1) + len(tr_prob[::-1][3*i+j][0]) / 2)), 
             int(2 * max_det / intervals_det[3*i+j] + 1)
         )
+        print(xticks)
+        print(max_det)
         xticklabels = np.round(np.arange(-max_det, max_det + 1e-2, intervals_det[3*i+j]), 1).astype(int)
         ax.set_xticks(xticks)
         ax.set_xticklabels(xticklabels, fontsize=18)
