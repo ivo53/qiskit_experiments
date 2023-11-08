@@ -196,7 +196,7 @@ for i in range(6):
         #     pulse_area=(2*j+1) * np.pi,
         #     lor_power=powers[i]
         # ) 
-        initial = [0.1, 1, 1e6, 1e6, 0.5, 0.5]
+        initial = [0.1, 1, 1e6, 5e6, 0.2, 0.5]
         initial_min = [-5, -5, 0, 0, 0, 0]
         initial_max = [5, 5, 1e9, 1e9, 1, 1]
         fit_params, y_fit, err = fit_function(
@@ -323,8 +323,10 @@ for i in range(3):
         fwhms_abs.append(plots_fwhm_abs)
 
 # fig.tight_layout()
+fwhms_abs = np.array(fwhms_abs)
 print(np.array(fwhms))
-print(np.array(fwhms_abs))
+print(fwhms_abs)
+print(fwhms_abs[:, 0] / fwhms_abs[:, 2])
 # Set save folder
 save_folder = os.path.join(file_dir, "paper_ready_plots", "power_narrowing")
 
