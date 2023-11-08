@@ -115,8 +115,10 @@ markers = [
     "P"
 ]
 sizes = 1.2 * np.array([30,35,35,35,35])
-intervals_det = [15, 15, 15, 35, 35, 50]
-intervals_det_minor = [3, 3, 3, 7, 7, 10]
+intervals_det = [2.5, 2.5, 2.5, 6, 6, 8]
+intervals_det_minor = [0.5, 0.5, 0.5, 1.2, 1.2, 1.6]
+# intervals_det = [15, 15, 15, 35, 35, 50]
+# intervals_det_minor = [3, 3, 3, 7, 7, 10]
 
 ## create folder where plots are saved
 file_dir = os.path.dirname(__file__)
@@ -159,7 +161,7 @@ for i, k in times.items():
     with open(os.path.join(data_folder(k[0], k[1], i), files[0]), 'rb') as f2:
         amp = l * (1 - np.exp(-p * (pickle.load(f2) - x0))) / (1e6 * T)
     with open(os.path.join(data_folder(k[0], k[1], i), files[1]), 'rb') as f3:
-        det = pickle.load(f3) * 2 * np.pi / 1e6
+        det = pickle.load(f3) / 1e6
     tr_probs.append(tr_prob)
     amps.append(amp)
     dets.append(det)
@@ -194,7 +196,7 @@ for i in range(6):
         #     pulse_area=(2*j+1) * np.pi,
         #     lor_power=powers[i]
         # ) 
-        initial = [0.1, 1, 6e6, 1e7, 0.5, 0.5]
+        initial = [0.1, 1, 1e6, 1e6, 0.5, 0.5]
         initial_min = [-5, -5, 0, 0, 0, 0]
         initial_max = [5, 5, 1e9, 1e9, 1, 1]
         fit_params, y_fit, err = fit_function(
@@ -246,7 +248,7 @@ for i in range(3):
         max_det = intervals_det[2*i+j] * np.floor(dets[2*i+j][-1] / intervals_det[2*i+j])        
         max_det_minor = intervals_det_minor[2*i+j] * np.floor(dets[2*i+j][-1] / intervals_det_minor[2*i+j])        
         sigma_temp = params[pulse_names[2*i+j]][0] * 10**6
-        det_limit = 0.8
+        det_limit = 0.14
         plots_fwhm, plots_fwhm_abs = [], []
         for idx, order, t in zip([0,1,2], [0,1,third_curve], tr_probs[2*i+j][1::2][[0,1,third_curve]]):
             ax.scatter(dets[2*i+j] * sigma_temp, t, c=colors[idx],linewidth=0,marker=markers[idx], s=sizes[idx], label=f"{2*order+1}$\pi$")
@@ -279,7 +281,8 @@ for i in range(3):
         ax.set_xticks(tick_locations)
         ax1 = ax.secondary_xaxis('top')
 
-        ax1.set_xticks(np.round(np.arange(-det_limit, det_limit+0.001, 0.4), 2))
+        top_labels = np.linspace(-det_limit, det_limit, 5)
+        ax1.set_xticks(np.round(top_labels, 2))
         # Add a rectangle in the top right corner
         rect = Rectangle((0.8, 0.89), 0.12, 0.11, transform=ax.transAxes,
                         color='#003399', alpha=0.7)
@@ -291,13 +294,15 @@ for i in range(3):
             color='white', fontsize=18)
         if i == 0:
             ax1.set_xlabel('Detuning (in units of $1/\\tau$)', fontsize=18)
-            ax1.set_xticklabels(np.round(np.arange(-det_limit, det_limit+0.001, 0.4), 2), fontsize=18)
+            ax1.set_xticklabels(np.round(top_labels, 2), fontsize=18)
         elif i == 1:
             ax1.set_xticklabels([])        
         elif i == 2:
             ax.set_xlabel('Detuning (MHz)', fontsize=18)
-            ax1.set_xticklabels([])        
-        ax.set_xticklabels(tick_labels.astype(int),fontsize=18)    
+            ax1.set_xticklabels([])
+        remainders = np.modf(tick_labels.round(1))[0]
+        tick_labels_formatted = [int(t) if r == 0 else np.round(t, 1) for r, t in zip(remainders, tick_labels)]
+        ax.set_xticklabels(tick_labels_formatted, fontsize=18)    
         if j == 0:
             ax.set_yticklabels([0, 0.2, 0.4, 0.6, 0.8, 1], fontsize=18)
             ax.set_ylabel('Transition Probability', fontsize=18)
