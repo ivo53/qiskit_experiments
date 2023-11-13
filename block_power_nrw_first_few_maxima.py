@@ -199,6 +199,12 @@ for i in range(6):
         initial = [0.1, 1, 1e6, 5e6, 0.2, 0.5]
         initial_min = [-5, -5, 0, 0, 0, 0]
         initial_max = [5, 5, 1e9, 1e9, 1, 1]
+        
+        if i==5 and j==1:
+            initial = [0.1, 1, 1e6, 10e6, 0.2, 0.5]
+            initial_min = [-5, -5, 0, 0, 0, 0]
+            initial_max = [5, 5, 1e9, 1e9, 1, 1]
+
         fit_params, y_fit, err = fit_function(
             dets[i],
             tr_probs[i][1::2][j], 
@@ -212,14 +218,14 @@ for i in range(6):
         # window_size = 3
         # moving_average = np.convolve(tr_probs[i][1::2][j], np.ones(window_size), mode='valid')/window_size
         ef = np.linspace(dets[i][0], dets[i][-1], 5000)
+        y_fit = fit_funcs[i](dets[i], *fit_params)
+        extended_y_fit = fit_funcs[i](ef, *fit_params)
         moving_average = exponential_moving_average(
             tr_probs[i][1::2][j], 
             0.8, 0.1)
         moving_average = np.interp(np.linspace(dets[i][:][0], dets[i][:][-1], 5000), dets[i][:], tr_probs[i][1::2][j])
         # print(fit_params)
-        y_fit = fit_funcs[i](dets[i], *fit_params)
         # print(y_fit)
-        extended_y_fit = fit_funcs[i](ef, *fit_params)
         # area_dets.append(numer_det / (1e6 * 2 * np.pi))
         # area_probs.append(numerical_tr_prob)
         mavg.append(moving_average)

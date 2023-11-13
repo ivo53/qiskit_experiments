@@ -102,10 +102,10 @@ def demkov(x, q_freq, delta, eps):
     omega_0 = pulse_shapes.find_rabi_amp("demkov", T, sigma, rb=rb)
 
     s_inf = np.pi * omega_0 * sigma
-    al = (x - q_freq) * 1e6 * sigma
-    bessel11 = np.array([complex(mp.besselj(1/2 + 1j * a / 2, s_inf / (2 * np.pi))) for a in al])
-    bessel21 = np.array([complex(mp.besselj(-1/2 - 1j * a / 2, s_inf / (2 * np.pi))) for a in al])
-    P2 = (s_inf / 4) ** 2 * np.abs(2 * np.real(bessel11 * bessel21)) ** 2 / np.cosh(al * np.pi / 2) ** 2
+    D = (x - q_freq) * 1e6 * sigma / (2 * np.pi)
+    bessel11 = np.array([complex(mp.besselj(1/2 + 1j * a / 2, s_inf / (2 * np.pi))) for a in D])
+    bessel21 = np.array([complex(mp.besselj(-1/2 - 1j * a / 2, s_inf / (2 * np.pi))) for a in D])
+    P2 = (s_inf / 4) ** 2 * np.abs(2 * np.real(bessel11 * bessel21)) ** 2 / np.cosh(D * np.pi / 2) ** 2
     return post_process(P2, eps, delta)
 
 def sech_sq(x, q_freq, delta, eps):
@@ -164,12 +164,22 @@ def double_approx(x, q_freq, delta, eps, tau, pulse_type):
 
 def sin_dappr(x, q_freq, delta, eps, tau):
     return double_approx(x, q_freq, delta, eps, tau, "sin")
+def sin2_dappr(x, q_freq, delta, eps, tau):
+    return double_approx(x, q_freq, delta, eps, tau, "sin2")
+def sin3_dappr(x, q_freq, delta, eps, tau):
+    return double_approx(x, q_freq, delta, eps, tau, "sin3")
+def sin4_dappr(x, q_freq, delta, eps, tau):
+    return double_approx(x, q_freq, delta, eps, tau, "sin4")
+def sin5_dappr(x, q_freq, delta, eps, tau):
+    return double_approx(x, q_freq, delta, eps, tau, "sin5")
 def sech_dappr(x, q_freq, delta, eps, tau):
     return double_approx(x, q_freq, delta, eps, tau, "sech")
 def sech2_dappr(x, q_freq, delta, eps, tau):
     return double_approx(x, q_freq, delta, eps, tau, "sech2")
 def gauss_dappr(x, q_freq, delta, eps, tau):
     return double_approx(x, q_freq, delta, eps, tau, "gauss")
+def demkov_dappr(x, q_freq, delta, eps, tau):
+    return double_approx(x, q_freq, delta, eps, tau, "demkov")
 def lor_dappr(x, q_freq, delta, eps, tau):
     return double_approx(x, q_freq, delta, eps, tau, "lor")
 def lor2_dappr(x, q_freq, delta, eps, tau):
@@ -183,7 +193,7 @@ def rlzsm_approx(x, q_freq, delta, eps, tau, pulse_type):
     # sigma = T / np.pi
     omega_0 = pulse_shapes.find_rabi_amp(pulse_type, T, sigma, rb=rb)
     
-    # sigma /= T
+    # sigma /= T 
     sigma /= T
     omega_0 *= T
     D = (x - q_freq) * 1e6 * T
@@ -231,18 +241,31 @@ def rlzsm_approx(x, q_freq, delta, eps, tau, pulse_type):
         )
     Ul = np.array(Ulin(a(d, alpha), b(d, alpha)).tolist(), dtype=complex)
     Ua = Uad(D, omega_0, tau)
-    U = np.einsum('jiz, jkz, klz -> ilz', Ul, Ua, Ul)
+    if tau < 0.5:
+        U = np.einsum('jiz, jkz, klz -> ilz', Ul, Ua, Ul)
+    else:
+        U = np.einsum('jiz, ilz -> jlz', Ul, Ul)
     P2 = np.abs(U[0, 1]) ** 2
     return post_process(P2, eps, delta)
 
 def sin_rlzsm(x, q_freq, delta, eps, tau):
     return rlzsm_approx(x, q_freq, delta, eps, tau, "sin")
+def sin2_rlzsm(x, q_freq, delta, eps, tau):
+    return rlzsm_approx(x, q_freq, delta, eps, tau, "sin2")
+def sin3_rlzsm(x, q_freq, delta, eps, tau):
+    return rlzsm_approx(x, q_freq, delta, eps, tau, "sin3")
+def sin4_rlzsm(x, q_freq, delta, eps, tau):
+    return rlzsm_approx(x, q_freq, delta, eps, tau, "sin4")
+def sin5_rlzsm(x, q_freq, delta, eps, tau):
+    return rlzsm_approx(x, q_freq, delta, eps, tau, "sin5")
 def sech_rlzsm(x, q_freq, delta, eps, tau):
     return rlzsm_approx(x, q_freq, delta, eps, tau, "sech")
 def sech2_rlzsm(x, q_freq, delta, eps, tau):
     return rlzsm_approx(x, q_freq, delta, eps, tau, "sech2")
 def gauss_rlzsm(x, q_freq, delta, eps, tau):
     return rlzsm_approx(x, q_freq, delta, eps, tau, "gauss")
+def demkov_rlzsm(x, q_freq, delta, eps, tau):
+    return rlzsm_approx(x, q_freq, delta, eps, tau, "demkov")
 def lor_rlzsm(x, q_freq, delta, eps, tau):
     return rlzsm_approx(x, q_freq, delta, eps, tau, "lor")
 def lor2_rlzsm(x, q_freq, delta, eps, tau):
@@ -265,7 +288,7 @@ def sin2(x, q_freq, delta, eps):
         return f_(t) * g_(t)
     tau = quad(f_, -1e-6, 1e-6, epsabs=1e-13, epsrel=1e-5)[0]
     G = quad_vec(fg_, -1e-6, 1e-6, epsabs=1e-13, epsrel=1e-5)[0]
-    print(tau, G)
+    # print(tau, G)
     P2 = np.sin(0.5 * tau * np.sqrt(omega_0 ** 2 + ALPHA["sin2"] * D ** 2)) ** 2 * np.abs(G / tau) ** 2
     return post_process(P2, eps, delta)
 
@@ -378,8 +401,8 @@ def gauss_rzconj(x, q_freq, delta, eps):
         return np.exp(1j * D * t)
     def fg_(t):
         return f_(t) * g_(t)
-    tau = quad(f_, -1e-5, 1e-5, epsabs=1e-13, epsrel=1e-5)[0]
-    G = quad_vec(fg_, -1e-5, 1e-5, epsabs=1e-13, epsrel=1e-5)[0]
+    tau = quad(f_, -T/2, T/2, epsabs=1e-13, epsrel=1e-5)[0]
+    G = quad_vec(fg_, -T/2, T/2, epsabs=1e-13, epsrel=1e-5)[0]
     P2 = np.sin(0.5 * tau * np.sqrt(omega_0 ** 2 + ALPHA["gauss"] * D ** 2)) ** 2 * np.abs(G / tau) ** 2
     return post_process(P2, eps, delta)
 
