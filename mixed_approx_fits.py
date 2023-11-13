@@ -39,17 +39,17 @@ FIT_FUNCTIONS = {
     "lorentzian": [lorentzian],
     "constant": [rabi],
     "rabi": [rabi],
-    "gauss": [gauss, gauss_rzconj], # [gauss_rlzsm, gauss_dappr], #gauss_rzconj,
+    "gauss": [gauss_rlzsm, gauss_dappr], #gauss_rzconj,
     "rz": [sech_rlzsm, sech_dappr], #rz,
     "sech": [sech_rlzsm, sech_dappr], #rz,
-    "demkov": [demkov,],
+    "demkov": [demkov_rlzsm, demkov_dappr],
     "sech2": [sech2_rlzsm, sech2_dappr], #sech_sq,
     "sinc2": [sinc2],
     "sin": [sin_rlzsm, sin_dappr],
-    "sin2": [sin2,],
-    "sin3": [sin3,],
-    "sin4": [sin4,],
-    "sin5": [sin5,],
+    "sin2": [sin2_rlzsm, sin2_dappr],
+    "sin3": [sin3_rlzsm, sin3_dappr],
+    "sin4": [sin4_rlzsm, sin4_dappr],
+    "sin5": [sin5_rlzsm, sin5_dappr],
     "lor": [lor_rlzsm, lor_dappr],
     "lor2": [lor2_rlzsm, lor2_dappr],
     "lor3": [lor3_rlzsm, lor3_dappr],
@@ -62,20 +62,13 @@ def make_all_dirs(path):
         if not os.path.isdir(folder):
             os.mkdir(folder)
 
-def save_dir(date, time, pulse_type):
-    save_dir = os.path.join(
-        file_dir,
-        "plots",
-        f"{backend_name}",
-        "calibration",
-        f"{pulse_type}_pulses",
-        date
-    )
-    folder_name = os.path.join(
-        save_dir,
-        time
-    ).replace("\\", "/")
-    return save_dir, folder_name
+file_dir = os.path.dirname(__file__)
+
+save_dir = os.path.join(
+    file_dir,
+    "paper_ready_plots",
+    "finite_pulses"
+).replace("\\", "/")
 
 def data_folder(date):
     return os.path.join(
@@ -87,7 +80,9 @@ def data_folder(date):
     ).replace("\\", "/")
 
 backend_name = "quito"
-pulse_types = ["sin", "sin2", "sin3", "lor", "lor2", "demkov", "sech", "sech2", "gauss"]
+# pulse_types = ["sin", "lor", "lor2", "demkov", "sech", "sech2", "gauss"]
+
+pulse_types = ["sin"]
 save_fig = 0
 
 times = {
@@ -114,7 +109,7 @@ durations = {
 
 s = 192
 dur = 192 # get_closest_multiple_of_16(round(957.28))
-
+save = 1
 tr_probs, dets = [], []
 
 for pulse_type in pulse_types:
@@ -142,16 +137,80 @@ for pulse_type in pulse_types:
             if file.startswith(t[1]) and file.endswith(".csv"):
                 df = pd.read_csv(os.path.join(data_folder(t[0]), file))
         tr_prob.append(df["transition_probability"].to_numpy())
-        det.append(df["frequency_ghz"].to_numpy() / (1e6 * T))
-    tr_probs.append(tr_prob)
-    dets.append(det)
+        det.append((df["frequency_ghz"].to_numpy()))
+    tr_probs.append(tr_prob[dur_idx])
+    dets.append(det[dur_idx])
+# print(dets)
+dets = np.array(dets) * 1e3
+tr_probs = np.array(tr_probs)
+dets_subtracted = dets - dets.mean(1)[:, None]
+# print(dets_subtracted)
+colors = ["r", "g"]
+params = [
+    [
+        [0.1,0.3,0.2,0.32],
+        [-10,0,0,0.2],
+        [10,1,1,.5]
+    ],
+    [
+        [0.1,0.3,0.2],
+        [-10,0,0],
+        [10,1,1]
+    ]
+]
 
+num_figures = 1
+num_columns = 2 if num_figures % 2 == 0 else 1
+num_rows = int(num_figures / num_columns)
 # Create a 3x3 grid of subplots with extra space for the color bar
-fig = plt.figure(figsize=(12,15), layout="constrained")
-gs0 = fig.add_gridspec(3, 3, width_ratios=[1, 1, 1])
+fig = plt.figure(figsize=(num_columns*12,num_rows*9), layout="constrained")
+gs0 = fig.add_gridspec(3 * num_rows, num_columns, height_ratios=[1, 0.1, 0.1] * num_rows, width_ratios=[1] * num_columns)
 # Generate datetime
 date = datetime.now()
 
-for i in range(3):
-    for j in range(3):
-        pass
+for i in range(num_rows):
+    for j in range(num_columns):
+        d = dets_subtracted[num_columns*i+j]
+        tr = tr_probs[num_columns*i+j]
+        efs, ex_tr_fits, tr_fits = [], [], []
+        current_pulse_shape = pulse_types[num_columns*i+j]
+        ffs = FIT_FUNCTIONS[current_pulse_shape]
+        init_params, lower, higher = params[1] if len(ffs) == 1 else params[0]
+        for ff in ffs:
+            fitparams, tr_fit, perr = fit_function(
+                d * 2 * np.pi, tr, ff, 
+                init_params=init_params,
+                lower=lower,
+                higher=higher,
+                sigma=s, duration=dur,
+                remove_bg=True, area=np.pi
+            )
+            print(fitparams)
+            ef = np.linspace(d[0], d[-1], 5000) * 2 * np.pi
+            extended_tr_fit = ff(ef, *fitparams)
+            efs.append(ef)
+            tr_fits.append(tr_fit)
+            ex_tr_fits.append(extended_tr_fit)
+
+        ax = fig.add_subplot(gs0[3*i, j])
+        ax.scatter(d, tr, marker="p", label="Measured Data")
+        for idx, ex_tr_fit in enumerate(ex_tr_fits):
+            ax.plot((ef - ef.mean()) / (2 * np.pi), ex_tr_fit, color=colors[idx], label=model_name_dict[pulse_types[num_columns*i+j]][idx])
+        ax.legend()
+        if j == 0:
+            ax.set_ylabel("Transition Probability")
+        ax.set_xticklabels([])
+        ax1 = fig.add_subplot(gs0[3*i+1, j])
+        ax2 = fig.add_subplot(gs0[3*i+2, j])
+        ax1.scatter(d, tr_fits[0] - tr, c="r", marker="x")
+        ax1.set_ylim((-0.03, 0.03))
+        ax1.set_xticklabels([])
+        ax2.scatter(d, tr_fits[1] - tr, c="g", marker="x")
+        ax2.set_ylim((-0.03, 0.03))
+        if i == num_rows - 1:
+            ax2.set_xlabel("Detuning (MHz)")
+        
+
+# plt.show()
+if save:
+    plt.savefig(os.path.join(save_dir, f"two_fits_intermixed_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pdf"), format="pdf")
