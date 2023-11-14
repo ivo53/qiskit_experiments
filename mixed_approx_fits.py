@@ -80,10 +80,9 @@ def data_folder(date):
     ).replace("\\", "/")
 
 backend_name = "quito"
-# pulse_types = ["sin", "lor", "lor2", "demkov", "sech", "sech2", "gauss"]
-
-pulse_types = ["sin"]
-save_fig = 0
+pulse_types = ["lor", "lor2", "demkov", "sech", "sech2", "gauss"]
+# pulse_types = ["sin"]
+save = 1
 
 times = {
     "lor_192": [["2023-04-27", "135516"],["2023-04-27", "135524"],["2023-04-27", "135528"],["2023-04-27", "135532"]],
@@ -108,8 +107,7 @@ durations = {
 }
 
 s = 192
-dur = 192 # get_closest_multiple_of_16(round(957.28))
-save = 1
+dur = 320 # get_closest_multiple_of_16(round(957.28))
 tr_probs, dets = [], []
 
 for pulse_type in pulse_types:
@@ -159,7 +157,7 @@ params = [
     ]
 ]
 
-num_figures = 1
+num_figures = len(pulse_types)
 num_columns = 2 if num_figures % 2 == 0 else 1
 num_rows = int(num_figures / num_columns)
 # Create a 3x3 grid of subplots with extra space for the color bar
