@@ -80,8 +80,8 @@ def data_folder(date):
     ).replace("\\", "/")
 
 backend_name = "quito"
-pulse_types = ["lor", "lor2", "demkov", "sech", "sech2", "gauss"]
-# pulse_types = ["sin"]
+# pulse_types = ["lor", "lor2", "demkov", "sech", "sech2", "gauss"]
+pulse_types = ["sin"]
 save = 1
 
 times = {
@@ -107,7 +107,7 @@ durations = {
 }
 
 s = 192
-dur = 320 # get_closest_multiple_of_16(round(957.28))
+dur = 192 # get_closest_multiple_of_16(round(957.28))
 tr_probs, dets = [], []
 
 for pulse_type in pulse_types:
@@ -158,10 +158,12 @@ params = [
 ]
 
 num_figures = len(pulse_types)
-num_columns = 2 if num_figures % 2 == 0 else 1
+num_columns = 3 if num_figures % 3 == 0 else 1
 num_rows = int(num_figures / num_columns)
+
+font_size, width, height = 16, 8, 6
 # Create a 3x3 grid of subplots with extra space for the color bar
-fig = plt.figure(figsize=(num_columns*12,num_rows*9), layout="constrained")
+fig = plt.figure(figsize=(num_columns * width, num_rows * height), layout="constrained")
 gs0 = fig.add_gridspec(3 * num_rows, num_columns, height_ratios=[1, 0.1, 0.1] * num_rows, width_ratios=[1] * num_columns)
 # Generate datetime
 date = datetime.now()
@@ -194,10 +196,9 @@ for i in range(num_rows):
         ax.scatter(d, tr, marker="p", label="Measured Data")
         for idx, ex_tr_fit in enumerate(ex_tr_fits):
             ax.plot((ef - ef.mean()) / (2 * np.pi), ex_tr_fit, color=colors[idx], label=model_name_dict[pulse_types[num_columns*i+j]][idx])
-        ax.legend()
-        if j == 0:
-            ax.set_ylabel("Transition Probability")
+        ax.legend(fontsize=font_size)
         ax.set_xticklabels([])
+        ax.set_yticklabels([item.get_text() for item in ax.get_yticklabels()], fontsize=font_size)
         ax1 = fig.add_subplot(gs0[3*i+1, j])
         ax2 = fig.add_subplot(gs0[3*i+2, j])
         ax1.scatter(d, tr_fits[0] - tr, c="r", marker="x")
@@ -205,10 +206,21 @@ for i in range(num_rows):
         ax1.set_xticklabels([])
         ax2.scatter(d, tr_fits[1] - tr, c="g", marker="x")
         ax2.set_ylim((-0.03, 0.03))
+        if j == 0:
+            ax.set_ylabel("Transition Probability", fontsize=font_size)
+            ax1.set_yticklabels([item.get_text() for item in ax1.get_yticklabels()], fontsize=0.9 * font_size)
+            ax2.set_yticklabels([item.get_text() for item in ax2.get_yticklabels()], fontsize=0.9 * font_size)
+        else:
+            ax1.set_yticklabels([])
+            ax2.set_yticklabels([])
         if i == num_rows - 1:
-            ax2.set_xlabel("Detuning (MHz)")
-        
+            xlabels = [item.get_text() for item in ax2.get_xticklabels()]
+            ax2.set_xticklabels(xlabels, fontsize=font_size)
+            ax2.set_xlabel("Detuning (MHz)", fontsize=font_size)
+        else:
+            ax2.set_xticklabels([])
+
 
 # plt.show()
 if save:
-    plt.savefig(os.path.join(save_dir, f"two_fits_intermixed_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pdf"), format="pdf")
+    plt.savefig(os.path.join(save_dir, f"two_fits_intermixed_dur-{dur}dt_s-{s}dt_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pdf"), format="pdf")
