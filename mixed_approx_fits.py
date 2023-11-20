@@ -70,6 +70,9 @@ save_dir = os.path.join(
     "finite_pulses"
 ).replace("\\", "/")
 
+def mae(vals):
+    return np.mean(np.abs(vals))
+
 def data_folder(date):
     return os.path.join(
         file_dir,
@@ -80,8 +83,8 @@ def data_folder(date):
     ).replace("\\", "/")
 
 backend_name = "quito"
-# pulse_types = ["lor", "lor2", "demkov", "sech", "sech2", "gauss"]
-pulse_types = ["sin"]
+pulse_types = ["lor", "lor2", "demkov", "sech", "sech2", "gauss"]
+# pulse_types = ["sin"]
 save = 1
 
 times = {
@@ -168,7 +171,9 @@ gs0 = fig.add_gridspec(3 * num_rows, num_columns, height_ratios=[1, 0.1, 0.1] * 
 # Generate datetime
 date = datetime.now()
 
+maes, sdrfs = [], []
 for i in range(num_rows):
+    ma, sdr = [], []
     for j in range(num_columns):
         d = dets_subtracted[num_columns*i+j]
         tr = tr_probs[num_columns*i+j]
@@ -176,6 +181,7 @@ for i in range(num_rows):
         current_pulse_shape = pulse_types[num_columns*i+j]
         ffs = FIT_FUNCTIONS[current_pulse_shape]
         init_params, lower, higher = params[1] if len(ffs) == 1 else params[0]
+        sd = []
         for ff in ffs:
             fitparams, tr_fit, perr = fit_function(
                 d * 2 * np.pi, tr, ff, 
@@ -185,7 +191,8 @@ for i in range(num_rows):
                 sigma=s, duration=dur,
                 remove_bg=True, area=np.pi
             )
-            print(fitparams)
+            print(fitparams, perr)
+            sd.append(perr[0] / (2 * np.pi))
             ef = np.linspace(d[0], d[-1], 5000) * 2 * np.pi
             extended_tr_fit = ff(ef, *fitparams)
             efs.append(ef)
@@ -219,8 +226,23 @@ for i in range(num_rows):
             ax2.set_xlabel("Detuning (MHz)", fontsize=font_size)
         else:
             ax2.set_xticklabels([])
-
+        ma.append([mae(tr_fits[0] - tr), mae(tr_fits[1] - tr)])
+        sdr.append(sd)
+    maes.append(ma)
+    sdrfs.append(sdr)
+    
+maes = np.array(maes)
+sdrfs = np.array(sdrfs)
 
 # plt.show()
 if save:
+    mae_csv_file_path1 = os.path.join(save_dir, f"MAE_split_dur-{dur}dt_s-{s}dt_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pdf")
+    mae_csv_file_path2 = os.path.join(save_dir, f"MAE_intermixed_dur-{dur}dt_s-{s}dt_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pdf")
+    sdrf_csv_file_path1 = os.path.join(save_dir, f"SDRF_split_dur-{dur}dt_s-{s}dt_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pdf")
+    sdrf_csv_file_path2 = os.path.join(save_dir, f"SDRF_intermixed_dur-{dur}dt_s-{s}dt_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pdf")
     plt.savefig(os.path.join(save_dir, f"two_fits_intermixed_dur-{dur}dt_s-{s}dt_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pdf"), format="pdf")
+    np.savetxt(mae_csv_file_path1, maes[:, :, 0], delimiter=',')
+    np.savetxt(sdrf_csv_file_path1, sdrfs[:, :, 0], delimiter=',')
+    np.savetxt(mae_csv_file_path2, maes[:, :, 1], delimiter=',')
+    np.savetxt(sdrf_csv_file_path2, sdrfs[:, :, 1], delimiter=',')
+
