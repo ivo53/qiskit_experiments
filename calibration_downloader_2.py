@@ -7,18 +7,22 @@ from datetime import datetime
 
 import numpy as np
 
-backends = [
-    "ibmq_lima", 
-    "ibmq_belem", 
-    "ibmq_quito", 
-    "ibmq_manila", 
-    "ibmq_jakarta", 
-    "ibm_oslo", 
-    "ibm_nairobi", 
-    "ibm_lagos", 
-    "ibm_perth"
-]
+# backends = [
+#     "ibmq_lima", 
+#     "ibmq_belem", 
+#     "ibmq_quito", 
+#     "ibmq_manila", 
+#     "ibmq_jakarta", 
+#     "ibm_oslo", 
+#     "ibm_nairobi", 
+#     "ibm_lagos", 
+#     "ibm_perth"
+# ]
 
+backends = [
+    "ibm_kyoto",
+    "ibm_brisbane"
+]
 def make_all_dirs(path):
     path = path.replace("\\", "/")
     folders = path.split("/")
