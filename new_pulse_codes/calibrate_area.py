@@ -114,7 +114,7 @@ if __name__ == "__main__":
     save = bool(args.save)
     backend_name = backend
     backend = "ibm_" + backend \
-        if backend in ["perth", "lagos", "nairobi", "oslo"] \
+        if backend in ["perth", "lagos", "nairobi", "oslo", "kyoto", "brisbane"] \
             else "ibmq_" + backend
     pulse_dict = {
         "gauss": [pt.Gaussian, pt.LiftedGaussian],
@@ -159,7 +159,6 @@ if __name__ == "__main__":
     MHz = 1.0e6 # Megahertz
     us = 1.0e-6 # Microseconds
     ns = 1.0e-9 # Nanoseconds
-    qubit = 0
     mem_slot = 0
 
     drive_chan = pulse.DriveChannel(qubit)

@@ -36,7 +36,7 @@ pulse_dict = {
     "sin2": [pt.Sine2, pt.Sine2],
     "sin3": [pt.Sine3, pt.Sine3],
     "sin4": [pt.Sine4, pt.Sine4],
-    "sin5": [pt.Sine5, pt.Sine5], 
+    "sin5": [pt.Sine5, pt.Sine5],
     "demkov": [pt.Demkov, pt.LiftedDemkov],
     "drag": [pt.Drag, pt.LiftedDrag],
     "ipN": [pt.InverseParabola, pt.InverseParabola],
@@ -96,7 +96,7 @@ def get_amp_for(area, l, p, x0):
 
 def initialize_backend(backend):
     backend_full_name = "ibm_" + backend \
-        if backend in ["perth", "lagos", "nairobi", "oslo"] \
+        if backend in ["perth", "lagos", "nairobi", "oslo", "kyoto", "brisbane"] \
             else "ibmq_" + backend
     drive_chan = pulse.DriveChannel(qubit)
     # meas_chan = pulse.MeasureChannel(qubit)
@@ -257,7 +257,7 @@ if __name__ == "__main__":
     print(f"Qubit {qubit} has an estimated frequency of {center_frequency_Hz / GHz} GHz.")
 
     backend_full_name = "ibm_" + backend_name \
-        if backend_name in ["perth", "lagos", "nairobi", "oslo"] \
+        if backend_name in ["perth", "lagos", "nairobi", "oslo", "kyoto", "brisbane"] \
             else "ibmq_" + backend_name
 
     frequency_span_Hz = frequency_span * MHz #5 * MHz #if cut_param < 1 els e 1.25 * MHz
@@ -294,7 +294,7 @@ if __name__ == "__main__":
         ) for a in amplitudes for f in frequencies_Hz]
 
     num_circs = len(circs)
-    num_shots = 1024
+    # num_shots = 1024
 
     transition_probability, job_ids = run_jobs(circs, backend, duration, num_shots_per_exp=num_shots)
 

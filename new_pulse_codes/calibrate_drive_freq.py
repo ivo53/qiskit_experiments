@@ -122,7 +122,7 @@ if __name__ == "__main__":
     backend = args.backend
     backend_name = backend
     backend = "ibm_" + backend \
-        if backend in ["perth", "lagos", "nairobi", "oslo"] \
+        if backend in ["perth", "lagos", "nairobi", "oslo", "kyoto", "brisbane"] \
             else "ibmq_" + backend
     
     ## create folder where plots are saved
@@ -186,8 +186,8 @@ if __name__ == "__main__":
                               num_experiments)
     dt = backend_config.dt
     # print(dt)
-    amp = -np.log(1 - np.pi / l) / p + x0
-
+    # amp = -np.log(1 - np.pi / l) / p + x0
+    amp = 0.06
     def add_circ(amp, duration, sigma, freq, qubit=0):
         # amp = Parameter("amp")
         # duration = 16 * 100
