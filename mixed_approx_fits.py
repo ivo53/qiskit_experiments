@@ -1,4 +1,5 @@
 import os
+import re
 import pickle
 from datetime import datetime
 import numpy as np
@@ -83,8 +84,8 @@ def data_folder(date):
     ).replace("\\", "/")
 
 backend_name = "quito"
-pulse_types = ["lor", "lor2", "demkov", "sech", "sech2", "gauss"]
-# pulse_types = ["sin"]
+# pulse_types = ["lor", "lor2", "demkov", "sech", "sech2", "gauss"]
+pulse_types = ["sin"]
 save = 1
 
 times = {
@@ -204,8 +205,6 @@ for i in range(num_rows):
         for idx, ex_tr_fit in enumerate(ex_tr_fits):
             ax.plot((ef - ef.mean()) / (2 * np.pi), ex_tr_fit, color=colors[idx], label=model_name_dict[pulse_types[num_columns*i+j]][idx])
         ax.legend(fontsize=font_size)
-        ax.set_xticklabels([])
-        ax.set_yticklabels([item.get_text() for item in ax.get_yticklabels()], fontsize=font_size)
         ax1 = fig.add_subplot(gs0[3*i+1, j])
         ax2 = fig.add_subplot(gs0[3*i+2, j])
         ax1.scatter(d, tr_fits[0] - tr, c="r", marker="x")
@@ -213,6 +212,16 @@ for i in range(num_rows):
         ax1.set_xticklabels([])
         ax2.scatter(d, tr_fits[1] - tr, c="g", marker="x")
         ax2.set_ylim((-0.03, 0.03))
+        xlabels = [item.get_text() for item in ax.get_xticklabels()]
+        minor_xlabels = np.linspace(
+            float(re.sub(r'[^\x00-\x7F]+','-', xlabels[0])), 
+            float(re.sub(r'[^\x00-\x7F]+','-', xlabels[-1])), 
+            (len(xlabels) - 1) * 3 + 1
+        )
+        print(xlabels, minor_xlabels)
+        ax.set_xticks(minor_xlabels, minor="True")
+        ax.set_xticklabels([])
+        ax.set_yticklabels([item.get_text() for item in ax.get_yticklabels()], fontsize=font_size)
         if j == 0:
             ax.set_ylabel("Transition Probability", fontsize=font_size)
             ax1.set_yticklabels([item.get_text() for item in ax1.get_yticklabels()], fontsize=0.9 * font_size)
@@ -221,11 +230,12 @@ for i in range(num_rows):
             ax1.set_yticklabels([])
             ax2.set_yticklabels([])
         if i == num_rows - 1:
-            xlabels = [item.get_text() for item in ax2.get_xticklabels()]
             ax2.set_xticklabels(xlabels, fontsize=font_size)
             ax2.set_xlabel("Detuning (MHz)", fontsize=font_size)
         else:
             ax2.set_xticklabels([])
+        ax.grid(which='minor', alpha=0.2)
+        ax.grid(which='major', alpha=0.6)
         ma.append([mae(tr_fits[0] - tr), mae(tr_fits[1] - tr)])
         sdr.append(sd)
     maes.append(ma)
@@ -236,13 +246,14 @@ sdrfs = np.array(sdrfs)
 
 # plt.show()
 if save:
-    mae_csv_file_path1 = os.path.join(save_dir, f"MAE_split_dur-{dur}dt_s-{s}dt_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pdf")
-    mae_csv_file_path2 = os.path.join(save_dir, f"MAE_intermixed_dur-{dur}dt_s-{s}dt_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pdf")
-    sdrf_csv_file_path1 = os.path.join(save_dir, f"SDRF_split_dur-{dur}dt_s-{s}dt_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pdf")
-    sdrf_csv_file_path2 = os.path.join(save_dir, f"SDRF_intermixed_dur-{dur}dt_s-{s}dt_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pdf")
+    mae_csv_file_path1 = os.path.join(save_dir, f"MAE_split_dur-{dur}dt_s-{s}dt_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.txt")
+    mae_csv_file_path2 = os.path.join(save_dir, f"MAE_intermixed_dur-{dur}dt_s-{s}dt_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.txt")
+    sdrf_csv_file_path1 = os.path.join(save_dir, f"SDRF_split_dur-{dur}dt_s-{s}dt_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.txt")
+    sdrf_csv_file_path2 = os.path.join(save_dir, f"SDRF_intermixed_dur-{dur}dt_s-{s}dt_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.txt")
+
     plt.savefig(os.path.join(save_dir, f"two_fits_intermixed_dur-{dur}dt_s-{s}dt_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pdf"), format="pdf")
+
     np.savetxt(mae_csv_file_path1, maes[:, :, 0], delimiter=',')
     np.savetxt(sdrf_csv_file_path1, sdrfs[:, :, 0], delimiter=',')
     np.savetxt(mae_csv_file_path2, maes[:, :, 1], delimiter=',')
     np.savetxt(sdrf_csv_file_path2, sdrfs[:, :, 1], delimiter=',')
-
