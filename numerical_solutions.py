@@ -195,16 +195,16 @@ def ndsolve_lorentz_map(
 #     num_t=1000,
 #     lor_power=1
 # )
-# 
-# d_range, A_range, tr_probs = ndsolve_lorentz_map(   
-#     (24 + 8/9) * 1e-9, (704) * 1e-9,
-#     -12e6, 60, 12e6,    
-#     num_t=1000,
-#     A_start=0,
-#     A_num=100,
-#     lor_power=1
-# )
-# fig, ax = plt.subplots(1,1)
-# cmap = plt.cm.get_cmap('cividis')  # Choose a colormap
-# im = ax.pcolormesh(d_range, A_range, tr_probs, vmin=0, vmax=1, cmap=cmap)
-# plt.show()
+
+d_range, A_range, tr_probs = ndsolve_lorentz_map(   
+    (24 + 8/9) * 1e-9, (704) * 1e-9,
+    -60e6, 61, 60e6,    
+    num_t=1000,
+    A_start=0,
+    A_num=100,
+    lor_power=1
+)
+fig, ax = plt.subplots(1,1)
+cmap = plt.cm.get_cmap('cividis')  # Choose a colormap
+im = ax.pcolormesh(d_range, A_range, tr_probs, vmin=0, vmax=1, cmap=cmap)
+plt.show()

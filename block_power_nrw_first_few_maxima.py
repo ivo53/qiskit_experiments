@@ -115,10 +115,10 @@ markers = [
     "P"
 ]
 sizes = 1.2 * np.array([30,35,35,35,35])
-intervals_det = [2.5, 2.5, 2.5, 6, 6, 8]
-intervals_det_minor = [0.5, 0.5, 0.5, 1.2, 1.2, 1.6]
-# intervals_det = [15, 15, 15, 35, 35, 50]
-# intervals_det_minor = [3, 3, 3, 7, 7, 10]
+# intervals_det = [2.5, 2.5, 2.5, 6, 6, 8]
+# intervals_det_minor = [0.5, 0.5, 0.5, 1.2, 1.2, 1.6]
+intervals_det = [15, 15, 15, 35, 35, 50]
+intervals_det_minor = [3, 3, 3, 7, 7, 10]
 
 ## create folder where plots are saved
 file_dir = os.path.dirname(__file__)
@@ -161,7 +161,7 @@ for i, k in times.items():
     with open(os.path.join(data_folder(k[0], k[1], i), files[0]), 'rb') as f2:
         amp = l * (1 - np.exp(-p * (pickle.load(f2) - x0))) / (1e6 * T)
     with open(os.path.join(data_folder(k[0], k[1], i), files[1]), 'rb') as f3:
-        det = pickle.load(f3) / 1e6
+        det = pickle.load(f3) * 2 * np.pi/ 1e6
     tr_probs.append(tr_prob)
     amps.append(amp)
     dets.append(det)
@@ -177,6 +177,45 @@ if include_35:
     pulse_names.pop(0)
     fit_funcs.pop(0)
     powers.pop(0)
+
+
+initial = [[[7.39387630e-01, 3.32448420e+00, 3.52987554e+07, 4.95231651e+07, 4.04510782e-01, 5.57783505e-01],
+[1.22213543e-01, 1.07754576e+00, 3.19285450e+07 ,2.01938417e+07,
+ 4.73148229e-01 ,4.87233069e-01],
+[-4.78643408e-01,  4.08591824e+00 , 2.75889142e+07,  3.77212479e+07,
+  3.78151352e-01,  5.79483946e-01]],
+[[7.36535691e-01, 1.03643143e+00, 2.63768868e+07, 8.74417445e+06,
+ 4.73892849e-01, 4.93638563e-01],
+[-1.12407126e-02, -1.56136560e+00,  3.31036477e+07,  4.12817667e+07,
+  6.06495588e-01,  3.60342462e-01],
+[-2.58051944e-01, -4.49488621e+00 , 3.30615384e+07,  4.47501618e+07,
+  9.68302963e-01,  1.61334854e-11]],
+[[ 2.37707154e-01, -1.67944023e+00 , 8.70552870e+06,  1.44486380e+07,
+  5.08058974e-01,  4.64125136e-01],
+[-1.75365316e-01, -3.55457923e+00 , 2.81601879e+08,  1.32092672e+07,
+  1.10883543e-01,  8.53011891e-01],
+[-1.65533696e-01, -4.94361655e-01 , 1.41017205e+07,  1.02478332e+07,
+  4.94737037e-01,  4.78277979e-01]],
+[[3.62640373e-01, 5.69206563e-01, 3.57851359e+07, 1.58302413e+07,
+ 4.66835073e-01, 4.93184058e-01],
+[-2.49381251e-01, -3.00468219e-01,  1.56248754e+08,  1.01955982e+07,
+  3.82641933e-01,  5.79208632e-01],
+[ 2.31643658e-02, -8.01753765e-01,  1.09697196e+07,  8.09967524e+06,
+  4.89760105e-01,  4.88432296e-01]],
+[[ 3.92035232e-01, -2.49133021e+00 , 1.04062444e+07,  1.53150060e+07,
+  4.90219168e-01,  4.85224204e-01],
+[-8.47314635e-02, -1.27161648e-01,  3.00391574e+07,  6.64032126e+06,
+  4.54706902e-01,  5.00646631e-01],
+[ 3.42120701e-02, -8.55793563e-01 , 6.64367484e+06 , 4.93892857e+06,
+  4.91221193e-01,  4.93140842e-01]],
+[[1.46912524e-01, 5.61873623e-01, 3.31302121e+07, 1.01440461e+07,
+ 4.59571129e-01, 5.17216946e-01],
+[-7.84020915e-02 ,-1.81724683e-01,  2.84358178e+07,  5.33481738e+06,
+  4.27660356e-01,  5.13259337e-01],
+[0, 0.5, 1e8, 2e8, 0.4, 0.5],]]
+# init = [0, 0.5, 1e8, 2e8, 0.4, 0.5]
+initial_min = [-30, -10, 0, 0, 0, 0]
+initial_max = [30, 10, 1e9, 1e9, 1, 1]
 
 third_curve = 3
 # FITS (num/analytical)
@@ -196,25 +235,18 @@ for i in range(6):
         #     pulse_area=(2*j+1) * np.pi,
         #     lor_power=powers[i]
         # ) 
-        initial = [0.1, 1, 1e6, 5e6, 0.2, 0.5]
-        initial_min = [-5, -5, 0, 0, 0, 0]
-        initial_max = [5, 5, 1e9, 1e9, 1, 1]
-        
-        if i==5 and j==1:
-            initial = [0.1, 1, 1e6, 10e6, 0.2, 0.5]
-            initial_min = [-5, -5, 0, 0, 0, 0]
-            initial_max = [5, 5, 1e9, 1e9, 1, 1]
-
+        init = initial[i][np.amin([2, j])]
         fit_params, y_fit, err = fit_function(
             dets[i],
             tr_probs[i][1::2][j], 
             fit_funcs[i],
-            initial, initial_min, initial_max,
+            init, initial_min, initial_max,
             params[pulse_names[i]][0] / (2e-9/9),
             params[pulse_names[i]][1] / (2e-9/9),
             area=(2 * j + 1) * np.pi,
             remove_bg=False
         )
+        # print(fit_params)
         # window_size = 3
         # moving_average = np.convolve(tr_probs[i][1::2][j], np.ones(window_size), mode='valid')/window_size
         ef = np.linspace(dets[i][0], dets[i][-1], 5000)
@@ -254,7 +286,7 @@ for i in range(3):
         max_det = intervals_det[2*i+j] * np.floor(dets[2*i+j][-1] / intervals_det[2*i+j])        
         max_det_minor = intervals_det_minor[2*i+j] * np.floor(dets[2*i+j][-1] / intervals_det_minor[2*i+j])        
         sigma_temp = params[pulse_names[2*i+j]][0] * 10**6
-        det_limit = 0.14
+        det_limit = 0.8#14
         plots_fwhm, plots_fwhm_abs = [], []
         for idx, order, t in zip([0,1,2], [0,1,third_curve], tr_probs[2*i+j][1::2][[0,1,third_curve]]):
             ax.scatter(dets[2*i+j] * sigma_temp, t, c=colors[idx],linewidth=0,marker=markers[idx], s=sizes[idx], label=f"{2*order+1}$\pi$")
