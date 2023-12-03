@@ -19,9 +19,8 @@ def make_all_dirs(path):
 backend_name = "manila"
 # pulse_type = "lor"
 # pulse_type2 = "lorentz"
-# fixed_detuning = [30 / (2 * np.pi), 25 / (2 * np.pi), 12.5 / (2 * np.pi), 
-#                   12.5 / (2 * np.pi), 12.5 / (2 * np.pi), 12.5 / (2 * np.pi)] # MHz
-fixed_detuning = [5, 4, 2, 2, 2, 2] # MHz
+fixed_detuning = [30, 25, 12.5, 12.5, 12.5, 12.5] # MHz
+# fixed_detuning = [5, 4, 2, 2, 2, 2] # MHz
 intervals = [200, 150, 100, 100, 100, 100]
 save_osc, save_map = 1, 0
 times = {

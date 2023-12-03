@@ -90,6 +90,7 @@ det[6] = det[6][20:-20]
 
 intervals_amp = [200, 100, 100, 100, 100, 100, 100, 100, 100]
 intervals_det = [50, 20, 16, 10, 6, 6, 6, 6, 6]
+# intervals_det = [300, 125, 100, 60, 35, 35, 35, 35, 35]
 # Set up the backend to use the EPS file format
 # plt.switch_backend('ps')
 
