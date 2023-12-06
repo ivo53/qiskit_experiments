@@ -5,7 +5,7 @@ SIZE_LIMIT = 250000
 CIRC_LIMIT = 100
 def run_jobs(circs, backend, duration, num_shots_per_exp=1024):
     num_exp = len(circs)
-    num_shots_per_exp = 1024
+    # num_shots_per_exp = 1024
     size = duration * num_exp * num_shots_per_exp
 
     job_ids = []
@@ -57,9 +57,12 @@ def run_jobs(circs, backend, duration, num_shots_per_exp=1024):
             )
             num_queued += 1
             # wait if more than three jobs are queued
-            if num_queued > 3:
+            if num_queued >= 3:
                 try:
                     first_job_status = jobs[-2].status() 
+                    while current_job.status() is JobStatus.INITIALIZING or \
+                            current_job.status() is JobStatus.VALIDATING:
+                        time.sleep(30)
                     while first_job_status is JobStatus.QUEUED:
                         time.sleep(30)
                     while current_job.status() is JobStatus.CANCELLED:
