@@ -1,5 +1,6 @@
 import time
 from qiskit.providers.jobstatus import JobStatus
+from qiskit_ibm_provider.job import IBMJobApiError
 
 SIZE_LIMIT = 250000
 CIRC_LIMIT = 100
