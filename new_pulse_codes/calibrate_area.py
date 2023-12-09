@@ -113,9 +113,9 @@ if __name__ == "__main__":
     beta = args.beta
     save = bool(args.save)
     backend_name = backend
-    backend = "ibm_" + backend \
-        if backend in ["perth", "lagos", "nairobi", "oslo", "kyoto", "brisbane"] \
-            else "ibmq_" + backend
+    backend = "ibm_" + backend
+        # if backend in ["perth", "lagos", "nairobi", "oslo", "kyoto", "brisbane"] \
+        #     else "ibmq_" + backend
     pulse_dict = {
         "gauss": [pt.Gaussian, pt.LiftedGaussian],
         "lor": [pt.Lorentzian, pt.LiftedLorentzian],
@@ -263,7 +263,7 @@ if __name__ == "__main__":
                 )
             pulse.play(pulse_played, drive_chan)
         pi_gate = Gate("rabi", 1, [])
-        base_circ = QuantumCircuit(5, 1)
+        base_circ = QuantumCircuit(qubit+1, 1)
         base_circ.append(pi_gate, [qubit])
         base_circ.measure(qubit, 0)
         base_circ.add_calibration(pi_gate, (qubit,), sched, [])

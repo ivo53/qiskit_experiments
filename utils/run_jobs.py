@@ -60,20 +60,21 @@ def run_jobs(circs, backend, duration, num_shots_per_exp=1024):
             # wait if more than three jobs are queued
             if num_queued >= 3:
                 try:
-                    first_job_status = jobs[-2].status() 
-                    while current_job.status() is JobStatus.INITIALIZING or \
-                            current_job.status() is JobStatus.VALIDATING:
-                        time.sleep(30)
-                    while first_job_status is JobStatus.QUEUED:
-                        time.sleep(30)
-                    while current_job.status() is JobStatus.CANCELLED:
+                    while jobs[-2].status() is JobStatus.INITIALIZING or \
+                            jobs[-2].status() is JobStatus.VALIDATING:
+                        time.sleep(10)
+                    while jobs[-2].status() is JobStatus.QUEUED or \
+                          jobs[-2].status() is JobStatus.RUNNING:
+                        time.sleep(10)
+                    while current_job.status() is JobStatus.ERROR or\
+                          current_job.status() is JobStatus.CANCELLED:
                         current_job = backend.run(
                             circs_part,
                             shots=num_shots_per_exp
                         )
                         while current_job.status() is JobStatus.INITIALIZING or \
                               current_job.status() is JobStatus.VALIDATING:
-                            time.sleep(30)
+                            time.sleep(10)
                     num_queued -= 1
                 except IBMJobApiError as ex:
                     print("Error encountered: {}".format(ex))
