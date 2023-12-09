@@ -22,6 +22,7 @@ import numpy as np
 backends = [
     "ibm_kyoto",
     "ibm_brisbane"
+    "ibm_osaka"
 ]
 def make_all_dirs(path):
     path = path.replace("\\", "/")

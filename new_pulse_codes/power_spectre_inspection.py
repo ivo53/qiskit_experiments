@@ -95,9 +95,7 @@ def get_amp_for(area, l, p, x0):
     return -np.log(1 - area / l) / p + x0
 
 def initialize_backend(backend):
-    backend_full_name = "ibm_" + backend \
-        if backend in ["perth", "lagos", "nairobi", "oslo", "kyoto", "brisbane"] \
-            else "ibmq_" + backend
+    backend_full_name = "ibm_" + backend
     drive_chan = pulse.DriveChannel(qubit)
     # meas_chan = pulse.MeasureChannel(qubit)
     # acq_chan = pulse.AcquireChannel(qubit)
@@ -108,7 +106,7 @@ def initialize_backend(backend):
     print(f"Using {backend_name} backend.")
     backend_defaults = backend.defaults()
     backend_config = backend.configuration()
-
+    print("Warning: dt =",backend_config.dt)
     num_qubits = backend_config.n_qubits
 
     q_freq = [backend_defaults.qubit_freq_est[q] for q in range(num_qubits)]
@@ -162,7 +160,7 @@ def add_circ(backend, drive_chan, pulse_type, amp, duration, sigma, remove_bg, f
             )
         pulse.play(pulse_played, drive_chan)
     pi_gate = Gate("power_spectre", 1, [])
-    base_circ = QuantumCircuit(5, 1)
+    base_circ = QuantumCircuit(qubit+1, 1)
     base_circ.append(pi_gate, [qubit])
     base_circ.measure(qubit, 0)
     base_circ.add_calibration(pi_gate, (qubit,), sched, [])
@@ -256,9 +254,9 @@ if __name__ == "__main__":
 
     print(f"Qubit {qubit} has an estimated frequency of {center_frequency_Hz / GHz} GHz.")
 
-    backend_full_name = "ibm_" + backend_name \
-        if backend_name in ["perth", "lagos", "nairobi", "oslo", "kyoto", "brisbane"] \
-            else "ibmq_" + backend_name
+    backend_full_name = "ibm_" + backend_name
+        # if backend_name in ["perth", "lagos", "nairobi", "oslo", "kyoto", "brisbane"] \
+        #     else "ibmq_" + backend_name
 
     frequency_span_Hz = frequency_span * MHz #5 * MHz #if cut_param < 1 els e 1.25 * MHz
     frequency_step_Hz = np.round(frequency_span_Hz / resolution[1], 3) #(1/4) * MHz
@@ -271,7 +269,7 @@ if __name__ == "__main__":
                                 frequency_max / GHz, 
                                 resolution[1])
 
-    a_max = get_amp_for(9.5 * np.pi, l, p, x0)
+    a_max = get_amp_for(10 * np.pi, l, p, x0)
     amplitudes = np.linspace(0.001, a_max, resolution[0]).round(3)
 
     assert len(amplitudes) == resolution[0], "amplitudes error"

@@ -10,6 +10,7 @@ from scipy.optimize import curve_fit
 
 resonant_frequencies = {
     "manila": 4962284031.287086,
+    "osaka": 5019850020.72268,
 }
 def make_all_dirs(path):
     path = path.replace("\\", "/")
