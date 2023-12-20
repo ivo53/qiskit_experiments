@@ -95,68 +95,71 @@ intervals_det = [300, 125, 100, 60, 35, 35, 35, 35, 35]
 # plt.switch_backend('ps')
 
 # Create a 3x3 grid of subplots with extra space for the color bar
-fig = plt.figure(figsize=(12,10), layout="constrained")
-gs = fig.add_gridspec(3, 4, width_ratios=[1, 1, 1, 0.1])
+fig = plt.figure(figsize=(13.6,6), layout="constrained")
+gs = fig.add_gridspec(1, 2, width_ratios=[1, 1])
 
 # Generate some random data for the color maps
 data = np.random.rand(10, 10)
 
 # Iterate over each subplot and plot the color map
-for i in range(3):
-    for j in range(3):
-        max_amp = intervals_amp[3*i+j] * np.floor(amp[::-1][3*i+j][-1] / intervals_amp[3*i+j])
-        max_det = intervals_det[3*i+j] * np.floor(det[::-1][3*i+j][-1] / intervals_det[3*i+j])
-        # max_amp_minor = intervals[3*i+j] / 4 * np.ceil(amp[3*i+j][-1] / (intervals[3*i+j] / 4))
+for idx, (i, j) in enumerate([[0, 0], [2, 2]]):
+    max_amp = intervals_amp[3*i+j] * np.floor(amp[::-1][3*i+j][-1] / intervals_amp[3*i+j])
+    max_det = intervals_det[3*i+j] * np.floor(det[::-1][3*i+j][-1] / intervals_det[3*i+j])
+    # max_amp_minor = intervals[3*i+j] / 4 * np.ceil(amp[3*i+j][-1] / (intervals[3*i+j] / 4))
 
-        ax = fig.add_subplot(gs[i, j])
-        # cmap = plt.cm.get_cmap('cividis')  # Choose a colormap
-        # im = ax.pcolormesh(det[::-1][3*i+j], amp[::-1][3*i+j], tr_prob[::-1][3*i+j], vmin=0, vmax=1, cmap=cmap)
-        cmap = plt.get_cmap('cividis')
-        
-        # Plot the color map
-        im = ax.imshow(tr_prob[::-1][3*i+j], cmap=cmap, aspect="auto", origin="lower", vmin=0, vmax=1)
+    ax = fig.add_subplot(gs[0, idx])
+    # cmap = plt.cm.get_cmap('cividis')  # Choose a colormap
+    # im = ax.pcolormesh(det[::-1][3*i+j], amp[::-1][3*i+j], tr_prob[::-1][3*i+j], vmin=0, vmax=1, cmap=cmap)
+    cmap = plt.get_cmap('twilight_r')
+    
+    # Plot the color map
+    im = ax.imshow(tr_prob[::-1][3*i+j], cmap=cmap, aspect="auto", origin="lower", vmin=0, vmax=1)
 
-        # Add a rectangle in the top right corner
-        rect = Rectangle((0.775, 0.85), 0.21, 0.15, transform=ax.transAxes,
-                        color='#DEDA8D', alpha=0.7)
-        ax.add_patch(rect)
-        
-        # Add text inside the rectangle
-        text = str(list(times.keys())[::-1][3*i+j]) + "%"
-        if (i==2 and j!=2) or (i==1 and j!=0):
-            text = " "+text
-        ax.text(0.78, 0.875, text, transform=ax.transAxes,
-            color='black', fontsize=18)
+    # # Add a rectangle in the top right corner
+    # rect = Rectangle((0.775, 0.85), 0.21, 0.15, transform=ax.transAxes,
+    #                 color='#DEDA8D', alpha=0.7)
+    # ax.add_patch(rect)
+    
+    # # Add text inside the rectangle
+    # text = str(list(times.keys())[::-1][3*i+j]) + "%"
+    # if (i==2 and j!=2) or (i==1 and j!=0):
+    #     text = " " + text
+    # ax.text(0.78, 0.875, text, transform=ax.transAxes,
+    #     color='black', fontsize=18)
 
-        xticks = np.linspace(
-            len(tr_prob[::-1][3*i+j][0])-int(np.round(max_det / det[::-1][3*i+j][-1] * (len(tr_prob[::-1][3*i+j][0]) / 2 - 1) + len(tr_prob[::-1][3*i+j][0]) / 2)), 
-            int(np.round(max_det / det[::-1][3*i+j][-1] * (len(tr_prob[::-1][3*i+j][0]) / 2 - 1) + len(tr_prob[::-1][3*i+j][0]) / 2)), 
-            int(2 * max_det / intervals_det[3*i+j] + 1)
-        )
-        print(xticks)
-        print(max_det)
-        xticklabels = np.round(np.arange(-max_det, max_det + 1e-2, intervals_det[3*i+j]), 1).astype(int)
-        ax.set_xticks(xticks)
-        ax.set_xticklabels(xticklabels, fontsize=18)
+    xticks = np.linspace(
+        len(tr_prob[::-1][3*i+j][0])-int(np.round(max_det / det[::-1][3*i+j][-1] * (len(tr_prob[::-1][3*i+j][0]) / 2 - 1) + len(tr_prob[::-1][3*i+j][0]) / 2)), 
+        int(np.round(max_det / det[::-1][3*i+j][-1] * (len(tr_prob[::-1][3*i+j][0]) / 2 - 1) + len(tr_prob[::-1][3*i+j][0]) / 2)), 
+        int(2 * max_det / intervals_det[3*i+j] + 1)
+    )
+    # print(xticks)
+    # print(max_det)
+    xticklabels = np.round(np.arange(-max_det, max_det + 1e-2, intervals_det[3*i+j]), 1).astype(int)
+    # ax.set_xticks(xticks)
+    # ax.set_xticklabels([])#xticklabels, fontsize=18)
 
-        yticks = np.linspace(
-            0, 
-            int(np.round(max_amp / amp[::-1][3*i+j][-1] * (len(tr_prob[::-1][3*i+j]) - 1))), 
-            int(max_amp / intervals_amp[3*i+j] + 1)
-        )
-        yticklabels = np.round(np.arange(0, max_amp + 1, intervals_amp[3*i+j]), 0).astype(int)
-        ax.set_yticks(yticks)
-        ax.set_yticklabels((yticklabels / 100).astype(int), fontsize=18)
-        if i == 2:
-            ax.set_xlabel('Detuning (MHz)', fontsize=18)
-        if j == 0:
-            ax.set_ylabel('Peak Rabi Freq. (100 MHz)', fontsize=16)
+    yticks = np.linspace(
+        0, 
+        int(np.round(max_amp / amp[::-1][3*i+j][-1] * (len(tr_prob[::-1][3*i+j]) - 1))), 
+        int(max_amp / intervals_amp[3*i+j] + 1)
+    )
+    yticklabels = np.round(np.arange(0, max_amp + 1, intervals_amp[3*i+j]), 0).astype(int)
+    # ax.set_yticks(yticks)
+    # ax.set_yticklabels([])#(yticklabels).astype(int), fontsize=18)
+    # if i == 2:
+    # ax.set_xlabel('Detuning (MHz)', fontsize=18)
+    # if j == 0:
+    #     ax.set_ylabel('Peak Rabi Freq. (MHz)', fontsize=16)
+    plt.axis('off')
+fig.patch.set_facecolor('white')
+fig.patch.set_alpha(1)
 
-# Create a separate subplot for the color bar
-cax = fig.add_subplot(gs[:, 3])
-cbar = fig.colorbar(im, cax=cax)
-# cbar.set_label('Transition probability', fontsize=15)
-cbar.ax.tick_params(labelsize=18)
+
+# # Create a separate subplot for the color bar
+# cax = fig.add_subplot(gs[:, 3])
+# cbar = fig.colorbar(im, cax=cax)
+# # cbar.set_label('Transition probability', fontsize=15)
+# cbar.ax.tick_params(labelsize=18)
 
 # Adjust the layout
 # fig.tight_layout()
