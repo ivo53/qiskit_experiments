@@ -2,7 +2,7 @@ import time
 from qiskit.providers.jobstatus import JobStatus
 
 SIZE_LIMIT = 250000
-CIRC_LIMIT = 100
+CIRC_LIMIT = 300
 def run_jobs(circs, backend, duration, num_shots_per_exp=1024):
     num_exp = len(circs)
     # num_shots_per_exp = 1024
