@@ -16,7 +16,7 @@ def make_all_dirs(path):
             os.mkdir(folder)
 
 backend_name = "kyoto"
-save_fig = 1
+save_fig = 0
 
 times = {
     "sq": ["2023-12-08", "175156"],
@@ -130,6 +130,7 @@ for idx in range(2):
     # if i == 2:
     ax.set_xlabel('Detuning (MHz)', fontsize=18)
     if idx == 0:
+        ax.set_xlim((det[1][0], det[1][-1]))
         ax.set_ylabel('Peak Rabi Freq. (MHz)', fontsize=16)
 # fig.patch.set_facecolor('white')
 # fig.patch.set_alpha(1)
