@@ -262,15 +262,18 @@ if __name__ == "__main__":
 
     frequency_span_Hz = frequency_span * MHz #5 * MHz #if cut_param < 1 els e 1.25 * MHz
     frequency_step_Hz = np.round(frequency_span_Hz / resolution[1], 3) #(1/4) * MHz
-
+    
     # We will sweep 20 MHz above and 20 MHz below the estimated frequency
     frequency_min = center_frequency_Hz - frequency_span_Hz / 2
     frequency_max = center_frequency_Hz + frequency_span_Hz / 2
     # Construct an np array of the frequencies for our experiment
-    frequencies_GHz = np.linspace(frequency_min / GHz, 
-                                frequency_max / GHz, 
-                                resolution[1])
-
+    frequencies_GHz = np.round(
+        np.linspace(
+            frequency_min / GHz,
+            frequency_max / GHz,
+            resolution[1]
+        ), 3)
+    print(frequencies_GHz)
     a_max = get_amp_for(9.5 * np.pi, l, p, x0)
     amplitudes = np.linspace(0.001, a_max, resolution[0]).round(3)
 
