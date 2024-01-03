@@ -84,8 +84,9 @@ def data_folder(date):
     ).replace("\\", "/")
 
 backend_name = "quito"
-# pulse_types = ["lor", "lor2", "demkov", "sech", "sech2", "gauss"]
-pulse_types = ["sin"]
+pulse_types = ["lor", "lor2", "demkov", "sech", "sech2", "gauss"]
+# pulse_types = ["sin"]
+save = 0
 save = 1
 
 times = {
@@ -212,15 +213,29 @@ for i in range(num_rows):
         ax1.set_xticklabels([])
         ax2.scatter(d, tr_fits[1] - tr, c="g", marker="x")
         ax2.set_ylim((-0.03, 0.03))
+        ax.set_xlim((-80, 80))
+        ax.set_ylim((-0.02,1))
+        ax.set_yticks(np.arange(0, 1.01, 0.2))
+        ax1.set_xlim((-80, 80))
+        ax2.set_xlim((-80, 80))
         xlabels = [item.get_text() for item in ax.get_xticklabels()]
+        ylabels = [item.get_text() for item in ax.get_yticklabels()]
         minor_xlabels = np.linspace(
             float(re.sub(r'[^\x00-\x7F]+','-', xlabels[0])), 
             float(re.sub(r'[^\x00-\x7F]+','-', xlabels[-1])), 
-            (len(xlabels) - 1) * 3 + 1
+            (len(xlabels) - 1) * 2 + 1
+        )
+        minor_ylabels = np.linspace(
+            float(re.sub(r'[^\x00-\x7F]+','-', ylabels[0])), 
+            float(re.sub(r'[^\x00-\x7F]+','-', ylabels[-1])), 
+            (len(ylabels) - 1) * 2 + 1
         )
         print(xlabels, minor_xlabels)
         ax.set_xticks(minor_xlabels, minor="True")
+        ax1.set_xticks(minor_xlabels, minor="True")
+        ax2.set_xticks(minor_xlabels, minor="True")
         ax.set_xticklabels([])
+        ax.set_yticks(minor_ylabels, minor="True")
         ax.set_yticklabels([item.get_text() for item in ax.get_yticklabels()], fontsize=font_size)
         if j == 0:
             ax.set_ylabel("Transition Probability", fontsize=font_size)
@@ -236,6 +251,10 @@ for i in range(num_rows):
             ax2.set_xticklabels([])
         ax.grid(which='minor', alpha=0.2)
         ax.grid(which='major', alpha=0.6)
+        ax1.grid(which='minor', alpha=0.2)
+        ax1.grid(which='major', alpha=0.6)
+        ax2.grid(which='minor', alpha=0.2)
+        ax2.grid(which='major', alpha=0.6)
         ma.append([mae(tr_fits[0] - tr), mae(tr_fits[1] - tr)])
         sdr.append(sd)
     maes.append(ma)
