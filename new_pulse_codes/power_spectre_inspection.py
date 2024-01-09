@@ -181,9 +181,8 @@ if __name__ == "__main__":
         help="Whether to drop the background (tail) of the pulse (0 or 1).")
     parser.add_argument("-ns", "--num_shots", default=2048, type=int,
         help="Number of shots per experiment (datapoint).")
-    parser.add_argument("-b", "--backend", default="manila", type=str,
-        help="The name of the backend to use in the experiment (one of perth, lagos, nairobi, \
-        oslo, jakarta, manila, quito, belem, lima).")
+    parser.add_argument("-b", "--backend", default="kyoto", type=str,
+        help="The name of the backend to use in the experiment (one of kyoto, osaka).")
     parser.add_argument("-rA", "--resolution_A", default=100, type=int,
         help="Resolution in the amplitude axis.")
     parser.add_argument("-rD", "--resolution_D", default=100, type=int,
