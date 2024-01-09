@@ -12,7 +12,7 @@ times = {
     "sin": ["2023-12-08", "130503"],
 }
 backend_name = "kyoto"
-save_fig = 1
+save_fig = 0
 file_dir = os.path.dirname(__file__)
 
 def data_folder(date, time, pulse_type):
