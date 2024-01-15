@@ -13,6 +13,7 @@ times = {
 }
 backend_name = "kyoto"
 save_fig = 0
+save_fig = 1
 file_dir = os.path.dirname(__file__)
 
 def data_folder(date, time, pulse_type):
@@ -39,53 +40,68 @@ for k, t in times.items():
         det.append(pickle.load(f3) * 2 * np.pi / 1e6)
 
 data = pd.read_csv("C:/Users/Ivo/Documents/Wolfram Mathematica/sine.csv", header=None).to_numpy()
-interval_det, interval_amp = 100, 100
+interval_det, interval_amp = [100, 100], [100, 150]
+lim_det, lim_amp = [230, 230], [300, 490]
 det.append(np.arange(-2.3e2, 2.3001e2, 0.05e2))
-amp.append(np.arange(0, 5.001e2, 1e1))
+amp.append(np.arange(0, 5.001e2, 2.5))
 tr_prob.append(data[:, 2].reshape(len(det[2]), len(amp[2])).T)
-fig = plt.figure(figsize=(13.6,6), layout="constrained")
-gs = fig.add_gridspec(1, 3, width_ratios=[1, 1, 0.05])
+
+data_sq = pd.read_csv("C:/Users/Ivo/Documents/Wolfram Mathematica/sq.csv", header=None).to_numpy()
+det.insert(1, np.arange(-2.3e2, 2.3001e2, 0.025e2))
+amp.insert(1, np.arange(0, 3.20001e2, 1))
+tr_prob.insert(1, data_sq[:, 2].reshape(len(det[1]), len(amp[1])).T)
+
+fig = plt.figure(figsize=(14,12), layout="constrained")
+gs = fig.add_gridspec(2, 4, width_ratios=[1, 1, 0.04, 0.08])
 cmap = plt.cm.get_cmap('cividis')  # Choose a colormap
-for idx in range(2):
-    a = amp[idx + 1]
-    d = det[idx + 1]
-    tr = tr_prob[idx + 1]
-    ax = fig.add_subplot(gs[0, idx])
-    im = ax.imshow(tr, cmap=cmap, aspect="auto", origin="lower", vmin=0, vmax=1)
-    ax.set_xlabel('Detuning (MHz)', fontsize=18)
-    if idx == 0:
-        ax.set_ylabel('Amplitude (MHz)', fontsize=18)
-    max_amp = interval_amp * np.floor(a[-1] / interval_amp)
-    max_det = interval_det * np.floor(d[-1] / interval_det)
-    ax.set_xlim(
-        (
-            len(tr[0])-int(np.round(max_det / d[-1] * (len(tr[0]) / 2 - 1) + len(tr[0]) / 2) * 19/18), 
-            int(np.round(max_det / d[-1] * (len(tr[0]) / 2 - 1) + len(tr[0]) / 2) * 19/18)
+for i in range(2):
+    for j in range(2):
+        a = amp[2 * i + j]
+        d = det[2 * i + j]
+        tr = tr_prob[2 * i + j]
+        ax = fig.add_subplot(gs[i, j])
+        im = ax.imshow(tr, cmap=cmap, aspect="auto", origin="lower", vmin=0, vmax=1)
+        max_amp = interval_amp[i] * np.floor(lim_amp[i] / interval_amp[i])
+        max_det = interval_det[i] * np.floor(lim_det[i] / interval_det[i])
+        ax.set_xlim(
+            (
+                len(tr[0])-int(np.round(lim_det[i] / d[-1] * (len(tr[0]) / 2 - 1) + len(tr[0]) / 2)), 
+                int(np.round(lim_det[i] / d[-1] * (len(tr[0]) / 2 - 1) + len(tr[0]) / 2))
+            )
         )
-    )
-    ax.set_ylim(
-        (
-            0,
-            int(np.round(max_amp / a[-1] * (len(tr) - 1) * (5/4 - 1/4 * bool(idx))))
+        ax.set_ylim(
+            (
+                0,
+                int(np.round(lim_amp[i] / a[-1] * (len(tr) - 1)))
+            )
         )
-    )
-    xticks = np.linspace(
-        len(tr[0])-int(np.round(max_det / d[-1] * (len(tr[0]) / 2 - 1) + len(tr[0]) / 2)), 
-        int(np.round(max_det / d[-1] * (len(tr[0]) / 2 - 1) + len(tr[0]) / 2)), 
-        int(2 * max_det / interval_det + 1)
-    )
-    yticks = np.linspace(
-        0, 
-        int(np.round(max_amp / a[-1] * (len(tr) - 1))), 
-        int(max_amp / interval_amp + 1)
-    )
-    ax.set_xticks(xticks)
-    ax.set_yticks(yticks)
-    ax.set_xticklabels(np.linspace(-max_det, max_det, int(2 * max_det / interval_det + 1)).round(0), fontsize=18)
-    ax.set_yticklabels(np.linspace(0, max_amp, int(max_amp / interval_amp + 1)).round(0), fontsize=18)
+
+        xticks = np.linspace(
+            len(tr[0])-int(np.round(max_det / d[-1] * (len(tr[0]) / 2 - 1) + len(tr[0]) / 2)), 
+            int(np.round(max_det / d[-1] * (len(tr[0]) / 2 - 1) + len(tr[0]) / 2)), 
+            int(2 * max_det / interval_det[i] + 1)
+        )
+        yticks = np.linspace(
+            0, 
+            int(np.round(max_amp / a[-1] * (len(tr) - 1))), 
+            int(max_amp / interval_amp[i] + 1)
+        )
+        ax.set_xticks(xticks)
+        ax.set_yticks(yticks)
+        if j == 0:
+            ax.set_yticklabels([int(tick) for tick in np.linspace(0, max_amp, int(max_amp / interval_amp[i] + 1)).round(0)], fontsize=18)
+            ax.set_ylabel('Amplitude (MHz)', fontsize=18)
+        else:
+            ax.set_yticklabels([])
+        if i == 1:
+            ax.set_xlabel('Detuning (MHz)', fontsize=18)
+            ax.set_xticklabels([int(tick) for tick in np.linspace(-max_det, max_det, int(2 * max_det / interval_det[i] + 1)).round(0)], fontsize=18)
+        else:
+            ax.set_xticklabels([])
+
     
 # Create a separate subplot for the color bar
-cax = fig.add_subplot(gs[:, 2])
+cax = fig.add_subplot(gs[:, 3])
 cbar = fig.colorbar(im, cax=cax)
 # cbar.set_label('Transition probability', fontsize=15)
 cbar.ax.tick_params(labelsize=18)
