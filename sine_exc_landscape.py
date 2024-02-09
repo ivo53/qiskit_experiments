@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.patches import Rectangle
 
+from transition_line_profile_functions import *
 
 def make_all_dirs(path):
     folders = path.split("/")
@@ -14,6 +15,26 @@ def make_all_dirs(path):
         folder = "/".join(folders[:i])
         if not os.path.isdir(folder):
             os.mkdir(folder)
+
+FIT_FUNCTIONS = {
+    "lorentzian": [lorentzian],
+    "constant": [rabi],
+    "rabi": [rabi],
+    "gauss": [gauss_rlzsm, gauss_dappr], #gauss_rzconj,
+    "rz": [sech_rlzsm, sech_dappr], #rz,
+    "sech": [sech_rlzsm, sech_dappr], #rz,
+    "demkov": [demkov_rlzsm, demkov_dappr],
+    "sech2": [sech2_rlzsm, sech2_dappr], #sech_sq,
+    "sinc2": [sinc2],
+    "sin": [sin_rlzsm, sin_dappr],
+    "sin2": [sin2_rlzsm, sin2_dappr],
+    "sin3": [sin3_rlzsm, sin3_dappr],
+    "sin4": [sin4_rlzsm, sin4_dappr],
+    "sin5": [sin5_rlzsm, sin5_dappr],
+    "lor": [lor_rlzsm, lor_dappr],
+    "lor2": [lor2_rlzsm, lor2_dappr],
+    "lor3": [lor3_rlzsm, lor3_dappr],
+}
 
 backend_name = "kyoto"
 save_fig = 0
@@ -54,6 +75,8 @@ def data_folder(date, time, pulse_type):
 
 l, p, x0 = 419.1631352890144, 0.0957564968883284, 0.0003302995697281
 T = 192 * 2/9 * 1e-9
+s = 192 * 0.5 * 1e-9
+dur = s
 
 tr_prob, amp, det = [], [], []
 for k, t in times.items():
@@ -77,6 +100,7 @@ intervals_det = [100, 100]
 
 # Create a 3x3 grid of subplots with extra space for the color bar
 fig = plt.figure(figsize=(13.6,6), layout="constrained")
+fig2, ax2 = plt.subplots(1, 1, figsize=(8,6), layout="constrained")
 gs = fig.add_gridspec(1, 4, width_ratios=[1, 1, 0.02, 0.07])
 
 # Generate some random data for the color maps
@@ -95,6 +119,54 @@ for idx in range(2):
     
     # Plot the color map
     im = ax.imshow(tr_prob[idx], cmap=cmap, aspect="auto", origin="lower", vmin=0, vmax=1)
+    
+    raw_idx = np.where(tr_prob[idx][:, int(0.5 * tr_prob[idx].shape[1])]>0.9)[0]
+    raw_idx_divided, ll = [], []
+    for i in raw_idx:
+        # print(len(ll))
+        if len(ll) > 0:
+            if i - ll[-1] == 1:
+                ll.append(i)
+            else:
+                raw_idx_divided.append(ll)
+                ll = []
+                ll.append(i)
+        else: 
+            ll.append(i)
+    else:
+        raw_idx_divided.append(ll)
+
+    final_idx = []
+    for i in raw_idx_divided:
+        final_idx.append(i[np.argmax(tr_prob[idx][i, int(0.5 * tr_prob[idx].shape[1])])])
+    final_idx = np.array(final_idx)
+
+    if idx==1:
+        sd = []
+        for idx_area, idx_amp in enumerate(final_idx):
+            init_params, lower, higher = [
+                [0,0.3,0.2,0.32],
+                [-10,0,0,0.1],
+                [10,1,1,.5]
+            ]
+            ff = FIT_FUNCTIONS["sin"][0]
+            d = det[idx] * 1e6
+            fitparams, tr_fit, perr = fit_function(
+                d, tr_prob[idx][idx_amp], ff,
+                init_params=init_params,
+                lower=lower,
+                higher=higher,
+                sigma=s, duration=dur,
+                remove_bg=True, area=(2 * idx_area + 1) * np.pi
+            )
+            # print(fitparams, perr)
+            sd.append(perr[0] / (2 * np.pi))
+            ef = np.linspace(d[0], d[-1], 5000)
+            extended_tr_fit = ff(ef, *fitparams)
+            ax2.plot(d, tr_prob[idx][idx_amp])
+            ax2.plot(ef, extended_tr_fit)
+            print(tr_fit)
+            # plt.show()
 
     # # Add a rectangle in the top right corner
     rect = Rectangle((0.8, 0.875), 0.16, 0.1, transform=ax.transAxes,

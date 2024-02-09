@@ -4,7 +4,7 @@ import pickle
 from datetime import datetime
 import numpy as np
 import pandas as pd
-import matplotlib; matplotlib.use('Agg')
+# import matplotlib; matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.patches import Rectangle
@@ -84,11 +84,11 @@ def data_folder(date):
     ).replace("\\", "/")
 
 backend_name = "quito"
-# pulse_types = ["lor", "lor2", "demkov", "sech", "sech2", "gauss"]
+pulse_types = ["lor", "lor2", "demkov", "sech", "sech2", "gauss"]
 # pulse_types = ["sin"]
-pulse_types = ["lor2"]
+# pulse_types = ["lor2"]
 save = 0
-save = 1
+# save = 1
 
 times = {
     "lor_192": [["2023-04-27", "135516"],["2023-04-27", "135524"],["2023-04-27", "135528"],["2023-04-27", "135532"]],
@@ -113,7 +113,7 @@ durations = {
 }
 
 s = 192
-dur = 320 # get_closest_multiple_of_16(round(957.28))
+dur = 192 # get_closest_multiple_of_16(round(957.28))
 tr_probs, dets = [], []
 
 for pulse_type in pulse_types:
@@ -198,6 +198,8 @@ for i in range(num_rows):
             sd.append(perr[0] / (2 * np.pi))
             ef = np.linspace(d[0], d[-1], 5000) * 2 * np.pi
             extended_tr_fit = ff(ef, *fitparams)
+            print(extended_tr_fit - np.amax(extended_tr_fit) / 2)
+            print(ef[np.argmin(np.abs(extended_tr_fit - np.amax(extended_tr_fit) / 2))])
             efs.append(ef)
             tr_fits.append(tr_fit)
             ex_tr_fits.append(extended_tr_fit)
@@ -231,7 +233,7 @@ for i in range(num_rows):
             float(re.sub(r'[^\x00-\x7F]+','-', ylabels[-1])), 
             (len(ylabels) - 1) * 2 + 1
         )
-        print(xlabels, minor_xlabels)
+        # print(xlabels, minor_xlabels)
         ax.set_xticks(minor_xlabels, minor="True")
         ax1.set_xticks(minor_xlabels, minor="True")
         ax2.set_xticks(minor_xlabels, minor="True")
@@ -260,11 +262,11 @@ for i in range(num_rows):
         sdr.append(sd)
     maes.append(ma)
     sdrfs.append(sdr)
-    
+
 maes = np.array(maes)
 sdrfs = np.array(sdrfs)
-print(maes, sdrfs)
-# plt.show()
+# print(maes, sdrfs)
+plt.show()
 if save:
     mae_csv_file_path1 = os.path.join(save_dir, f"MAE_split_dur-{dur}dt_s-{s}dt_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.txt")
     mae_csv_file_path2 = os.path.join(save_dir, f"MAE_intermixed_dur-{dur}dt_s-{s}dt_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.txt")
