@@ -146,7 +146,7 @@ def sin(x, q_freq, delta, eps):
 def double_approx(x, q_freq, delta, eps, tau, pulse_type):
     T = dur * 2e-9 / 9
     sigma = s * 2e-9 / 9
-    omega_0 = pulse_shapes.find_rabi_amp(pulse_type, T, sigma, rb=rb)
+    omega_0 = pulse_shapes.find_rabi_amp(pulse_type, T, sigma, pulse_area=a, rb=rb)
     sigma /= T
     omega_0 *= T
     D = (x - q_freq) * 1e6 * T
