@@ -191,15 +191,13 @@ for i in range(num_rows):
                 init_params=init_params,
                 lower=lower,
                 higher=higher,
-                sigma=s, duration=dur,
+                sigma=s, duration=dur, time_interval=2e-9/9,
                 remove_bg=True, area=np.pi
             )
-            print(fitparams, perr)
+            # print(fitparams, perr)
             sd.append(perr[0] / (2 * np.pi))
             ef = np.linspace(d[0], d[-1], 5000) * 2 * np.pi
             extended_tr_fit = ff(ef, *fitparams)
-            print(extended_tr_fit - np.amax(extended_tr_fit) / 2)
-            print(ef[np.argmin(np.abs(extended_tr_fit - np.amax(extended_tr_fit) / 2))])
             efs.append(ef)
             tr_fits.append(tr_fit)
             ex_tr_fits.append(extended_tr_fit)

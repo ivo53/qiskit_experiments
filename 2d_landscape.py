@@ -5,7 +5,29 @@ from datetime import datetime
 import numpy as np 
 import pandas as pd
 import matplotlib.pyplot as plt 
-import matplotlib; matplotlib.use('Agg')
+# import matplotlib; matplotlib.use('Agg')
+
+from transition_line_profile_functions import *
+
+FIT_FUNCTIONS = {
+    "lorentzian": [lorentzian],
+    "constant": [rabi],
+    "rabi": [rabi],
+    "gauss": [gauss_rlzsm, gauss_dappr], #gauss_rzconj,
+    "rz": [sech_rlzsm, sech_dappr], #rz,
+    "sech": [sech_rlzsm, sech_dappr], #rz,
+    "demkov": [demkov_rlzsm, demkov_dappr],
+    "sech2": [sech2_rlzsm, sech2_dappr], #sech_sq,
+    "sinc2": [sinc2],
+    "sin": [sin_rlzsm, sin_dappr],
+    "sin2": [sin2_rlzsm, sin2_dappr],
+    "sin3": [sin3_rlzsm, sin3_dappr],
+    "sin4": [sin4_rlzsm, sin4_dappr],
+    "sin5": [sin5_rlzsm, sin5_dappr],
+    "lor": [lor_rlzsm, lor_dappr],
+    "lor2": [lor2_rlzsm, lor2_dappr],
+    "lor3": [lor3_rlzsm, lor3_dappr],
+}
 
 times = {
     "sq": ["2023-12-08", "175156"],
@@ -54,6 +76,7 @@ tr_prob.insert(1, data_sq[:, 2].reshape(len(det[1]), len(amp[1])).T)
 fig = plt.figure(figsize=(14,12), layout="constrained")
 gs = fig.add_gridspec(2, 4, width_ratios=[1, 1, 0.04, 0.08])
 cmap = plt.cm.get_cmap('cividis')  # Choose a colormap
+linewidths = np.empty(5)
 for i in range(2):
     for j in range(2):
         a = amp[2 * i + j]
@@ -63,6 +86,60 @@ for i in range(2):
         im = ax.imshow(tr, cmap=cmap, aspect="auto", origin="lower", vmin=0, vmax=1)
         max_amp = interval_amp[i] * np.floor(lim_amp[i] / interval_amp[i])
         max_det = interval_det[i] * np.floor(lim_det[i] / interval_det[i])
+        
+        raw_idx = np.where(tr[:, int(0.5 * tr.shape[1])]>0.9)[0]
+        raw_idx_divided, ll = [], []
+        for idx in raw_idx:
+            # print(len(ll))
+            if len(ll) > 0:
+                if idx - ll[-1] == 1:
+                    ll.append(idx)
+                else:
+                    raw_idx_divided.append(ll)
+                    ll = []
+                    ll.append(idx)
+            else: 
+                ll.append(idx)
+        else:
+            raw_idx_divided.append(ll)
+
+        final_idx = []
+        for idx in raw_idx_divided:
+            final_idx.append(idx[np.argmax(tr[idx, int(0.5 * tr.shape[1])])])
+        final_idx = np.array(final_idx)
+        
+        if i==0 and j == 0:
+            f, axis = plt.subplots(1, 5,figsize=(12,3))
+            s = 192
+            dur = 192
+            sd = []
+            for idx_area, idx_amp in enumerate(final_idx):
+                init_params, lower, higher = [
+                    [0,0.5,0.5,0.32],
+                    [-10,0,0,0.1],
+                    [10,1,1,.5]
+                ]
+                ff = FIT_FUNCTIONS["sin"][1]
+                detun = d
+                detun[detun==0] = 0.0001
+                fitparams, tr_fit, perr = fit_function(
+                    d, tr[idx_amp], ff,
+                    init_params=init_params,
+                    lower=lower,
+                    higher=higher,
+                    sigma=s, duration=dur, time_interval=0.5e-9,
+                    remove_bg=True, area=(2 * idx_area + 1) * np.pi
+                )
+                # print(fitparams, perr)
+                sd.append(perr[0] / (2 * np.pi))
+                ef = np.linspace(detun[0], detun[-1], 5000)
+                extended_tr_fit = ff(ef, *fitparams)
+                axis[idx_area].scatter(detun, tr[idx_amp], marker="x")
+                axis[idx_area].plot(ef, extended_tr_fit, color="r")
+                linewidths[idx_area] = 2 * np.abs(ef[np.argmin(np.abs(extended_tr_fit - (np.amax(extended_tr_fit) + np.amin(extended_tr_fit)) / 2))])
+        ##
+        ## END OF FIT
+
         ax.set_xlim(
             (
                 len(tr[0])-int(np.round(lim_det[i] / d[-1] * (len(tr[0]) / 2 - 1) + len(tr[0]) / 2)), 
@@ -99,14 +176,14 @@ for i in range(2):
         else:
             ax.set_xticklabels([])
 
-    
+print(linewidths)
 # Create a separate subplot for the color bar
 cax = fig.add_subplot(gs[:, 3])
 cbar = fig.colorbar(im, cax=cax)
 # cbar.set_label('Transition probability', fontsize=15)
 cbar.ax.tick_params(labelsize=18)
 
-# plt.show()
+plt.show()
 
 # Set save folder
 save_folder = os.path.join(file_dir, "paper_ready_plots", "finite_pulses")
