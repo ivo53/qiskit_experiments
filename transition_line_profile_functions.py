@@ -56,15 +56,17 @@ ALPHA = {
     "lor2": -0.4773936486396947, # +- 0.01572690541716722
 }
 
-def fit_function(x_values, y_values, function, init_params, lower, higher, sigma=None, duration=None, remove_bg=True, area=np.pi):
+def fit_function(x_values, y_values, function, init_params, lower, higher, sigma=None, duration=None, time_interval=0.5e-9, remove_bg=True, area=np.pi):
     global s
     global dur
     global rb
     global a
+    global dt
     s = sigma
     dur = sigma if duration is None else duration
     rb = remove_bg
     a = area
+    dt = time_interval
     fitparams, conv = curve_fit(
         function, 
         x_values, y_values, init_params, 
@@ -87,8 +89,8 @@ def lorentzian(x, s, A, q_freq, c):
     # return A / np.cosh(((x - q_freq) / s))**2 + c
     
 def rz(x, q_freq, delta, eps):
-    sigma = s * 2e-9 / 9
-    T = dur * 2e-9 / 9
+    sigma = s * dt
+    T = dur * dt
     O = pulse_shapes.find_rabi_amp("rz", T, sigma, rb=rb)
 
     D = (x - q_freq) * 1e6
@@ -97,8 +99,8 @@ def rz(x, q_freq, delta, eps):
     return post_process(P2, eps, delta)
 
 def demkov(x, q_freq, delta, eps):
-    sigma = s * 2e-9 / 9
-    T = dur * 2e-9 / 9
+    sigma = s * dt
+    T = dur * dt
     omega_0 = pulse_shapes.find_rabi_amp("demkov", T, sigma, rb=rb)
 
     s_inf = np.pi * omega_0 * sigma
@@ -109,8 +111,8 @@ def demkov(x, q_freq, delta, eps):
     return post_process(P2, eps, delta)
 
 def sech_sq(x, q_freq, delta, eps):
-    sigma = s * 2e-9 / 9
-    T = dur * 2e-9 / 9
+    sigma = s * dt
+    T = dur * dt
     omega_0 = pulse_shapes.find_rabi_amp("sech2", T, sigma, rb=rb)
 
     D = (x - q_freq) * 1e6
@@ -126,7 +128,7 @@ def sech_sq(x, q_freq, delta, eps):
     return post_process(P2, eps, delta)
 
 def sin(x, q_freq, delta, eps):
-    T = dur * 2e-9 / 9
+    T = dur * dt
     sigma = T / np.pi
     omega_0 = pulse_shapes.find_rabi_amp("sin", T, sigma, rb=rb)
 
@@ -144,8 +146,8 @@ def sin(x, q_freq, delta, eps):
 
 
 def double_approx(x, q_freq, delta, eps, tau, pulse_type):
-    T = dur * 2e-9 / 9
-    sigma = s * 2e-9 / 9
+    T = dur * dt
+    sigma = s * dt
     omega_0 = pulse_shapes.find_rabi_amp(pulse_type, T, sigma, pulse_area=a, rb=rb)
     sigma /= T
     omega_0 *= T
@@ -188,11 +190,10 @@ def lor3_dappr(x, q_freq, delta, eps, tau):
     return double_approx(x, q_freq, delta, eps, tau, "lor3")
 
 def rlzsm_approx(x, q_freq, delta, eps, tau, pulse_type):
-    T = dur * 2e-9 / 9
-    sigma = s * 2e-9 / 9
+    T = dur * dt
+    sigma = s * dt
     # sigma = T / np.pi
     omega_0 = pulse_shapes.find_rabi_amp(pulse_type, T, sigma, rb=rb)
-    
     # sigma /= T 
     sigma /= T
     omega_0 *= T
@@ -275,7 +276,7 @@ def lor3_rlzsm(x, q_freq, delta, eps, tau):
 
 
 def sin2(x, q_freq, delta, eps):
-    T = dur * 2e-9 / 9
+    T = dur * dt
     sigma = T / np.pi
     omega_0 = pulse_shapes.find_rabi_amp("sin2", T, sigma, rb=rb)
 
@@ -293,7 +294,7 @@ def sin2(x, q_freq, delta, eps):
     return post_process(P2, eps, delta)
 
 def sin3(x, q_freq, delta, eps):
-    T = dur * 2e-9 / 9
+    T = dur * dt
     sigma = T / np.pi
     omega_0 = pulse_shapes.find_rabi_amp("sin3", T, sigma, rb=rb)
 
@@ -310,7 +311,7 @@ def sin3(x, q_freq, delta, eps):
     return post_process(P2, eps, delta)
 
 def sin4(x, q_freq, delta, eps):
-    T = dur * 2e-9 / 9
+    T = dur * dt
     sigma = T / np.pi
     omega_0 = pulse_shapes.find_rabi_amp("sin4", T, sigma, rb=rb)
 
@@ -327,7 +328,7 @@ def sin4(x, q_freq, delta, eps):
     return post_process(P2, eps, delta)
 
 def sin5(x, q_freq, delta, eps):
-    T = dur * 2e-9 / 9
+    T = dur * dt
     sigma = T / np.pi
     omega_0 = pulse_shapes.find_rabi_amp("sin5", T, sigma, rb=rb)
 
@@ -357,8 +358,8 @@ def sin5(x, q_freq, delta, eps):
 #     return post_process(P2, eps, delta)
 
 def gauss(x, q_freq, delta, eps):
-    sigma = s * 2e-9 / 9
-    T = dur * 2e-9 / 9
+    sigma = s * dt
+    T = dur * dt
     omega_0 = pulse_shapes.find_rabi_amp("gauss", T, sigma, rb=rb)
 
     D = (x - q_freq) * 1e6
@@ -390,8 +391,8 @@ def gauss(x, q_freq, delta, eps):
     return post_process(P2, eps, delta)
 
 def gauss_rzconj(x, q_freq, delta, eps):
-    sigma = s * 2e-9 / 9 
-    T = dur * 2e-9 / 9
+    sigma = s * dt
+    T = dur * dt
     omega_0 = pulse_shapes.find_rabi_amp("gauss", T, sigma, rb=rb)
 
     D = (x - q_freq) * 1e6
@@ -408,8 +409,8 @@ def gauss_rzconj(x, q_freq, delta, eps):
 
 
 def demkov_rzconj(x, q_freq, delta, eps):
-    sigma = s * 2e-9 / 9
-    T = dur * 2e-9 / 9
+    sigma = s * dt
+    T = dur * dt
     omega_0 = pulse_shapes.find_rabi_amp("demkov", T, sigma, rb=rb)
 
     D = (x - q_freq) * 1e6
@@ -426,8 +427,8 @@ def demkov_rzconj(x, q_freq, delta, eps):
 
 
 def lor_rzconj_amp(x, D, delta, eps):
-    sigma = s * 2e-9 / 9
-    T = dur * 2e-9 / 9
+    sigma = s * dt
+    T = dur * dt
     omega_0 = x # pulse_shapes.find_rabi_amp("lor", T, sigma, rb=rb)
 
     # D = (x - q_freq) * 1e6
@@ -443,8 +444,8 @@ def lor_rzconj_amp(x, D, delta, eps):
     return post_process(P2, eps, delta)
 
 def lor_rzconj(x, q_freq, delta, eps):
-    sigma = s * 2e-9 / 9
-    T = dur * 2e-9 / 9
+    sigma = s * dt
+    T = dur * dt
     omega_0 = pulse_shapes.find_rabi_amp("lor", T, sigma, rb=rb, pulse_area=a)
 
     D = (x - q_freq) * 1e6
@@ -460,8 +461,8 @@ def lor_rzconj(x, q_freq, delta, eps):
     return post_process(P2, eps, delta)
 
 def lor2_rzconj(x, q_freq, delta, eps):
-    sigma = s * 2e-9 / 9
-    T = dur * 2e-9 / 9
+    sigma = s * dt
+    T = dur * dt
     omega_0 = pulse_shapes.find_rabi_amp("lor2", T, sigma, rb=rb, pulse_area=a)
 
     D = (x - q_freq) * 1e6
@@ -477,8 +478,8 @@ def lor2_rzconj(x, q_freq, delta, eps):
     return post_process(P2, eps, delta)
 
 def lor3_4_rzconj(x, q_freq, delta, eps):
-    sigma = s * 2e-9 / 9
-    T = dur * 2e-9 / 9
+    sigma = s * dt
+    T = dur * dt
     omega_0 = pulse_shapes.find_rabi_amp("lor3_4", T, sigma, rb=rb, pulse_area=a)
 
     D = (x - q_freq) * 1e6
@@ -494,8 +495,8 @@ def lor3_4_rzconj(x, q_freq, delta, eps):
     return post_process(P2, eps, delta)
 
 def lor2_3_rzconj(x, q_freq, delta, eps):
-    sigma = s * 2e-9 / 9
-    T = dur * 2e-9 / 9
+    sigma = s * dt
+    T = dur * dt
     omega_0 = pulse_shapes.find_rabi_amp("lor2_3", T, sigma, rb=rb, pulse_area=a)
 
     D = (x - q_freq) * 1e6
@@ -511,8 +512,8 @@ def lor2_3_rzconj(x, q_freq, delta, eps):
     return post_process(P2, eps, delta)
 
 def lor_narrowing(x, q_freq, a, b, d, delta, eps):
-    sigma = s * 2e-9 / 9
-    T = dur * 2e-9 / 9
+    sigma = s * dt
+    T = dur * dt
     omega_0 = pulse_shapes.find_rabi_amp("lor", T, sigma, rb=rb, pulse_area=a)
     D = (x - q_freq) * 1e6
     # print(sigma, T, omega_0, D[0], D[-1])
@@ -522,8 +523,8 @@ def lor_narrowing(x, q_freq, a, b, d, delta, eps):
     return post_process(P2, eps, delta)
 
 def lor2_narrowing(x, q_freq, a, b, d, delta, eps):
-    sigma = s * 2e-9 / 9
-    T = dur * 2e-9 / 9
+    sigma = s * dt
+    T = dur * dt
     omega_0 = pulse_shapes.find_rabi_amp("lor2", T, sigma, rb=rb, pulse_area=a)
     D = (x - q_freq) * 1e6
 
@@ -538,8 +539,8 @@ def lor2_narrowing(x, q_freq, a, b, d, delta, eps):
     return post_process(P2, eps, delta)
 
 def lor3_2_narrowing(x, q_freq, a, b, d, delta, eps):
-    sigma = s * 2e-9 / 9
-    T = dur * 2e-9 / 9
+    sigma = s * dt
+    T = dur * dt
     omega_0 = pulse_shapes.find_rabi_amp("lor3_2", T, sigma, rb=rb, pulse_area=a)
     D = (x - q_freq) * 1e6
 
@@ -547,8 +548,8 @@ def lor3_2_narrowing(x, q_freq, a, b, d, delta, eps):
     return post_process(P2, eps, delta)
 
 def lor3_4_narrowing(x, q_freq, a, b, d, delta, eps):
-    sigma = s * 2e-9 / 9
-    T = dur * 2e-9 / 9
+    sigma = s * dt
+    T = dur * dt
     omega_0 = pulse_shapes.find_rabi_amp("lor3_4", T, sigma, rb=rb, pulse_area=a)
     D = (x - q_freq) * 1e6
 
@@ -562,8 +563,8 @@ def lor3_4_narrowing(x, q_freq, a, b, d, delta, eps):
     return post_process(P2, eps, delta)
 
 def lor2_3_narrowing(x, q_freq, a, b, d, delta, eps):
-    sigma = s * 2e-9 / 9
-    T = dur * 2e-9 / 9
+    sigma = s * dt
+    T = dur * dt
     omega_0 = pulse_shapes.find_rabi_amp("lor2_3", T, sigma, rb=rb, pulse_area=a)
     D = (x - q_freq) * 1e6
 
@@ -576,8 +577,8 @@ def lor2_3_narrowing(x, q_freq, a, b, d, delta, eps):
     return post_process(P2, eps, delta)
 
 def lor3_5_narrowing(x, q_freq, a, b, d, delta, eps):
-    sigma = s * 2e-9 / 9
-    T = dur * 2e-9 / 9
+    sigma = s * dt
+    T = dur * dt
     omega_0 = pulse_shapes.find_rabi_amp("lor3_5", T, sigma, rb=rb, pulse_area=a)
     D = (x - q_freq) * 1e6
 
@@ -595,8 +596,8 @@ def sinc2(x, s, A, q_freq, c):
     return A * (np.sinc((x - q_freq) / s)) ** 2 + c
 
 def rabi(x, q_freq, delta, eps):
-    sigma = s * 2e-9 / 9
-    T = dur * 2e-9 / 9
+    sigma = s * dt
+    T = dur * dt
     omega_0 = pulse_shapes.find_rabi_amp("rabi", T, sigma, rb=rb)
 
     D = (x - q_freq) * 1e6
