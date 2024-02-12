@@ -19,21 +19,22 @@ center_freqs = {
     "lima": 5029749743.642724 * 1e-6
 }
 
+model_short_name_dict = ["Split Model", "Integrated Model"]
 model_name_dict = {
-    "rabi": ["Rabi", "Sinc$^2$"], 
-    "rz": ["Rosen-Zener rLZSM", "Double Approx"], 
-    "sech": ["Rosen-Zener rLZSM", "Double Approx"], 
-    "gauss": ["Gaussian rLZSM", "Double Approx"], 
-    "demkov": ["Demkov rLZSM", "Double Approx"], 
-    "sech2": ["Sech$^2$ rLZSM", "Double Approx"],
-    "sin": ["Sine rLZSM", "Double Approx"],
-    "sin2": ["Sine$^2$", "Double Approx"],
-    "sin3": ["Sine$^3$", "Double Approx"],
-    "sin4": ["Sine$^4$", "Double Approx"],
-    "sin5": ["Sine$^5$", "Double Approx"],
-    "lor": ["Lorentzian rLZSM", "Double Approx"],
-    "lor2": ["Lorentzian$^2$ rLZSM", "Double Approx"],
-    "lor3": ["Lorentzian$^3$ rLZSM", "Double Approx"],
+    "rabi": ["Rabi", "Sinc$^2$", "Rabi Model"], 
+    "rz": ["Rosen-Zener Split Model", "Integrated Model", "Sech"], 
+    "sech": ["Rosen-Zener Split Model", "Integrated Model", "Sech"], 
+    "gauss": ["Gaussian Split Model", "Integrated Model", "Gaussian"], 
+    "demkov": ["Demkov Split Model", "Integrated Model", "Exponential"], 
+    "sech2": ["Sech$^2$ Split Model", "Integrated Model", "Sech$^2$"],
+    "sin": ["Sine Split Model", "Integrated Model", "Sine"],
+    "sin2": ["Sine$^2$", "Integrated Model", "Sine$^2$"],
+    "sin3": ["Sine$^3$", "Integrated Model", "Sine$^3$"],
+    "sin4": ["Sine$^4$", "Integrated Model", "Sine$^4$"],
+    "sin5": ["Sine$^5$", "Integrated Model", "Sine$^5$"],
+    "lor": ["Lorentzian Split Model", "Integrated Model", "Lorentzian"],
+    "lor2": ["Lorentzian$^2$ Split Model", "Integrated Model", "Lorentzian$^2$"],
+    "lor3": ["Lorentzian$^3$ Split Model", "Integrated Model", "Lorentzian$^3$"],
 }
 
 FIT_FUNCTIONS = {
@@ -84,9 +85,9 @@ def data_folder(date):
     ).replace("\\", "/")
 
 backend_name = "quito"
-pulse_types = ["lor", "lor2", "demkov", "sech", "sech2", "gauss"]
+pulse_types = ["sin", "lor", "lor2", "sech", "sech2", "gauss"]
 # pulse_types = ["sin"]
-# pulse_types = ["lor2"]
+pulse_types = ["lor2"] * 4
 save = 0
 # save = 1
 
@@ -113,10 +114,11 @@ durations = {
 }
 
 s = 192
-dur = 192 # get_closest_multiple_of_16(round(957.28))
+durs = [192, 224, 256, 320]
+# durs = [192] * len(pulse_types) # get_closest_multiple_of_16(round(957.28))
 tr_probs, dets = [], []
 
-for pulse_type in pulse_types:
+for pulse_type, dur in zip(pulse_types, durs):
     full_pulse_name = pulse_type if dur is None else "_".join([pulse_type, str(s)])
     print(full_pulse_name)
     dur_idx = durations [dur] if dur is not None else 0
@@ -152,7 +154,7 @@ dets_subtracted = dets - dets.mean(1)[:, None]
 colors = ["r", "g"]
 params = [
     [
-        [0.1,0.3,0.2,0.32],
+        [4,0.3,0.2,0.32],
         [-10,0,0,0.2],
         [10,1,1,.5]
     ],
@@ -164,7 +166,7 @@ params = [
 ]
 
 num_figures = len(pulse_types)
-num_columns = 3 if num_figures % 3 == 0 else 1
+num_columns = 3 if num_figures % 3 == 0 else 2
 num_rows = int(num_figures / num_columns)
 
 font_size, width, height = 16, 8, 6
@@ -185,7 +187,7 @@ for i in range(num_rows):
         ffs = FIT_FUNCTIONS[current_pulse_shape]
         init_params, lower, higher = params[1] if len(ffs) == 1 else params[0]
         sd = []
-        for ff in ffs:
+        for ff, dur in zip(ffs, durs):
             fitparams, tr_fit, perr = fit_function(
                 d * 2 * np.pi, tr, ff, 
                 init_params=init_params,
@@ -194,7 +196,7 @@ for i in range(num_rows):
                 sigma=s, duration=dur, time_interval=2e-9/9,
                 remove_bg=True, area=np.pi
             )
-            # print(fitparams, perr)
+            print(fitparams, perr)
             sd.append(perr[0] / (2 * np.pi))
             ef = np.linspace(d[0], d[-1], 5000) * 2 * np.pi
             extended_tr_fit = ff(ef, *fitparams)
@@ -203,9 +205,9 @@ for i in range(num_rows):
             ex_tr_fits.append(extended_tr_fit)
 
         ax = fig.add_subplot(gs0[3*i, j])
-        ax.scatter(d, tr, marker="p", label="Measured Data")
+        ax.scatter(d, tr, marker="p", label=f"{model_name_dict[pulse_types[num_columns * i + j]][2]} Pulse Data")
         for idx, ex_tr_fit in enumerate(ex_tr_fits):
-            ax.plot((ef - ef.mean()) / (2 * np.pi), ex_tr_fit, color=colors[idx], label=model_name_dict[pulse_types[num_columns*i+j]][idx])
+            ax.plot((ef - ef.mean()) / (2 * np.pi), ex_tr_fit, color=colors[idx], label=model_short_name_dict[idx])#label=model_name_dict[pulse_types[num_columns*i+j]][idx])
         ax.legend(fontsize=font_size)
         ax1 = fig.add_subplot(gs0[3*i+1, j])
         ax2 = fig.add_subplot(gs0[3*i+2, j])
