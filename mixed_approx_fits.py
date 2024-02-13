@@ -4,7 +4,7 @@ import pickle
 from datetime import datetime
 import numpy as np
 import pandas as pd
-# import matplotlib; matplotlib.use('Agg')
+import matplotlib; matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.patches import Rectangle
@@ -87,9 +87,10 @@ def data_folder(date):
 backend_name = "quito"
 pulse_types = ["sin", "lor", "lor2", "sech", "sech2", "gauss"]
 # pulse_types = ["sin"]
-pulse_types = ["lor2"] * 4
+# pulse_types = ["lor2"] * 4
+pulse_types = ["demkov"]
 save = 0
-# save = 1
+save = 1
 
 times = {
     "lor_192": [["2023-04-27", "135516"],["2023-04-27", "135524"],["2023-04-27", "135528"],["2023-04-27", "135532"]],
@@ -114,14 +115,14 @@ durations = {
 }
 
 s = 192
-durs = [192, 224, 256, 320]
-# durs = [192] * len(pulse_types) # get_closest_multiple_of_16(round(957.28))
+# durs = [192, 224, 256, 320]
+durs = [192] * len(pulse_types) # get_closest_multiple_of_16(round(957.28))
 tr_probs, dets = [], []
 
 for pulse_type, dur in zip(pulse_types, durs):
     full_pulse_name = pulse_type if dur is None else "_".join([pulse_type, str(s)])
-    print(full_pulse_name)
-    dur_idx = durations [dur] if dur is not None else 0
+    # print(full_pulse_name)
+    dur_idx = durations[dur] if dur is not None else 0
     date = times[full_pulse_name][dur_idx][0]
     time = times[full_pulse_name][dur_idx][1]
     fit_func = pulse_type # full_pulse_name if "_" not in full_pulse_name else full_pulse_name.split("_")[0]
@@ -166,7 +167,7 @@ params = [
 ]
 
 num_figures = len(pulse_types)
-num_columns = 3 if num_figures % 3 == 0 else 2
+num_columns = np.maximum(int(num_figures / 2), 1) # 3 if num_figures % 3 == 0 else 2
 num_rows = int(num_figures / num_columns)
 
 font_size, width, height = 16, 8, 6
@@ -187,9 +188,10 @@ for i in range(num_rows):
         ffs = FIT_FUNCTIONS[current_pulse_shape]
         init_params, lower, higher = params[1] if len(ffs) == 1 else params[0]
         sd = []
-        for ff, dur in zip(ffs, durs):
+        dur = durs[num_columns * i + j]
+        for ff in ffs:
             fitparams, tr_fit, perr = fit_function(
-                d * 2 * np.pi, tr, ff, 
+                d * 2 * np.pi, tr, ff,
                 init_params=init_params,
                 lower=lower,
                 higher=higher,
@@ -203,12 +205,12 @@ for i in range(num_rows):
             efs.append(ef)
             tr_fits.append(tr_fit)
             ex_tr_fits.append(extended_tr_fit)
-
+        dur_ns = np.round(dur * 2 / 9, 2)
         ax = fig.add_subplot(gs0[3*i, j])
-        ax.scatter(d, tr, marker="p", label=f"{model_name_dict[pulse_types[num_columns * i + j]][2]} Pulse Data")
+        ax.scatter(d, tr, marker="p", label=f"Measured Data")
         for idx, ex_tr_fit in enumerate(ex_tr_fits):
             ax.plot((ef - ef.mean()) / (2 * np.pi), ex_tr_fit, color=colors[idx], label=model_short_name_dict[idx])#label=model_name_dict[pulse_types[num_columns*i+j]][idx])
-        ax.legend(fontsize=font_size)
+        ax.legend(fontsize=font_size, title_fontsize=font_size, title=f"{model_name_dict[pulse_types[num_columns * i + j]][2]} {dur_ns}ns")
         ax1 = fig.add_subplot(gs0[3*i+1, j])
         ax2 = fig.add_subplot(gs0[3*i+2, j])
         ax1.scatter(d, tr_fits[0] - tr, c="r", marker="x")
@@ -266,7 +268,7 @@ for i in range(num_rows):
 maes = np.array(maes)
 sdrfs = np.array(sdrfs)
 # print(maes, sdrfs)
-plt.show()
+# plt.show()
 if save:
     mae_csv_file_path1 = os.path.join(save_dir, f"MAE_split_dur-{dur}dt_s-{s}dt_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.txt")
     mae_csv_file_path2 = os.path.join(save_dir, f"MAE_intermixed_dur-{dur}dt_s-{s}dt_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.txt")
