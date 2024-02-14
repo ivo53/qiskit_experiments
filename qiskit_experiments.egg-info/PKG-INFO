@@ -1,0 +1,18 @@
+Metadata-Version: 2.1
+Name: qiskit-experiments
+Version: 1.0.0
+Summary: A collection of Qiskit Pulse codes
+Home-page: https://github.com/ivo53/qiskit_experiments
+Author: IM
+Author-email: 
+Classifier: Development Status :: 3 - Alpha
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.6
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Requires-Python: >=3.6
+Description-Content-Type: text/markdown
+
+A collection of Qiskit Pulse codes that were used to produce three separate scientific works during my PhD.
