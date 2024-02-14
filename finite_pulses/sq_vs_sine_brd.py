@@ -7,7 +7,7 @@ import pandas as pd
 import matplotlib.pyplot as plt 
 # import matplotlib; matplotlib.use('Agg')
 
-from qiskit_codes.transition_line_profile_functions import *
+from common.transition_line_profile_functions import *
 
 FIT_FUNCTIONS = {
     "lorentzian": [lorentzian],
@@ -69,9 +69,11 @@ colors = [
     "brown",
     "purple"
 ]
+interval_det = [1250, 1000]
+lim_det = [5000, 3000]
 
-fig = plt.figure(figsize=(14,12), layout="constrained")
-gs = fig.add_gridspec(1, 2, width_ratios=[1, 1, 0.04, 0.08])
+fig = plt.figure(figsize=(13,6), layout="constrained")
+gs = fig.add_gridspec(1, 2, width_ratios=[1, 1])
 # cmap = plt.cm.get_cmap('cividis')  # Choose a colormap
 linewidths = np.empty(5)
 for i in range(2):
@@ -101,22 +103,25 @@ for i in range(2):
     final_idx = np.array(final_idx)
 
     # im = ax.imshow(tr, cmap=cmap, aspect="auto", origin="lower", vmin=0, vmax=1)
-    max_amp = interval_amp[i] * np.floor(lim_amp[i] / interval_amp[i])
     max_det = interval_det[i] * np.floor(lim_det[i] / interval_det[i])
     
     #### START OF FITS
-    f, axis = plt.subplots(1, 5,figsize=(12,3))
+    # f, axis = plt.subplots(1, 5,figsize=(12,3))
     s = 192
     dur = 192
     sd = []
     for idx_area, idx_amp in enumerate(final_idx):
-        ax.scatter(d, tr[idx_amp], "")
+        ax.scatter(d, tr[idx_amp], color=colors[idx_area], marker="x")
         init_params, lower, higher = [
             [0,0.5,0.5,0.32],
             [-10,0,0,0.1],
             [10,1,1,.5]
+        ] if i == 1 else [
+            [0,0.5,0.5],
+            [-10,0,0],
+            [10,1,1]
         ]
-        ff = FIT_FUNCTIONS["sin"][1]
+        ff = FIT_FUNCTIONS["rabi"][0] if i == 0 else FIT_FUNCTIONS["sin"][1]
         detun = d
         detun[detun==0] = 0.0001
         fitparams, tr_fit, perr = fit_function(
@@ -131,8 +136,9 @@ for i in range(2):
         sd.append(perr[0] / (2 * np.pi))
         ef = np.linspace(detun[0], detun[-1], 5000)
         extended_tr_fit = ff(ef, *fitparams)
-        axis[idx_area].scatter(detun, tr[idx_amp], marker="x")
-        axis[idx_area].plot(ef, extended_tr_fit, color="r")
+        # axis[idx_area].scatter(detun, tr[idx_amp], marker="x")
+        # axis[idx_area].plot(ef, extended_tr_fit, color="r")
+        ax.plot(ef, extended_tr_fit, color=colors[idx_area], linestyle="--")
         linewidths[idx_area] = 2 * np.abs(ef[np.argmin(np.abs(extended_tr_fit - (np.amax(extended_tr_fit) + np.amin(extended_tr_fit)) / 2))])
     ##
     ## END OF FITS
@@ -143,12 +149,7 @@ for i in range(2):
             int(np.round(lim_det[i] / d[-1] * (len(tr[0]) / 2 - 1) + len(tr[0]) / 2))
         )
     )
-    ax.set_ylim(
-        (
-            0,
-            int(np.round(lim_amp[i] / a[-1] * (len(tr) - 1)))
-        )
-    )
+    ax.set_ylim((0,1))
 
     xticks = np.linspace(
         len(tr[0])-int(np.round(max_det / d[-1] * (len(tr[0]) / 2 - 1) + len(tr[0]) / 2)), 
@@ -156,15 +157,13 @@ for i in range(2):
         int(2 * max_det / interval_det[i] + 1)
     )
     yticks = np.linspace(
-        0, 
-        int(np.round(max_amp / a[-1] * (len(tr) - 1))), 
-        int(max_amp / interval_amp[i] + 1)
+        0, 1, 6
     )
     ax.set_xticks(xticks)
     ax.set_yticks(yticks)
-    if j == 0:
-        ax.set_yticklabels([int(tick) for tick in np.linspace(0, max_amp, int(max_amp / interval_amp[i] + 1)).round(0)], fontsize=18)
-        ax.set_ylabel('Amplitude (MHz)', fontsize=18)
+    if i == 0:
+        ax.set_yticklabels([np.round(tick, 1) for tick in np.linspace(0, 1, 6)], fontsize=18)
+        ax.set_ylabel('Transition Probability', fontsize=18)
     else:
         ax.set_yticklabels([])
     ax.set_xlabel('Detuning (MHz)', fontsize=18)
