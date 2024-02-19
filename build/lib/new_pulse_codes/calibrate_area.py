@@ -162,9 +162,7 @@ if __name__ == "__main__":
     mem_slot = 0
 
     drive_chan = pulse.DriveChannel(qubit)
-    meas_chan = pulse.MeasureChannel(qubit)
-    acq_chan = pulse.AcquireChannel(qubit)
-
+    
     # # with real provider
     # provider = IBMQ.load_account()
     # backend = provider.get_backend(backend)
