@@ -1272,7 +1272,6 @@ pulse_shapes/fit_numerical_data.py
 qiskit_experiments.egg-info/PKG-INFO
 qiskit_experiments.egg-info/SOURCES.txt
 qiskit_experiments.egg-info/dependency_links.txt
-qiskit_experiments.egg-info/requires.txt
 qiskit_experiments.egg-info/top_level.txt
 utils/__init__.py
 utils/initialise_backend.py
