@@ -4,7 +4,7 @@ import pickle
 from datetime import datetime
 import numpy as np
 import pandas as pd
-# import matplotlib; matplotlib.use('Agg')
+import matplotlib; matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.patches import Rectangle
@@ -65,7 +65,6 @@ def make_all_dirs(path):
             os.mkdir(folder)
 
 file_dir = "/".join(os.path.dirname(__file__).split("\\")[:-1])
-print(file_dir)
 save_dir = os.path.join(
     file_dir,
     "paper_ready_plots",
@@ -86,11 +85,12 @@ def data_folder(date):
 
 backend_name = "quito"
 pulse_types = ["sin", "lor", "lor2", "sech", "sech2", "gauss"]
-pulse_types = ["sin"]
+# pulse_types = ["sin"]
 # pulse_types = ["lor2"] * 4
 # pulse_types = ["demkov"]
+both_models = False
 save = 0
-# save = 1
+save = 1
 
 times = {
     "lor_192": [["2023-04-27", "135516"],["2023-04-27", "135524"],["2023-04-27", "135528"],["2023-04-27", "135532"]],
@@ -149,7 +149,7 @@ dets = np.array(dets) * 1e3
 tr_probs = np.array(tr_probs)
 dets_subtracted = dets - dets.mean(1)[:, None]
 # print(dets_subtracted)
-colors = ["r", "g"]
+colors = ["r", "g"] if both_models else ["r", "orangered"]
 params = [
     [
         [4,0.3,0.2,0.32],
@@ -166,14 +166,14 @@ params = [
 num_figures = len(pulse_types)
 num_columns = np.maximum(int(num_figures / 2), 1) # 3 if num_figures % 3 == 0 else 2
 num_rows = int(num_figures / num_columns)
-
+print(num_columns, num_rows)
+num_residual_axes = 2 if both_models else 1
 font_size, width, height = 16, 8, 6
 # Create a 3x3 grid of subplots with extra space for the color bar
 fig = plt.figure(figsize=(num_columns * width, num_rows * height), layout="constrained")
-gs0 = fig.add_gridspec(3 * num_rows, num_columns, height_ratios=[1, 0.1, 0.1] * num_rows, width_ratios=[1] * num_columns)
+gs0 = fig.add_gridspec((1 + num_residual_axes) * num_rows, num_columns, height_ratios=([1] + [0.1] * num_residual_axes) * num_rows, width_ratios=[1] * num_columns)
 # Generate datetime
 date = datetime.now()
-
 maes, sdrfs = [], []
 for i in range(num_rows):
     ma, sdr = [], []
@@ -203,22 +203,28 @@ for i in range(num_rows):
             tr_fits.append(tr_fit)
             ex_tr_fits.append(extended_tr_fit)
         dur_ns = np.round(dur * 2 / 9, 2)
-        ax = fig.add_subplot(gs0[3*i, j])
+        ax = fig.add_subplot(gs0[3*i, j]) if both_models else fig.add_subplot(gs0[2*i, j])
         ax.scatter(d, tr, marker="p", label=f"Measured Data")
         for idx, ex_tr_fit in enumerate(ex_tr_fits):
+            if not both_models and idx == 0:
+                continue
             ax.plot((ef - ef.mean()) / (2 * np.pi), ex_tr_fit, color=colors[idx], label=model_short_name_dict[idx])#label=model_name_dict[pulse_types[num_columns*i+j]][idx])
         ax.legend(fontsize=font_size, title_fontsize=font_size, title=f"{model_name_dict[pulse_types[num_columns * i + j]][2]} {dur_ns}ns")
-        ax1 = fig.add_subplot(gs0[3*i+1, j])
-        ax2 = fig.add_subplot(gs0[3*i+2, j])
-        ax1.scatter(d, tr_fits[0] - tr, c="r", marker="x")
-        ax1.set_ylim((-0.03, 0.03))
-        ax1.set_xticklabels([])
-        ax2.scatter(d, tr_fits[1] - tr, c="g", marker="x")
+        if both_models:
+            ax1 = fig.add_subplot(gs0[3*i+1, j])
+            ax1.scatter(d, tr_fits[0] - tr, c=colors[0], marker="x")
+            ax1.set_ylim((-0.03, 0.03))
+            ax1.set_xticklabels([])
+            ax2 = fig.add_subplot(gs0[3*i+2, j])
+        else:
+            ax2 = fig.add_subplot(gs0[2*i+1, j])
+        ax2.scatter(d, tr_fits[1] - tr, c=colors[1], marker="x")
         ax2.set_ylim((-0.03, 0.03))
         ax.set_xlim((-80, 80))
         ax.set_ylim((-0.02,1))
         ax.set_yticks(np.arange(0, 1.01, 0.2))
-        ax1.set_xlim((-80, 80))
+        if both_models:
+            ax1.set_xlim((-80, 80))
         ax2.set_xlim((-80, 80))
         xlabels = [item.get_text() for item in ax.get_xticklabels()]
         ylabels = [item.get_text() for item in ax.get_yticklabels()]
@@ -234,17 +240,20 @@ for i in range(num_rows):
         )
         # print(xlabels, minor_xlabels)
         ax.set_xticks(minor_xlabels, minor="True")
-        ax1.set_xticks(minor_xlabels, minor="True")
+        if both_models:
+            ax1.set_xticks(minor_xlabels, minor="True")
         ax2.set_xticks(minor_xlabels, minor="True")
         ax.set_xticklabels([])
         ax.set_yticks(minor_ylabels, minor="True")
         ax.set_yticklabels([item.get_text() for item in ax.get_yticklabels()], fontsize=font_size)
         if j == 0:
             ax.set_ylabel("Transition Probability", fontsize=font_size)
-            ax1.set_yticklabels([item.get_text() for item in ax1.get_yticklabels()], fontsize=0.9 * font_size)
+            if both_models:
+                ax1.set_yticklabels([item.get_text() for item in ax1.get_yticklabels()], fontsize=0.9 * font_size)
             ax2.set_yticklabels([item.get_text() for item in ax2.get_yticklabels()], fontsize=0.9 * font_size)
         else:
-            ax1.set_yticklabels([])
+            if both_models:
+                ax1.set_yticklabels([])
             ax2.set_yticklabels([])
         if i == num_rows - 1:
             ax2.set_xticklabels(xlabels, fontsize=font_size)
@@ -253,8 +262,9 @@ for i in range(num_rows):
             ax2.set_xticklabels([])
         ax.grid(which='minor', alpha=0.2)
         ax.grid(which='major', alpha=0.6)
-        ax1.grid(which='minor', alpha=0.2)
-        ax1.grid(which='major', alpha=0.6)
+        if both_models:
+            ax1.grid(which='minor', alpha=0.2)
+            ax1.grid(which='major', alpha=0.6)
         ax2.grid(which='minor', alpha=0.2)
         ax2.grid(which='major', alpha=0.6)
         ma.append([mae(tr_fits[0] - tr), mae(tr_fits[1] - tr)])
@@ -265,7 +275,7 @@ for i in range(num_rows):
 maes = np.array(maes)
 sdrfs = np.array(sdrfs)
 # print(maes, sdrfs)
-plt.show()
+# plt.show()
 if save:
     mae_csv_file_path1 = os.path.join(save_dir, f"MAE_split_dur-{dur}dt_s-{s}dt_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.txt")
     mae_csv_file_path2 = os.path.join(save_dir, f"MAE_intermixed_dur-{dur}dt_s-{s}dt_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.txt")
