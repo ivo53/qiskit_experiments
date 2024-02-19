@@ -7,7 +7,7 @@ import pandas as pd
 import matplotlib.pyplot as plt 
 # import matplotlib; matplotlib.use('Agg')
 
-from qiskit_codes.transition_line_profile_functions import *
+from ..transition_line_profile_functions import *
 
 FIT_FUNCTIONS = {
     "lorentzian": [lorentzian],
