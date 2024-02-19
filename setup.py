@@ -21,7 +21,7 @@ setup(
     ],
     python_requires='>=3.6',
     install_requires=[
-        'numpy>=1.0.0',
+        'numpy>=1.20.0',
         'qiskit>=1.0.0',
         'matplotlib>=3.0.0'
     ],
