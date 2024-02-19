@@ -69,8 +69,8 @@ colors = [
     "brown",
     "purple"
 ]
-interval_det = [500, 500]
-lim_det = [5000, 5000]
+interval_det = [1250, 1000]
+lim_det = [5000, 3000]
 
 fig = plt.figure(figsize=(13,6), layout="constrained")
 gs = fig.add_gridspec(1, 2, width_ratios=[1, 1])

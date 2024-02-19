@@ -222,25 +222,25 @@ def rlzsm_approx(x, q_freq, delta, eps, tau, pulse_type):
                         [-((1j * np.sin(eta/2) * omega(tau))/np.sqrt(D**2 + omega(tau)**2)),
                         np.cos(eta/2) - (1j * D * np.sin(eta/2))/np.sqrt(D**2 + omega(tau)**2)]])
 
-    def a(d, alpha):
+    def A(d, alpha):
         return (2**(1j * np.power(d,2)/2))/(2 * np.sqrt(np.pi)) * (sp.gamma(1/2 + (1j * d**2)/2)) * ((1 + np.exp(-np.pi * d**2)) * \
             ParabolicCylinderD(-1j * d**2, alpha * np.exp(1j * np.pi/4)) - (1j * np.sqrt(2 * np.pi))/(sp.gamma(1j * d**2)) * \
                 np.exp(-np.pi * d**2/2) * ParabolicCylinderD(-1 + 1j * d**2, alpha * np.exp(-1j * np.pi/4)))
 
-    def b(d, alpha):
+    def B(d, alpha):
         return (2**(1j * d**2/2) * np.exp(-1j * np.pi/4))/(d * np.sqrt(2 * np.pi)) * (sp.gamma(1 + (1j * d**2)/2)) * \
             ((1 - np.exp(-np.pi * d**2)) * ParabolicCylinderD(-1j * d**2, alpha * np.exp(1j * np.pi/4)) + \
                 (1j * np.sqrt(2 * np.pi))/(sp.gamma(1j * d**2)) * np.exp(-np.pi * d**2/2) * \
                     ParabolicCylinderD(-1 + 1j * d**2, alpha * np.exp(-1j * np.pi/4)))
     
-    def Ulin(a, b):
+    def Ulin(u, v):
         return np.array(
             [
-                [np.real(a) - 1j * np.imag(b), np.real(b) + 1j * np.imag(a)], 
-                [-np.real(b) + 1j * np.imag(a), np.real(a) + 1j * np.imag(b)]
+                [np.real(u) - 1j * np.imag(v), np.real(v) + 1j * np.imag(u)], 
+                [-np.real(v) + 1j * np.imag(u), np.real(u) + 1j * np.imag(v)]
             ]
         )
-    Ul = np.array(Ulin(a(d, alpha), b(d, alpha)).tolist(), dtype=complex)
+    Ul = np.array(Ulin(A(d, alpha), B(d, alpha)).tolist(), dtype=complex)
     Ua = Uad(D, omega_0, tau)
     if tau < 0.5:
         U = np.einsum('jiz, jkz, klz -> ilz', Ul, Ua, Ul)

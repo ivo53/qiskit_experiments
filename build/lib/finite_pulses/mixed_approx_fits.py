@@ -4,12 +4,12 @@ import pickle
 from datetime import datetime
 import numpy as np
 import pandas as pd
-import matplotlib; matplotlib.use('Agg')
+# import matplotlib; matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.patches import Rectangle
 
-from transition_line_profile_functions import *
+from common.transition_line_profile_functions import *
 
 center_freqs = {
     "armonk": 4971730000 * 1e-6,
@@ -64,8 +64,8 @@ def make_all_dirs(path):
         if not os.path.isdir(folder):
             os.mkdir(folder)
 
-file_dir = os.path.dirname(__file__)
-
+file_dir = "/".join(os.path.dirname(__file__).split("\\")[:-1])
+print(file_dir)
 save_dir = os.path.join(
     file_dir,
     "paper_ready_plots",
@@ -86,11 +86,11 @@ def data_folder(date):
 
 backend_name = "quito"
 pulse_types = ["sin", "lor", "lor2", "sech", "sech2", "gauss"]
-# pulse_types = ["sin"]
+pulse_types = ["sin"]
 # pulse_types = ["lor2"] * 4
-pulse_types = ["demkov"]
+# pulse_types = ["demkov"]
 save = 0
-save = 1
+# save = 1
 
 times = {
     "lor_192": [["2023-04-27", "135516"],["2023-04-27", "135524"],["2023-04-27", "135528"],["2023-04-27", "135532"]],
@@ -129,9 +129,6 @@ for pulse_type, dur in zip(pulse_types, durs):
     # baseline_fit_func = "sinc2" if pulse_type in ["rabi", "constant"] else "lorentzian"
     comparison = 0 # 0 or 1, whether to have both curves
     log_plot = 0
-
-    ## create folder where plots are saved
-    file_dir = os.path.dirname(__file__)
 
 
     l, p, x0 = 419.1631352890144, 0.0957564968883284, 0.0003302995697281
@@ -268,7 +265,7 @@ for i in range(num_rows):
 maes = np.array(maes)
 sdrfs = np.array(sdrfs)
 # print(maes, sdrfs)
-# plt.show()
+plt.show()
 if save:
     mae_csv_file_path1 = os.path.join(save_dir, f"MAE_split_dur-{dur}dt_s-{s}dt_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.txt")
     mae_csv_file_path2 = os.path.join(save_dir, f"MAE_intermixed_dur-{dur}dt_s-{s}dt_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.txt")
