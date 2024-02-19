@@ -1,10 +1,15 @@
 setup.py
-finite_pulses/2d_landscape.py
+common/__init__.py
+common/pulse_shapes.py
+common/pulse_types.py
+common/save_account.py
+common/transition_line_profile_functions.py
 finite_pulses/__init__.py
 finite_pulses/mixed_approx_fits.py
 finite_pulses/sine_exc_landscape.py
 finite_pulses/sine_offres_rabi.py
 finite_pulses/sq_vs_sine_brd.py
+finite_pulses/twod_landscape.py
 new_pulse_codes/__init__.py
 new_pulse_codes/calibrate_area.py
 new_pulse_codes/calibrate_drive_freq.py

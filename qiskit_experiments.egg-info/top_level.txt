@@ -1,3 +1,4 @@
+common
 finite_pulses
 new_pulse_codes
 patched_qiskit
