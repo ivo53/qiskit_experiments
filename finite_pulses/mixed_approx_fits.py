@@ -84,11 +84,12 @@ def data_folder(date):
     ).replace("\\", "/")
 
 backend_name = "quito"
-pulse_types = ["sin", "lor", "lor2", "sech", "sech2", "gauss"]
+# pulse_types = ["sin", "lor", "lor2", "sech", "sech2", "gauss"]
 # pulse_types = ["sin"]
 # pulse_types = ["lor2"] * 4
 # pulse_types = ["demkov"]
-both_models = False
+pulse_types = ["lor2", "demkov"]
+both_models = True
 save = 0
 save = 1
 
@@ -116,7 +117,8 @@ durations = {
 
 s = 192
 # durs = [192, 224, 256, 320]
-durs = [192] * len(pulse_types) # get_closest_multiple_of_16(round(957.28))
+# durs = [192] * len(pulse_types) # get_closest_multiple_of_16(round(957.28))
+durs = [320, 192]
 tr_probs, dets = [], []
 
 for pulse_type, dur in zip(pulse_types, durs):
