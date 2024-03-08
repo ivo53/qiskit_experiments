@@ -153,7 +153,9 @@ def double_approx(x, q_freq, delta, eps, tau, pulse_type):
     omega_0 *= T
     D = (x - q_freq) * 1e6 * T
     omega = lambda t: ps.rabi_freq(t, omega_0, pulse_type, 1, sigma, rb=rb)
-    beta = np.sqrt(np.pi * omega(tau))
+    lamb = 1/4
+    beta = np.sqrt(np.pi * omega(lamb))
+    # beta = np.sqrt(np.pi**2 * omega_0)
     d = (D / (2 * beta))
     eta = np.abs(D) * sp.ellipeinc(np.pi, -omega_0**2 / D**2) / np.pi
     chi1 = d**2 / 2 + np.angle(sp.gamma(1/2 * (1 + 1j * d**2))) \

@@ -5,7 +5,7 @@ from datetime import datetime
 import numpy as np 
 import pandas as pd
 import matplotlib.pyplot as plt 
-import matplotlib; matplotlib.use('Agg')
+# import matplotlib; matplotlib.use('Agg')
 
 from common.transition_line_profile_functions import *
 
@@ -35,7 +35,7 @@ times = {
 }
 backend_name = "kyoto"
 save_fig = 0
-save_fig = 1
+# save_fig = 1
 file_dir = os.path.dirname(__file__) + "/.."
 
 def data_folder(date, time, pulse_type):
@@ -187,7 +187,7 @@ cbar = fig.colorbar(im, cax=cax)
 # cbar.set_label('Transition probability', fontsize=15)
 cbar.ax.tick_params(labelsize=18)
 
-# plt.show()
+plt.show()
 
 # Set save folder
 save_folder = os.path.join(file_dir, "paper_ready_plots", "finite_pulses")
