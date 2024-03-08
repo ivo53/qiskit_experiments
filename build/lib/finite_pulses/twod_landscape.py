@@ -5,7 +5,7 @@ from datetime import datetime
 import numpy as np 
 import pandas as pd
 import matplotlib.pyplot as plt 
-# import matplotlib; matplotlib.use('Agg')
+import matplotlib; matplotlib.use('Agg')
 
 from common.transition_line_profile_functions import *
 
@@ -61,17 +61,21 @@ for k, t in times.items():
     with open(os.path.join(data_folder(t[0], t[1], k), files[1]), 'rb') as f3:
         det.append(pickle.load(f3) * 2 * np.pi / 1e6)
 
-data = pd.read_csv("C:/Users/Ivo/Documents/Wolfram Mathematica/sine.csv", header=None).to_numpy()
+with open("C:/Users/Ivo/Documents/qiskit_experiments/sine.pkl", "rb") as f1:
+    data = pickle.load(f1)
 interval_det, interval_amp = [100, 100], [100, 150]
-lim_det, lim_amp = [230, 230], [300, 490]
+lim_det, lim_amp = [230, 230], [300, 500]#490]
 det.append(np.arange(-2.3e2, 2.3001e2, 0.05e2))
 amp.append(np.arange(0, 5.001e2, 2.5))
-tr_prob.append(data[:, 2].reshape(len(det[2]), len(amp[2])).T)
+# tr_prob.append(data[:, 2].reshape(len(det[2]), len(amp[2])).T)
+tr_prob.append(data)
 
-data_sq = pd.read_csv("C:/Users/Ivo/Documents/Wolfram Mathematica/sq.csv", header=None).to_numpy()
+# data_sq = pd.read_csv("C:/Users/Ivo/Documents/qiskit_experiments/sq.csv", header=None).to_numpy()
+with open("C:/Users/Ivo/Documents/qiskit_experiments/sq.pkl", "rb") as f2:
+    data_sq = pickle.load(f2)
 det.insert(1, np.arange(-2.3e2, 2.3001e2, 0.025e2))
 amp.insert(1, np.arange(0, 3.20001e2, 1))
-tr_prob.insert(1, data_sq[:, 2].reshape(len(det[1]), len(amp[1])).T)
+tr_prob.insert(1, data_sq)#[:, 2].reshape(len(det[1]), len(amp[1])).T)
 
 fig = plt.figure(figsize=(14,12), layout="constrained")
 gs = fig.add_gridspec(2, 4, width_ratios=[1, 1, 0.04, 0.08])
@@ -109,7 +113,7 @@ for i in range(2):
         final_idx = np.array(final_idx)
         
         if i==0 and j == 0:
-            f, axis = plt.subplots(1, 5,figsize=(12,3))
+            # f, axis = plt.subplots(1, 5,figsize=(12,3))
             s = 192
             dur = 192
             sd = []
@@ -134,8 +138,8 @@ for i in range(2):
                 sd.append(perr[0] / (2 * np.pi))
                 ef = np.linspace(detun[0], detun[-1], 5000)
                 extended_tr_fit = ff(ef, *fitparams)
-                axis[idx_area].scatter(detun, tr[idx_amp], marker="x")
-                axis[idx_area].plot(ef, extended_tr_fit, color="r")
+                # axis[idx_area].scatter(detun, tr[idx_amp], marker="x")
+                # axis[idx_area].plot(ef, extended_tr_fit, color="r")
                 linewidths[idx_area] = 2 * np.abs(ef[np.argmin(np.abs(extended_tr_fit - (np.amax(extended_tr_fit) + np.amin(extended_tr_fit)) / 2))])
         ##
         ## END OF FIT
@@ -183,7 +187,7 @@ cbar = fig.colorbar(im, cax=cax)
 # cbar.set_label('Transition probability', fontsize=15)
 cbar.ax.tick_params(labelsize=18)
 
-plt.show()
+# plt.show()
 
 # Set save folder
 save_folder = os.path.join(file_dir, "paper_ready_plots", "finite_pulses")
