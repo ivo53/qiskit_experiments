@@ -84,12 +84,12 @@ def data_folder(date):
     ).replace("\\", "/")
 
 backend_name = "quito"
-# pulse_types = ["sin", "lor", "lor2", "sech", "sech2", "gauss"]
+pulse_types = ["sin", "lor", "lor2", "sech", "sech2", "gauss"]
 # pulse_types = ["sin"]
 # pulse_types = ["lor2"] * 4
 # pulse_types = ["demkov"]
-pulse_types = ["lor2", "demkov"]
-both_models = True
+# pulse_types = ["lor2", "demkov"]
+both_models = 0
 save = 0
 save = 1
 
@@ -117,8 +117,8 @@ durations = {
 
 s = 192
 # durs = [192, 224, 256, 320]
-# durs = [192] * len(pulse_types) # get_closest_multiple_of_16(round(957.28))
-durs = [320, 192]
+durs = [192] * len(pulse_types) # get_closest_multiple_of_16(round(957.28))
+# durs = [320, 192]
 tr_probs, dets = [], []
 
 for pulse_type, dur in zip(pulse_types, durs):
@@ -155,8 +155,8 @@ colors = ["r", "g"] if both_models else ["r", "orangered"]
 params = [
     [
         [4,0.3,0.2,0.32],
-        [-10,0,0,0.2],
-        [10,1,1,.5]
+        [-10,0,0,0.1],
+        [10,1,1,.4]
     ],
     [
         [0.1,0.3,0.2],
@@ -211,7 +211,10 @@ for i in range(num_rows):
             if not both_models and idx == 0:
                 continue
             ax.plot((ef - ef.mean()) / (2 * np.pi), ex_tr_fit, color=colors[idx], label=model_short_name_dict[idx])#label=model_name_dict[pulse_types[num_columns*i+j]][idx])
-        ax.legend(fontsize=font_size, title_fontsize=font_size, title=f"{model_name_dict[pulse_types[num_columns * i + j]][2]} {dur_ns}ns")
+        legend_text = f"{model_name_dict[pulse_types[num_columns * i + j]][2]} {dur_ns}ns" if len(pulse_types) < 5 \
+            else f"{model_name_dict[pulse_types[num_columns * i + j]][2]} Shape"
+        legend = ax.legend(fontsize=font_size, title_fontsize=font_size, title=legend_text)
+        legend.get_title().set_fontweight('bold')
         if both_models:
             ax1 = fig.add_subplot(gs0[3*i+1, j])
             ax1.scatter(d, tr_fits[0] - tr, c=colors[0], marker="x")
@@ -276,7 +279,7 @@ for i in range(num_rows):
 
 maes = np.array(maes)
 sdrfs = np.array(sdrfs)
-# print(maes, sdrfs)
+print(maes, sdrfs)
 # plt.show()
 if save:
     mae_csv_file_path1 = os.path.join(save_dir, f"MAE_split_dur-{dur}dt_s-{s}dt_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.txt")

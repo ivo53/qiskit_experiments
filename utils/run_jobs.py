@@ -11,12 +11,6 @@ def run_jobs(circs, backend, duration, num_shots_per_exp=1024):
     job_ids = []
     values = []
     if size < SIZE_LIMIT * 1024 and num_exp <= CIRC_LIMIT:
-        # print("size", size)
-        # print("num_exp", num_exp)
-        # print(circs)
-        # print("len_circs", len(circs))
-        # print("option 1")
-        # return
         pi_job = backend.run(
             circs,
             shots=num_shots_per_exp
@@ -40,15 +34,6 @@ def run_jobs(circs, backend, duration, num_shots_per_exp=1024):
             end = (i + 1) * base_size_part + min(i + 1, extra)
             parts[i] = circs[start:end]
         jobs = []
-        # print("size", size)
-        # print("num_exp", num_exp)
-        # print(parts)
-        # import numpy as np
-        # print((np.array([len(p) for p in parts]) != 100).any())
-        # print("len_parts0", len(parts[0]))
-        # print("len_parts", len(parts))
-        # print("option 2")
-        # return
         num_queued = 0
         for idx, circs_part in enumerate(parts):
             current_job = backend.run(
