@@ -32,13 +32,13 @@ def generic_shape(t, args, num_pulses=10):
 
 def adiab_cond(t_, args, func, num_pulses):
     omega = func(t_, args, num_pulses)
-    omega_dot = np.diff(omega)
+    omega_dot = np.diff(omega) / np.diff(t_)
     theta1_dot = omega_dot * D / (omega[:-1] ** 2 + D ** 2)
     eps1 = (omega ** 2 + D ** 2) ** (1/2)
     adiabaticity = np.abs(theta1_dot / eps1[:-1])
     # Now calculate theta2 and thus the superadiabaticity
-    eps1_dot = np.diff(eps1)
-    theta1_ddot = np.diff(theta1_dot)
+    eps1_dot = np.diff(eps1) / np.diff(t_)
+    theta1_ddot = np.diff(theta1_dot) / np.diff(t_)[:-1]
     theta2_dot = (eps1[:-2] * theta1_ddot - eps1_dot[:-1] * theta1_dot[:-1]) / (eps1[:-2] ** 2 + 4 * theta1_dot[:-1] ** 2)
     eps2 = (eps1[:-1] ** 2 + 4 * theta1_dot ** 2) ** (1/2)
     superadiabaticity = np.abs(theta2_dot / eps2[:-1])
@@ -54,11 +54,11 @@ T, D = 5, 0.3
 t_ = np.linspace(-T, T, 500)
 
 # Define bounds for optimization
-bounds = 2 * np.array(num_pulses * 3 * [(-1, 1)] + [(-1, 1)])
+bounds = 0.5 * np.array(num_pulses * [(-1, 1), (-3, 3), (-1, 1)] + [(-1, 1)])
 
 # Initialize loss value and iterator
 res, it = 1e3, 1878
-while res > 0.15:
+while res > 20:
     # Initial guess for optimization
     np.random.seed(it)
     gen = np.random.Generator(np.random.PCG64())
