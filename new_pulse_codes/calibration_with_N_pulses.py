@@ -21,7 +21,7 @@ from qiskit.circuit import Parameter, Gate
 from qiskit.pulse import Delay,Play
 # This Pulse module helps us build sampled pulses for common pulse shapes
 from qiskit.pulse import library as pulse_lib
-from qiskit.providers.ibmq.managed import IBMQJobManager
+# from qiskit.providers.ibmq.managed import IBMQJobManager
 from qiskit_ibm_provider import IBMProvider
 
 current_dir = os.path.dirname(__file__)
@@ -29,8 +29,7 @@ package_path = os.path.abspath(os.path.split(current_dir)[0])
 sys.path.insert(0, package_path)
 
 from utils.run_jobs import run_jobs
-import pulse_types as pt
-
+import common.pulse_types as pt
 
 pulse_dict = {
     "gauss": [pt.Gaussian, pt.LiftedGaussian],
@@ -58,6 +57,7 @@ def get_calib_params(
     file_dir = os.path.split(file_dir)[0]
     calib_dir = os.path.join(file_dir, "calibrations", backend)
     params_file = os.path.join(calib_dir, "actual_params.csv")
+    
     if os.path.isfile(params_file):
         param_df = pd.read_csv(params_file)
     df = param_df[param_df.apply(
@@ -80,9 +80,9 @@ def get_calib_params(
     return l, p, x0
 
 def initialize_backend(backend):
-    backend_full_name = "ibm_" + backend \
-        if backend in ["perth", "lagos", "nairobi", "oslo"] \
-            else "ibmq_" + backend
+    backend_full_name = "ibm_" + backend 
+        # if backend in ["perth", "lagos", "nairobi", "oslo"] \
+        #     else "ibmq_" + backend
     GHz = 1.0e9 # Gigahertz
     MHz = 1.0e6 # Megahertz
     us = 1.0e-6 # Microseconds
