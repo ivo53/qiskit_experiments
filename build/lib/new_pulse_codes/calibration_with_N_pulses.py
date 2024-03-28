@@ -21,7 +21,7 @@ from qiskit.circuit import Parameter, Gate
 from qiskit.pulse import Delay,Play
 # This Pulse module helps us build sampled pulses for common pulse shapes
 from qiskit.pulse import library as pulse_lib
-from qiskit.providers.ibmq.managed import IBMQJobManager
+# from qiskit.providers.ibmq.managed import IBMQJobManager
 from qiskit_ibm_provider import IBMProvider
 
 current_dir = os.path.dirname(__file__)
@@ -30,7 +30,6 @@ sys.path.insert(0, package_path)
 
 from utils.run_jobs import run_jobs
 import pulse_types as pt
-
 
 pulse_dict = {
     "gauss": [pt.Gaussian, pt.LiftedGaussian],

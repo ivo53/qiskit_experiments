@@ -17,7 +17,7 @@ current_dir = os.path.dirname(__file__)
 package_path = os.path.abspath(os.path.split(current_dir)[0])
 sys.path.insert(0, package_path)
 
-import pulse_types as pt
+import common.pulse_types as pt
 from utils.run_jobs import run_jobs
 
 pulse_dict = {

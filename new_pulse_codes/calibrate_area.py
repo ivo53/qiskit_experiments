@@ -16,12 +16,12 @@ from qiskit.tools.monitor import job_monitor
 # from qiskit.providers.ibmq.managed import IBMQJobManager
 from qiskit_ibm_provider import IBMProvider
 
-current_dir = os.path.dirname(__file__)
-package_path = os.path.abspath(os.path.split(current_dir)[0])
-sys.path.insert(0, package_path)
+# current_dir = os.path.dirname(__file__)
+# package_path = os.path.abspath(os.path.split(current_dir)[0])
+# sys.path.insert(0, package_path)
 
 from utils.run_jobs import run_jobs
-import pulse_types as pt
+import common.pulse_types as pt
 
 def make_all_dirs(path):
     path = path.replace("\\", "/")

@@ -13,11 +13,11 @@ from qiskit import pulse                  # This is where we access all of our P
 from qiskit.circuit import Parameter, Gate # This is Parameter Class for variable parameters.
 from qiskit_ibm_provider import IBMProvider
 
-current_dir = os.path.dirname(__file__)
-package_path = os.path.abspath(os.path.split(current_dir)[0])
-sys.path.insert(0, package_path)
+# current_dir = os.path.dirname(__file__)
+# package_path = os.path.abspath(os.path.split(current_dir)[0])
+# sys.path.insert(0, package_path)
 
-import pulse_types as pt
+import qiskit_experiments.pulse_types as pt
 from utils.run_jobs import run_jobs
 
 pulse_dict = {
