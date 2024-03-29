@@ -159,9 +159,13 @@ def run_check(
     )
     Ns = np.arange(0, N_max + N_interval / 2, N_interval, dtype="int64")
 
-    def add_circ(amp, duration, sigma, freq, Ns, qubit=0):
-        amp = Parameter("amp")
-        phi = Parameter("phi")
+    def add_circ(amp, duration, sigma, freq, N, qubit=0):
+        amps = [None] * (int(N/2) + 1)
+        phis = [None] * (int(N/2) + 1)
+        for i in range(int(N/2) + 1):
+            amps.append(Parameter(f"amp{i}"))
+            phis.append(Parameter(f"phi{i}"))
+
         with pulse.build(backend=backend, default_alignment='sequential', name="calibrate_area_with_N_pulses") as sched:
             dur_dt = duration
             pulse.set_frequency(freq, drive_chan)
@@ -193,12 +197,21 @@ def run_check(
                     sigma=sigma,
                 )
             pulse.play(pulse_played, drive_chan)
-        base_circ = QuantumCircuit(num_qubits, len(Ns))
-        custom_gate = Gate("N_pulses", 1, [])
-        for _ in range(N):
-            base_circ.append(custom_gate, [qubit])
+        base_circ = QuantumCircuit(num_qubits, 1)
+        comp_pulses = []
+        for i in range(N):
+            if i < N/2:
+                cp = Gate(f"cp{i}", 1, [amps[i], phis[i]])
+            else: 
+                cp = Gate(f"cp{i}", 1, [amps[N-i-1], phis[N-i-1]])
+            comp_pulses.append(cp)
+            base_circ.append(cp, [qubit])
         base_circ.measure(qubit, 0)
-        base_circ.add_calibration(custom_gate, (qubit,), sched, [])
+        for i in range(N):
+            if i < N/2:
+                base_circ.add_calibration(comp_pulses[i], (qubit,), sched, [amps[i], phis[i]])
+            else:
+                base_circ.add_calibration(comp_pulses[i], (qubit,), sched, [amps[N-i-1], phis[N-i-1]])
         return base_circ
 
 
