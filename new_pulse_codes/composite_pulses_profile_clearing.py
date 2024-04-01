@@ -143,8 +143,7 @@ def linear_func(x, a, b):
 def run_check(
     amp_span,
     duration, sigma, pulse_type, remove_bg,
-    num_exp=10, N_max=100,
-    N_interval=2, max_exp_per_job=50,
+    num_exp=10, N=5, max_exp_per_job=50,
     num_shots=1024, backend="manila",
     l=100, p=0.5, x0=0,
     closest_amp=None
@@ -159,13 +158,8 @@ def run_check(
     )
     Ns = np.arange(0, N_max + N_interval / 2, N_interval, dtype="int64")
 
-    def add_circ(amp, duration, sigma, freq, N, qubit=0):
-        amps = [None] * (int(N/2) + 1)
-        phis = [None] * (int(N/2) + 1)
-        for i in range(int(N/2) + 1):
-            amps.append(Parameter(f"amp{i}"))
-            phis.append(Parameter(f"phi{i}"))
-
+    
+    def add_pulse(amp, phi):
         with pulse.build(backend=backend, default_alignment='sequential', name="calibrate_area_with_N_pulses") as sched:
             dur_dt = duration
             pulse.set_frequency(freq, drive_chan)
@@ -197,32 +191,48 @@ def run_check(
                     sigma=sigma,
                 )
             pulse.play(pulse_played, drive_chan)
-        base_circ = QuantumCircuit(num_qubits, 1)
-        comp_pulses = []
-        for i in range(N):
-            if i < N/2:
-                cp = Gate(f"cp{i}", 1, [amps[i], phis[i]])
-            else: 
-                cp = Gate(f"cp{i}", 1, [amps[N-i-1], phis[N-i-1]])
-            comp_pulses.append(cp)
-            base_circ.append(cp, [qubit])
-        base_circ.measure(qubit, 0)
-        for i in range(N):
-            if i < N/2:
-                base_circ.add_calibration(comp_pulses[i], (qubit,), sched, [amps[i], phis[i]])
-            else:
-                base_circ.add_calibration(comp_pulses[i], (qubit,), sched, [amps[N-i-1], phis[N-i-1]])
-        return base_circ
+        return sched
+    
+    amps = []
+    phis = []
+    for i in range(int(N/2) + 1):
+        amps.append(Parameter(f"amp{i}"))
+        phis.append(Parameter(f"phi{i}"))
 
-
-    circs = [add_circ(a, duration, sigma, q_freq[qubit], Ns) for a in amplitudes]
+    base_circ = QuantumCircuit(num_qubits, 1)
+    comp_pulses = []
+    for i in range(N):
+        if i < N/2:
+            cp = Gate(f"cp{i}", 1, [amps[i], phis[i]])
+            cp_sched.append(add_pulse(amps[i], phis[i]))
+        else: 
+            cp = Gate(f"cp{i}", 1, [amps[N-i-1], phis[N-i-1]])
+            cp_sched.append(add_pulse(amps[N-i-1], phis[N-i-1]))
+        comp_pulses.append(cp)
+        base_circ.append(cp, [qubit])
+    base_circ.measure(qubit, 0)
+    for i in range(N):
+        if i < N/2:
+            base_circ.add_calibration(comp_pulses[i], (qubit,), cp_sched[i], [amps[i], phis[i]])
+        else:
+            base_circ.add_calibration(comp_pulses[i], (qubit,), cp_sched[i], [amps[N-i-1], phis[N-i-1]])
+    amplitude_values = np.ones((N))
+    amplitude_values[0] = COMP_PARAMS[N]["alpha"]
+    phase_values = np.empty((N))
+    phase_values[:int(N/2) + 1] = np.array(COMP_PARAMS[N]["phases"])
+    phase_values[int(N/2) + 1:] = np.array(COMP_PARAMS[N]["phases"])[:-1:-1]
+    print({amps[i]: COMP_PARAMS[N]["alpha"] * pi_amp, phis[i]: phase_values[i] * np.pi} for i in range(N))
+    exit()
+    circs = base_circ.assign_parameters(
+        {amps[i]: COMP_PARAMS[N]["alpha"] * pi_amp, phis[i]: phase_values[i] * np.pi} for i in range(N)
+    )
 
     max_experiments_per_job = 100
     num_shots = 1024
 
     sweep_values, job_ids = run_jobs(circs, backend, duration *len(Ns)  , num_shots_per_exp=num_shots)
 
-    print(Ns, np.array(sweep_values).reshape(np.round(N_max / N_interval + 1).astype(np.int64), len(amplitudes)))
+    # print(Ns, np.array(sweep_values).reshape(np.round(N_max / N_interval + 1).astype(np.int64), len(amplitudes)))
     return Ns, np.array(sweep_values).reshape(np.round(N_max / N_interval + 1).astype(np.int64), len(amplitudes))
 
 
@@ -275,8 +285,7 @@ if __name__ == "__main__":
     closest_amp = args.closest_amp
     sigma = args.sigma
     duration = args.duration
-    N_max = args.N_max
-    N_interval = args.N_interval
+    N = args.N
     remove_bg = args.remove_bg
     max_experiments_per_job = args.max_experiments_per_job
     num_shots = args.num_shots
@@ -296,7 +305,7 @@ if __name__ == "__main__":
             duration, sigma, 
             pulse_type, remove_bg,
             num_exp=num_exp,
-            N_max=N_max, N_interval=N_interval,
+            N=N,
             max_exp_per_job=max_experiments_per_job,
             num_shots=num_shots, 
             backend=backend,
