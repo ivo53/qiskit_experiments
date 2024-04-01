@@ -317,7 +317,7 @@ if __name__ == "__main__":
     # rabi_schedule = schedule(circs[-1], backend)
     # rabi_schedule.draw(backend=backend)
 
-    # # with real provider    
+    # # with real provider
     # job_manager = IBMQJobManager()
     # pi_job = job_manager.run(
     #     circs,
