@@ -84,12 +84,12 @@ def data_folder(date):
     ).replace("\\", "/")
 
 backend_name = "quito"
-pulse_types = ["sin", "lor", "lor2", "sech", "sech2", "gauss"]
-# pulse_types = ["sin"]
+# pulse_types = ["sin", "lor", "lor2", "sech", "sech2", "gauss"]
+pulse_types = ["sin"]
 # pulse_types = ["lor2"] * 4
 # pulse_types = ["demkov"]
-# pulse_types = ["lor2", "demkov"]
-both_models = 0
+pulse_types = ["lor2", "demkov"]
+both_models = 1
 save = 0
 save = 1
 
@@ -151,7 +151,7 @@ dets = np.array(dets) * 1e3
 tr_probs = np.array(tr_probs)
 dets_subtracted = dets - dets.mean(1)[:, None]
 # print(dets_subtracted)
-colors = ["r", "g"] if both_models else ["r", "orangered"]
+colors = ["#118ab3", "r"] if both_models else ["#118ab3", "r"]
 params = [
     [
         [4,0.3,0.2,0.32],
@@ -206,7 +206,7 @@ for i in range(num_rows):
             ex_tr_fits.append(extended_tr_fit)
         dur_ns = np.round(dur * 2 / 9, 2)
         ax = fig.add_subplot(gs0[3*i, j]) if both_models else fig.add_subplot(gs0[2*i, j])
-        ax.scatter(d, tr, marker="p", label=f"Measured Data")
+        ax.scatter(d, tr, marker="p", color="black", label=f"Measured Data")
         for idx, ex_tr_fit in enumerate(ex_tr_fits):
             if not both_models and idx == 0:
                 continue
