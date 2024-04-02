@@ -141,9 +141,11 @@ def linear_func(x, a, b):
     return a * x + b
 
 def run_check(
-    amp_span,
-    duration, sigma, pulse_type, remove_bg,
-    num_exp=10, N=5, max_exp_per_job=50,
+    duration, sigma, 
+    pulse_type, remove_bg,
+    N=5, delay_int=32, 
+    delay_min=32, delay_max=3200, 
+    max_exp_per_job=50,
     num_shots=1024, backend="manila",
     l=100, p=0.5, x0=0,
     closest_amp=None
@@ -151,18 +153,18 @@ def run_check(
     backend, drive_chan, num_qubits, q_freq = initialize_backend(backend)
     if closest_amp is None:
         closest_amp = -np.log(1 - np.pi / l) / p + x0
-    amplitudes = np.linspace(
-        closest_amp - amp_span / 2,
-        closest_amp + amp_span / 2,
-        num_exp
-    )
-    Ns = np.arange(0, N_max + N_interval / 2, N_interval, dtype="int64")
-
+    # amplitudes = np.linspace(
+    #     closest_amp - amp_span / 2,
+    #     closest_amp + amp_span / 2,
+    #     num_exp
+    # )
+    # Ns = np.arange(0, N_max + N_interval / 2, N_interval, dtype="int64")
+    delays = np.arange(delay_min, delay_max, delay_int)
     
-    def add_pulse(amp, phi):
+    def add_pulse(amp, phi, delay):
         with pulse.build(backend=backend, default_alignment='sequential', name="calibrate_area_with_N_pulses") as sched:
             dur_dt = duration
-            pulse.set_frequency(freq, drive_chan)
+            pulse.set_frequency(q_freq, drive_chan)
             if pulse_type == "sq" or "sin" in pulse_type:
                 pulse_played = pulse_dict[pulse_type][remove_bg](
                     duration=dur_dt,
@@ -191,49 +193,54 @@ def run_check(
                     sigma=sigma,
                 )
             pulse.play(pulse_played, drive_chan)
+            pulse.delay(delay, drive_chan)
         return sched
-    
-    amps = []
-    phis = []
-    for i in range(int(N/2) + 1):
-        amps.append(Parameter(f"amp{i}"))
-        phis.append(Parameter(f"phi{i}"))
+    circs = []
+    for d in delays:
+        # amps = []
+        # phis = []
+        # for i in range(N):
+        #     amps.append(Parameter(f"amp{i}"))
+        #     phis.append(Parameter(f"phi{i}"))
+        amplitude_values = np.ones((N))
+        amplitude_values[0] = COMP_PARAMS[N]["alpha"]
+        phase_values = np.empty((N))
+        phase_values[:int(N/2) + 1] = np.array(COMP_PARAMS[N]["phases"])
+        phase_values[int(N/2) + 1:] = np.array(COMP_PARAMS[N]["phases"])[::-1][1:]
 
-    base_circ = QuantumCircuit(num_qubits, 1)
-    comp_pulses = []
-    for i in range(N):
-        if i < N/2:
-            cp = Gate(f"cp{i}", 1, [amps[i], phis[i]])
-            cp_sched.append(add_pulse(amps[i], phis[i]))
-        else: 
-            cp = Gate(f"cp{i}", 1, [amps[N-i-1], phis[N-i-1]])
-            cp_sched.append(add_pulse(amps[N-i-1], phis[N-i-1]))
-        comp_pulses.append(cp)
-        base_circ.append(cp, [qubit])
-    base_circ.measure(qubit, 0)
-    for i in range(N):
-        if i < N/2:
-            base_circ.add_calibration(comp_pulses[i], (qubit,), cp_sched[i], [amps[i], phis[i]])
-        else:
-            base_circ.add_calibration(comp_pulses[i], (qubit,), cp_sched[i], [amps[N-i-1], phis[N-i-1]])
-    amplitude_values = np.ones((N))
-    amplitude_values[0] = COMP_PARAMS[N]["alpha"]
-    phase_values = np.empty((N))
-    phase_values[:int(N/2) + 1] = np.array(COMP_PARAMS[N]["phases"])
-    phase_values[int(N/2) + 1:] = np.array(COMP_PARAMS[N]["phases"])[:-1:-1]
-    print({amps[i]: COMP_PARAMS[N]["alpha"] * pi_amp, phis[i]: phase_values[i] * np.pi} for i in range(N))
-    exit()
-    circs = base_circ.assign_parameters(
-        {amps[i]: COMP_PARAMS[N]["alpha"] * pi_amp, phis[i]: phase_values[i] * np.pi} for i in range(N)
-    )
+        base_circ = QuantumCircuit(num_qubits, 1)
+        cp_sched, comp_pulses = [], []
+        for i in range(N):
+            cp = Gate(f"cp{i}", 1, [])
+            cp_sched.append(add_pulse(amplitude_values[i] * closest_amp, phase_values[i], d))
+            comp_pulses.append(cp)
+            base_circ.append(cp, [qubit])
+            
+        base_circ.measure(qubit, 0)
+        for i in range(N):
+            base_circ.add_calibration(comp_pulses[i], (qubit,), cp_sched[i], [])
+        params_dict = {}
+        # for i in range(N):
+        #     params_dict[amps[i]] = amplitude_values[i] * closest_amp
+        #     params_dict[phis[i]] = phase_values[i]
+        circs.append(base_circ)
+        # for d in delays:
+        #     params_dict_copy = params_dict.copy()
+        #     params_dict_copy[delay] = d
+        #     print(params_dict_copy)
+        #     circs.append(
+        #         base_circ.assign_parameters(
+        #             params_dict_copy, inplace=False
+        #         )
+        #     )
 
     max_experiments_per_job = 100
-    num_shots = 1024
+    # num_shots = 1024
 
-    sweep_values, job_ids = run_jobs(circs, backend, duration *len(Ns)  , num_shots_per_exp=num_shots)
+    sweep_values, job_ids = run_jobs(circs, backend, duration * len(delays), num_shots_per_exp=num_shots)
 
     # print(Ns, np.array(sweep_values).reshape(np.round(N_max / N_interval + 1).astype(np.int64), len(amplitudes)))
-    return Ns, np.array(sweep_values).reshape(np.round(N_max / N_interval + 1).astype(np.int64), len(amplitudes))
+    return N, np.array(sweep_values)
 
 
 def find_least_variation(x, ys, init_params=[1, 1], bounds=[[-100, -100],[100, 100]]):
@@ -259,10 +266,14 @@ if __name__ == "__main__":
         help="Pulse width (sigma) parameter")    
     parser.add_argument("-T", "--duration", default=2256, type=int,
         help="Pulse duration parameter")
-    parser.add_argument("-N", "--N_max", default=100, type=int,
-        help="Maximum N number of pulses to use in the experiment.")
-    parser.add_argument("-Ni", "--N_interval", default=2, type=int,
-        help="Interval between N number of pulses.")
+    parser.add_argument("-N", "--N", default=5, type=int,
+        help="Number of composite pulses to use.")
+    parser.add_argument("-di", "--delay_int", default=32, type=int,
+        help="Delay number step between the composite pulses.")
+    parser.add_argument("-dmn", "--delay_min", default=32, type=int,
+        help="Minimum delay between the composite pulses.")
+    parser.add_argument("-dmx", "--delay_max", default=1000, type=int,
+        help="Maximum delay between the composite pulses.")
     parser.add_argument("-rb", "--remove_bg", default=1, type=int,
         help="Whether to drop the background (tail) of the pulse (0 or 1).")
     parser.add_argument("-epj", "--max_experiments_per_job", default=100, type=int,
@@ -286,6 +297,9 @@ if __name__ == "__main__":
     sigma = args.sigma
     duration = args.duration
     N = args.N
+    delay_int = args.delay_int
+    delay_min = args.delay_min
+    delay_max = args.delay_max
     remove_bg = args.remove_bg
     max_experiments_per_job = args.max_experiments_per_job
     num_shots = args.num_shots
@@ -301,11 +315,12 @@ if __name__ == "__main__":
     )
     for i in range(num_iterations):
         x, ys = run_check(
-            amp_span / (10**i), 
+            # amp_span / (10**i), 
             duration, sigma, 
             pulse_type, remove_bg,
-            num_exp=num_exp,
-            N=N,
+            N=N, delay_int=delay_int, 
+            delay_min=delay_min, 
+            delay_max=delay_max,
             max_exp_per_job=max_experiments_per_job,
             num_shots=num_shots, 
             backend=backend,
