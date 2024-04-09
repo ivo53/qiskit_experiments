@@ -5,7 +5,7 @@ from datetime import datetime
 import numpy as np 
 import pandas as pd
 import matplotlib.pyplot as plt 
-# import matplotlib; matplotlib.use('Agg')
+import matplotlib; matplotlib.use('Agg')
 
 from common.transition_line_profile_functions import *
 
@@ -35,7 +35,7 @@ times = {
 }
 backend_name = "kyoto"
 save_fig = 0
-# save_fig = 1
+save_fig = 1
 file_dir = os.path.dirname(__file__) + "/.."
 
 def data_folder(date, time, pulse_type):
@@ -81,8 +81,8 @@ fig = plt.figure(figsize=(14,12), layout="constrained")
 gs = fig.add_gridspec(2, 4, width_ratios=[1, 1, 0.04, 0.08])
 cmap = plt.cm.get_cmap('cividis')  # Choose a colormap
 linewidths = np.empty(5)
-fignew = plt.figure(figsize=(7,6), layout="constrained")
-gsnew = fignew.add_gridspec(1, 3, width_ratios=[1, 0.04, 0.08])
+# fignew = plt.figure(figsize=(7,6), layout="constrained")
+# gsnew = fignew.add_gridspec(1, 3, width_ratios=[1, 0.04, 0.08])
 
 for i in range(2):
     for j in range(2):
@@ -173,52 +173,52 @@ for i in range(2):
         ax.set_xticks(xticks)
         ax.set_yticks(yticks)
         if j == 0:
-            ax.set_yticklabels([int(tick) for tick in np.linspace(0, max_amp, int(max_amp / interval_amp[i] + 1)).round(0)], fontsize=18)
-            ax.set_ylabel('Amplitude (MHz)', fontsize=18)
+            ax.set_yticklabels([int(tick) for tick in np.linspace(0, max_amp, int(max_amp / interval_amp[i] + 1)).round(0)], fontsize=24)
+            ax.set_ylabel('Amplitude (MHz)', fontsize=28)
         else:
             ax.set_yticklabels([])
         if i == 1:
-            ax.set_xlabel('Detuning (MHz)', fontsize=18)
-            ax.set_xticklabels([int(tick) for tick in np.linspace(-max_det, max_det, int(2 * max_det / interval_det[i] + 1)).round(0)], fontsize=18)
+            ax.set_xlabel('Detuning (MHz)', fontsize=28)
+            ax.set_xticklabels([int(tick) for tick in np.linspace(-max_det, max_det, int(2 * max_det / interval_det[i] + 1)).round(0)], fontsize=24)
         else:
             ax.set_xticklabels([])
 
 
 
-        if i==0 and j==1:
-            axnew = fignew.add_subplot(gsnew[0,0])
-            imnew = axnew.imshow(tr, cmap=cmap, aspect="auto", origin="lower", vmin=0, vmax=1)
-            xticks = np.linspace(
-                len(tr[0])-int(np.round(max_det / d[-1] * (len(tr[0]) / 2 - 1) + len(tr[0]) / 2)), 
-                int(np.round(max_det / d[-1] * (len(tr[0]) / 2 - 1) + len(tr[0]) / 2)), 
-                int(2 * max_det / interval_det[i] + 1)
-            )
-            yticks = np.linspace(
-                0, 
-                int(np.round(max_amp / a[-1] * (len(tr) - 1))), 
-                int(max_amp / interval_amp[i] + 1)
-            )
-            axnew.set_xticks(xticks)
-            axnew.set_yticks(yticks)
-            axnew.set_yticklabels([int(tick) for tick in np.linspace(0, max_amp, int(max_amp / interval_amp[i] + 1)).round(0)], fontsize=18)
-            axnew.set_ylabel('Amplitude (MHz)', fontsize=18)
-            axnew.set_xlabel('Detuning (MHz)', fontsize=18)
-            axnew.set_xticklabels([int(tick) for tick in np.linspace(-max_det, max_det, int(2 * max_det / interval_det[i] + 1)).round(0)], fontsize=18)
+        # if i==0 and j==1:
+        #     axnew = fignew.add_subplot(gsnew[0,0])
+        #     imnew = axnew.imshow(tr, cmap=cmap, aspect="auto", origin="lower", vmin=0, vmax=1)
+        #     xticks = np.linspace(
+        #         len(tr[0])-int(np.round(max_det / d[-1] * (len(tr[0]) / 2 - 1) + len(tr[0]) / 2)), 
+        #         int(np.round(max_det / d[-1] * (len(tr[0]) / 2 - 1) + len(tr[0]) / 2)), 
+        #         int(2 * max_det / interval_det[i] + 1)
+        #     )
+        #     yticks = np.linspace(
+        #         0, 
+        #         int(np.round(max_amp / a[-1] * (len(tr) - 1))), 
+        #         int(max_amp / interval_amp[i] + 1)
+        #     )
+        #     axnew.set_xticks(xticks)
+        #     axnew.set_yticks(yticks)
+        #     axnew.set_yticklabels([int(tick) for tick in np.linspace(0, max_amp, int(max_amp / interval_amp[i] + 1)).round(0)], fontsize=18)
+        #     axnew.set_ylabel('Amplitude (MHz)', fontsize=28)
+        #     axnew.set_xlabel('Detuning (MHz)', fontsize=28)
+        #     axnew.set_xticklabels([int(tick) for tick in np.linspace(-max_det, max_det, int(2 * max_det / interval_det[i] + 1)).round(0)], fontsize=18)
 
 # print(linewidths)
 # Create a separate subplot for the color bar
 cax = fig.add_subplot(gs[:, 3])
 cbar = fig.colorbar(im, cax=cax)
 # cbar.set_label('Transition probability', fontsize=15)
-cbar.ax.tick_params(labelsize=18)
+cbar.ax.tick_params(labelsize=28)
 
-# Create a separate subplot for the color bar
-caxnew = fignew.add_subplot(gsnew[:, 2])
-cbarnew = fignew.colorbar(imnew, cax=caxnew)
-# cbar.set_label('Transition probability', fontsize=15)
-cbarnew.ax.tick_params(labelsize=18)
+# # Create a separate subplot for the color bar
+# caxnew = fignew.add_subplot(gsnew[:, 2])
+# cbarnew = fignew.colorbar(imnew, cax=caxnew)
+# # cbar.set_label('Transition probability', fontsize=15)
+# cbarnew.ax.tick_params(labelsize=28)
 
-plt.show()
+# plt.show()
 
 # Set save folder
 save_folder = os.path.join(file_dir, "paper_ready_plots", "finite_pulses")
@@ -227,7 +227,8 @@ save_folder = os.path.join(file_dir, "paper_ready_plots", "finite_pulses")
 date = datetime.now()
 
 # Set fig name
-fig_name = f"2d_sine_exp_sim_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pdf"
+# fig_name = f"2d_sine_exp_sim_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pdf"
+fig_name = f"2d_sine_sq_exp_sim_{date.strftime('%Y%m%d')}_{date.strftime('%H%M%S')}.pdf"
 
 if save_fig:
     # Save the fig
