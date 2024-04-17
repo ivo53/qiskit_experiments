@@ -86,10 +86,12 @@ def data_folder(date):
 backend_name = "quito"
 pulse_types = ["sin", "lor", "lor2", "sech", "sech2", "gauss"]
 # pulse_types = ["sin"]
+pulse_types = ["sin", "lor", "lor2", "sech", "sech2", "gauss"]
+pulse_types = ["sin"]
 # pulse_types = ["lor2"] * 4
 # pulse_types = ["demkov"]
 # pulse_types = ["lor2", "demkov"]
-both_models = 0
+both_models = 1
 save = 0
 # save = 1
 
@@ -151,7 +153,7 @@ dets = np.array(dets) * 1e3
 tr_probs = np.array(tr_probs)
 dets_subtracted = dets - dets.mean(1)[:, None]
 # print(dets_subtracted)
-colors = ["#118ab3", "r"] if both_models else ["#118ab3", "r"]
+colors = ["#000000", "r"] if both_models else ["#000000", "r"]
 params = [
     [
         [4,0.3,0.2,0.32],
@@ -170,7 +172,9 @@ num_columns = np.maximum(int(num_figures / 2), 1) # 3 if num_figures % 3 == 0 el
 num_rows = int(num_figures / num_columns)
 print(num_columns, num_rows)
 num_residual_axes = 2 if both_models else 1
-font_size, width, height = 16, 8, 6
+font_size = 16 if not num_figures == 6 else 24
+font_size2 = 16 if not num_figures == 6 else 18
+width, height = 8, 6
 # Create a 3x3 grid of subplots with extra space for the color bar
 fig = plt.figure(figsize=(num_columns * width, num_rows * height), layout="constrained")
 gs0 = fig.add_gridspec((1 + num_residual_axes) * num_rows, num_columns, height_ratios=([1] + [0.1] * num_residual_axes) * num_rows, width_ratios=[1] * num_columns)
@@ -206,14 +210,14 @@ for i in range(num_rows):
             ex_tr_fits.append(extended_tr_fit)
         dur_ns = np.round(dur * 2 / 9, 2)
         ax = fig.add_subplot(gs0[3*i, j]) if both_models else fig.add_subplot(gs0[2*i, j])
-        ax.scatter(d, tr, marker="p", color="black", label=f"Measured Data")
+        ax.scatter(d, tr, marker="p", label=f"Measured Data")
         for idx, ex_tr_fit in enumerate(ex_tr_fits):
             if not both_models and idx == 0:
                 continue
             ax.plot((ef - ef.mean()) / (2 * np.pi), ex_tr_fit, color=colors[idx], label=model_short_name_dict[idx])#label=model_name_dict[pulse_types[num_columns*i+j]][idx])
         legend_text = f"{model_name_dict[pulse_types[num_columns * i + j]][2]} {dur_ns}ns" if len(pulse_types) < 5 \
             else f"{model_name_dict[pulse_types[num_columns * i + j]][2]} Shape"
-        legend = ax.legend(fontsize=font_size, title_fontsize=font_size, title=legend_text)
+        legend = ax.legend(fontsize=font_size2, title_fontsize=font_size2, title=legend_text)
         legend.get_title().set_fontweight('bold')
         if both_models:
             ax1 = fig.add_subplot(gs0[3*i+1, j])
@@ -250,16 +254,17 @@ for i in range(num_rows):
         ax2.set_xticks(minor_xlabels, minor="True")
         ax.set_xticklabels([])
         ax.set_yticks(minor_ylabels, minor="True")
-        ax.set_yticklabels([item.get_text() for item in ax.get_yticklabels()], fontsize=font_size)
         if j == 0:
             ax.set_ylabel("Transition Probability", fontsize=font_size)
             if both_models:
-                ax1.set_yticklabels([item.get_text() for item in ax1.get_yticklabels()], fontsize=0.9 * font_size)
-            ax2.set_yticklabels([item.get_text() for item in ax2.get_yticklabels()], fontsize=0.9 * font_size)
+                ax1.set_yticklabels([item.get_text() for item in ax1.get_yticklabels()], fontsize=0.9 * font_size2)
+            ax2.set_yticklabels([item.get_text() for item in ax2.get_yticklabels()], fontsize=0.9 * font_size2)
+            ax.set_yticklabels([item.get_text() for item in ax.get_yticklabels()], fontsize=font_size)
         else:
             if both_models:
                 ax1.set_yticklabels([])
             ax2.set_yticklabels([])
+            ax.set_yticklabels([])
         if i == num_rows - 1:
             ax2.set_xticklabels(xlabels, fontsize=font_size)
             ax2.set_xlabel("Detuning (MHz)", fontsize=font_size)
