@@ -85,13 +85,15 @@ def data_folder(date):
 
 backend_name = "quito"
 pulse_types = ["sin", "lor", "lor2", "sech", "sech2", "gauss"]
+# pulse_types = ["sin"]
+pulse_types = ["sin", "lor", "lor2", "sech", "sech2", "gauss"]
 pulse_types = ["sin"]
 # pulse_types = ["lor2"] * 4
 # pulse_types = ["demkov"]
 # pulse_types = ["lor2", "demkov"]
 both_models = 1
 save = 0
-save = 1
+# save = 1
 
 times = {
     "lor_192": [["2023-04-27", "135516"],["2023-04-27", "135524"],["2023-04-27", "135528"],["2023-04-27", "135532"]],

@@ -195,6 +195,7 @@ def run_check(
             pulse.play(pulse_played, drive_chan)
             pulse.delay(delay, drive_chan)
         return sched
+
     circs = []
     for d in delays:
         # amps = []
@@ -215,7 +216,7 @@ def run_check(
             cp_sched.append(add_pulse(amplitude_values[i] * closest_amp, phase_values[i], d))
             comp_pulses.append(cp)
             base_circ.append(cp, [qubit])
-            
+
         base_circ.measure(qubit, 0)
         for i in range(N):
             base_circ.add_calibration(comp_pulses[i], (qubit,), cp_sched[i], [])
