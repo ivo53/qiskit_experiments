@@ -5,16 +5,6 @@ import qutip as qt
 import atomphys as ap
 from scipy.integrate import quad
 
-# Ca = ap.Atom("Ca+")
-# u = Ca._ureg
-# print()
-# S_1_2 = Ca.states[0]
-# D_5_2 = Ca.states[2]
-# other_states = [Ca.states[i] for i in np.arange(72)[~(np.arange(72)[:, None] == np.array([0, 2])[None]).any(1)]]
-# T_729 = ap.Transition(S_1_2, D_5_2)
-# print(T_729.to_dict())
-
-
 wavenumbers = [
     13650.19, 13710.88, 25191.51, 25414.40, 52166.93, 56839.25, 56858.46, \
     60533.02, 60611.28, 68056.91, 68056.91, 70677.62, 72722.23, 72730.93, \
@@ -55,8 +45,8 @@ def omega(t, args):
 def omega_sq(t, args):
     return (args["O"] / (1 + ((t) / args["sigma"]) ** 2) ** args["lor_power"]) ** 2
 
-sigma = 1
-T = 10
+sigma = 1e-7
+T = 10e-7
 num_t = 1000
 max_pulse_area = 10 * np.pi
 lor_power = 1
@@ -68,7 +58,7 @@ A_end = max_pulse_area / quad(lambda t: omega(t, {"O": 1, "sigma": sigma, "lor_p
 
 tlist = np.linspace(-T/2, T/2, num_t)
 options = qt.Options()
-options.nsteps = 5000
+options.nsteps = 10000
 d_range = np.linspace(d_start, d_end, d_num)
 A_range = np.linspace(A_start, A_end, A_num) 
 
@@ -91,11 +81,11 @@ for d in d_range:
                 H0_init, 
                 [H0_shift, omega_sq],
                 [H1, omega]
-            ],
+        ]
         #execute mesolve
         times = np.linspace(0, 10, 100)  # Time from 0 to 10 arbitrary units
         psi0 = ground_state  # Initial state
-        result = qt.mesolve(H, psi0, times, [], [], args={"O": a, "sigma": sigma, "lor_power": lor_power})
+        result = qt.mesolve(H, psi0, times, [], [], args={"O": a, "sigma": sigma, "lor_power": lor_power}, options=options)
 
 #visualize results
 import matplotlib.pyplot as plt
