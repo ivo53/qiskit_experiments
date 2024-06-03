@@ -68,12 +68,14 @@ excited_state = qt.basis(2, 1)
 
 for d in d_range:
     # Calculate the AC Stark shifts
-    delta_g = sum(1 / (ord + d) + 1 / ((ord + d) + 2 * natural_frequency) for ord in detunings)
-    delta_e = sum((1 / ((-1) ** int(f < natural_frequency) * ord + d) + 1 / (((-1) ** int(f < natural_frequency) * ord + d) + 2 * natural_frequency)) for f, ord in zip(frequencies_hz, detunings))
-    print(delta_g, delta_e)
+    # delta_g = sum(1 / (ord + d) + 1 / ((ord + d) + 2 * natural_frequency) for ord in detunings)
+    # delta_e = sum((1 / ((-1) ** int(f < natural_frequency) * ord + d) + 1 / (((-1) ** int(f < natural_frequency) * ord + d) + 2 * natural_frequency)) for f, ord in zip(frequencies_hz, detunings))
+    # print(delta_g, delta_e)
+
+    delta_g = 1 / ()
     for a in A_range:
     # Define the Hamiltonian
-        H0_init = d * qt.sigmaz()/2
+        H0_init = d * qt.sigmaz() / 2
         H0_shift = delta_g * qt.basis(2, 0) * qt.basis(2, 0).dag() + delta_e * qt.basis(2, 1) * qt.basis(2, 1).dag()
         H0 = H0_init + H0_shift
         H1 = qt.sigmax() / 2

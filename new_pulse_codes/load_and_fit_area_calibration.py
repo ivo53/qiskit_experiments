@@ -9,6 +9,7 @@ import pandas as pd
 from scipy.optimize import curve_fit
 
 resonant_frequencies = {
+    "sherbrooke": 4635663704.124764,
     "manila": 4962284031.287086,
     "osaka": 5019850020.72268,
 }

@@ -142,12 +142,14 @@ def linear_func(x, a, b):
 
 def run_check(
     duration, sigma, 
-    pulse_type, remove_bg,
-    N=5, delay_int=32, 
-    delay_min=32, delay_max=3200, 
+    pulse_type, remove_bg, N=5, 
+    delay_int=32, delay_min=32, delay_max=3200,
+    freq_int=32, freq_min=32, freq_max=3200,
+    intensity_int=32, intensity_min=32, intensity_max=3200, 
     max_exp_per_job=50,
     num_shots=1024, backend="manila",
     l=100, p=0.5, x0=0,
+    qubit=0,
     closest_amp=None
 ):
     backend, drive_chan, num_qubits, q_freq = initialize_backend(backend)
@@ -160,71 +162,89 @@ def run_check(
     # )
     # Ns = np.arange(0, N_max + N_interval / 2, N_interval, dtype="int64")
     delays = np.arange(delay_min, delay_max, delay_int)
+    # frequencies = np.arange(freq_min, freq_max, freq_int)
+    # intensities = np.arange(intensity_min, intensity_max, intensity_int)
     
-    def add_pulse(amp, phi, delay):
-        with pulse.build(backend=backend, default_alignment='sequential', name="calibrate_area_with_N_pulses") as sched:
-            dur_dt = duration
-            pulse.set_frequency(q_freq, drive_chan)
+    amplitude_values = np.ones((N))
+    amplitude_values[0] = COMP_PARAMS[N]["alpha"]
+    phase_values = np.empty((N))
+    phase_values[:int(N/2) + 1] = np.array(COMP_PARAMS[N]["phases"])
+    phase_values[int(N/2) + 1:] = np.array(COMP_PARAMS[N]["phases"])[::-1][1:]
+    
+    freq = Parameter("freq")
+    rabi_intensity = Parameter("rabi_intensity")
+    delay = Parameter("delay")
+    with pulse.build(backend=backend, default_alignment='sequential', name="calibrate_area_with_N_pulses") as sched:
+        dur_dt = duration
+        pulse.set_frequency(freq, drive_chan)
+        for idx, (amp, phi) in enumerate(zip(amplitude_values, phase_values)):
             if pulse_type == "sq" or "sin" in pulse_type:
                 pulse_played = pulse_dict[pulse_type][remove_bg](
                     duration=dur_dt,
-                    amp=amp * np.exp(1j * phi * np.pi),
+                    amp=rabi_intensity * amp * np.exp(1j * phi * np.pi),
                     name=pulse_type
                 )
             elif pulse_type == "gauss":
                 pulse_played = pulse_dict[pulse_type][remove_bg](
                     duration=dur_dt,
-                    amp=amp * np.exp(1j * phi * np.pi),
+                    amp=rabi_intensity * amp * np.exp(1j * phi * np.pi),
                     name=pulse_type,
                     sigma=sigma / np.sqrt(2)
                 )
             elif pulse_type in ["lor", "lor2", "lor3"]:
                 pulse_played = pulse_dict[pulse_type][remove_bg](
                     duration=dur_dt,
-                    amp=amp * np.exp(1j * phi * np.pi),
+                    amp=rabi_intensity * amp * np.exp(1j * phi * np.pi),
                     name=pulse_type,
                     sigma=sigma,
                 )
             else:
                 pulse_played = pulse_dict[pulse_type][remove_bg](
                     duration=dur_dt,
-                    amp=amp * np.exp(1j * phi * np.pi),
+                    amp=rabi_intensity * amp * np.exp(1j * phi * np.pi),
                     name=pulse_type,
                     sigma=sigma,
                 )
             pulse.play(pulse_played, drive_chan)
-            pulse.delay(delay, drive_chan)
-        return sched
+            if idx < len(amplitude_values) - 1:
+                pulse.delay(delay, drive_chan)
 
-    circs = []
-    for d in delays:
-        # amps = []
-        # phis = []
+
+    # circs = []
+    # for d in delays:
+    #     # amps = []
+    #     # phis = []
+    #     # for i in range(N):
+    #     #     amps.append(Parameter(f"amp{i}"))
+    #     #     phis.append(Parameter(f"phi{i}"))
+    #     amplitude_values = np.ones((N))
+    #     amplitude_values[0] = COMP_PARAMS[N]["alpha"]
+    #     phase_values = np.empty((N))
+    #     phase_values[:int(N/2) + 1] = np.array(COMP_PARAMS[N]["phases"])
+    #     phase_values[int(N/2) + 1:] = np.array(COMP_PARAMS[N]["phases"])[::-1][1:]
+
+        # base_circ = QuantumCircuit(num_qubits, 1)
+        # cp_sched, comp_pulses = [], [None] * N
         # for i in range(N):
-        #     amps.append(Parameter(f"amp{i}"))
-        #     phis.append(Parameter(f"phi{i}"))
-        amplitude_values = np.ones((N))
-        amplitude_values[0] = COMP_PARAMS[N]["alpha"]
-        phase_values = np.empty((N))
-        phase_values[:int(N/2) + 1] = np.array(COMP_PARAMS[N]["phases"])
-        phase_values[int(N/2) + 1:] = np.array(COMP_PARAMS[N]["phases"])[::-1][1:]
+        #     comp_pulses[i] = Gate(f"cp{i}", 1, [])
+        #     cp_sched.append(add_pulse(amplitude_values[i] * closest_amp, phase_values[i], d))
+        #     base_circ.append(comp_pulses[i], [qubit])
 
-        base_circ = QuantumCircuit(num_qubits, 1)
-        cp_sched, comp_pulses = [], []
-        for i in range(N):
-            cp = Gate(f"cp{i}", 1, [])
-            cp_sched.append(add_pulse(amplitude_values[i] * closest_amp, phase_values[i], d))
-            comp_pulses.append(cp)
-            base_circ.append(cp, [qubit])
-
-        base_circ.measure(qubit, 0)
-        for i in range(N):
-            base_circ.add_calibration(comp_pulses[i], (qubit,), cp_sched[i], [])
-        params_dict = {}
+        # base_circ.measure(qubit, 0)
         # for i in range(N):
-        #     params_dict[amps[i]] = amplitude_values[i] * closest_amp
-        #     params_dict[phis[i]] = phase_values[i]
-        circs.append(base_circ)
+        #     base_circ.add_calibration(comp_pulses[i], (qubit,), cp_sched[i], [])
+        # params_dict = {}
+        # # for i in range(N):
+        # #     params_dict[amps[i]] = amplitude_values[i] * closest_amp
+        # #     params_dict[phis[i]] = phase_values[i]
+
+    base_circ = QuantumCircuit(num_qubits, 1)
+    comp_gate = Gate("composite_series", 1, [freq, rabi_intensity, delay])
+    base_circ.append(comp_gate, [qubit])
+    base_circ.measure(qubit, 0)
+    base_circ.add_calibration(comp_gate, (qubit,), sched, [freq, rabi_intensity, delay])
+    circs = [base_circ.assign_parameters({freq: q_freq[qubit], rabi_intensity: 1, delay: d}, inplace=False) 
+             for d in delays]
         # for d in delays:
         #     params_dict_copy = params_dict.copy()
         #     params_dict_copy[delay] = d
@@ -237,7 +257,6 @@ def run_check(
 
     max_experiments_per_job = 100
     # num_shots = 1024
-
     sweep_values, job_ids = run_jobs(circs, backend, duration * len(delays), num_shots_per_exp=num_shots)
 
     # print(Ns, np.array(sweep_values).reshape(np.round(N_max / N_interval + 1).astype(np.int64), len(amplitudes)))
@@ -279,7 +298,7 @@ if __name__ == "__main__":
         help="Whether to drop the background (tail) of the pulse (0 or 1).")
     parser.add_argument("-epj", "--max_experiments_per_job", default=100, type=int,
         help="Maximum experiments per job")
-    parser.add_argument("-ns", "--num_shots", default=2048, type=int,
+    parser.add_argument("-ns", "--num_shots", default=256, type=int,
         help="Number of shots per experiment (datapoint).")
     parser.add_argument("-ne", "--num_experiments", default=100, type=int,
         help="Number of experiments with different detuning each.")
