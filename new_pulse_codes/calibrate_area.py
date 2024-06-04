@@ -12,7 +12,7 @@ from qiskit import pulse, IBMQ, QuantumCircuit, transpile
 from qiskit.circuit import Parameter, Gate
 # This Pulse module helps us build sampled pulses for common pulse shapes
 # from qiskit.pulse import library as pulse_lib
-from qiskit.tools.monitor import job_monitor
+# from qiskit.tools.monitor import job_monitor
 # from qiskit.providers.ibmq.managed import IBMQJobManager
 from qiskit_ibm_provider import IBMProvider
 
@@ -144,11 +144,11 @@ if __name__ == "__main__":
     date = datetime.now()
     time = date.strftime("%H%M%S")
     current_date = date.strftime("%Y-%m-%d")
-    calib_dir = os.path.join(file_dir, "calibrations", backend_name)
+    calib_dir = os.path.join(file_dir, "calibrations", backend_name, str(qubit))
     save_dir = os.path.join(calib_dir, current_date)
     # if not os.path.isdir(save_dir):
     #     os.mkdir(save_dir)
-    data_folder = os.path.join(file_dir, "data", backend_name, "calibration", current_date)
+    data_folder = os.path.join(file_dir, "data", backend_name, str(qubit), "calibration", current_date)
     # if not os.path.isdir(data_folder):
     #     os.mkdir(data_folder)
     make_all_dirs(save_dir)

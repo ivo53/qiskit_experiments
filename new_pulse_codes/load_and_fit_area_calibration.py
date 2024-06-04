@@ -9,9 +9,9 @@ import pandas as pd
 from scipy.optimize import curve_fit
 
 resonant_frequencies = {
-    "sherbrooke": 4635663704.124764,
-    "manila": 4962284031.287086,
-    "osaka": 5019850020.72268,
+    "sherbrooke": {42: 4635663704.124764},
+    # "manila": 4962284031.287086,
+    "osaka": {0: 5019850020.72268},
 }
 def make_all_dirs(path):
     path = path.replace("\\", "/")
@@ -50,6 +50,9 @@ if __name__ == "__main__":
         "-b", "--backend", default="manila", type=str,
         help="Backend on which area was calibrated.")
     parser.add_argument(
+        "-q", "--qubit", default=0, type=int,
+        help="Qubit on which the calibration was done.")
+    parser.add_argument(
         "-pt", "--pulse_type", default="lor", type=str,
         help="Pulse type (e.g. sq, gauss, sine, sech etc.).")
     parser.add_argument(
@@ -85,6 +88,7 @@ if __name__ == "__main__":
         help="Whether to save the result (0 or 1).")
     args = parser.parse_args()
     backend = args.backend
+    qubit = args.qubit
     pulse_type = args.pulse_type
     duration = args.duration
     sigma = args.sigma
@@ -106,13 +110,13 @@ if __name__ == "__main__":
     file_dir = os.path.split(file_dir)[0]
     curr_date = datetime.now()
     current_date = curr_date.strftime("%Y-%m-%d")
-    load_dir = os.path.join(file_dir, "data", backend_name, "calibration", date)
+    load_dir = os.path.join(file_dir, "data", backend_name, str(qubit),"calibration", date)
     calib_dir = os.path.join(file_dir, "calibrations")
-    save_dir = os.path.join(calib_dir, backend_name, date)
+    save_dir = os.path.join(calib_dir, backend_name, str(qubit), date)
 
     for calib_file in os.listdir(save_dir):
         split_calib_file = calib_file.split("_")
-        print(split_calib_file)
+        # print(split_calib_file)
         if split_calib_file[-1] == "areacal.png":
             if pulse_type == split_calib_file[1] and \
                 duration == int(split_calib_file[3]) and \
@@ -203,7 +207,7 @@ if __name__ == "__main__":
     # exit()
     if save:
         new_entry = pd.DataFrame(param_dict)
-        params_file = os.path.join(calib_dir, backend_name, "actual_params.csv")
+        params_file = os.path.join(calib_dir, backend_name, str(qubit), "actual_params.csv")
         if os.path.isfile(params_file):
             param_df = pd.read_csv(params_file)
             param_df = add_entry_and_remove_duplicates(param_df, new_entry)

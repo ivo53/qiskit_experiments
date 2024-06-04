@@ -47,24 +47,52 @@ pulse_dict = {
     "demkov": [pt.Demkov, pt.LiftedDemkov],
 }
 
+# COMP_PARAMS = {
+#     3: {"alpha": 0.6399, "phases": [1.8442, 1.0587]},
+#     5: {"alpha": 0.45, "phases": [1.9494, 0.5106, 1.31]},
+#     7: {"alpha": 0.2769, "phases": [1.6803, 0.2724, 0.8255, 1.6624]},
+#     9: {"alpha": 0.2947, "phases": [0.2711, 1.1069, 1.5283, 0.1283, 0.9884]},
+#     11: {"alpha": 0.2985, "phases": [1.7377, 0.1651, 0.9147, 0.1510, 0.9331, 1.6415]},
+#     13: {"alpha": 0.5065, "phases": [0.0065, 1.7755, 0.7155, 0.5188, 0.2662, 1.2251, 1.3189]},
+#     15: {"alpha": 0.3213, "phases": [1.2316, 0.9204, 0.2043, 1.9199, 0.8910, 0.7381, 1.9612, 1.3649]},
+# }
 COMP_PARAMS = {
-    3: {"alpha": 0.6399, "phases": [1.8442, 1.0587]},
-    5: {"alpha": 0.45, "phases": [1.9494, 0.5106, 1.31]},
-    7: {"alpha": 0.2769, "phases": [1.6803, 0.2724, 0.8255, 1.6624]},
-    9: {"alpha": 0.2947, "phases": [0.2711, 1.1069, 1.5283, 0.1283, 0.9884]},
-    11: {"alpha": 0.2985, "phases": [1.7377, 0.1651, 0.9147, 0.1510, 0.9331, 1.6415]},
-    13: {"alpha": 0.5065, "phases": [0.0065, 1.7755, 0.7155, 0.5188, 0.2662, 1.2251, 1.3189]},
-    15: {"alpha": 0.3213, "phases": [1.2316, 0.9204, 0.2043, 1.9199, 0.8910, 0.7381, 1.9612, 1.3649]},
+    3: [{"alpha": 1, "phases": [0, 1/2]}],
+    5: [
+        {"alpha": 1, "phases": [0, 5/6, 2/6]}, 
+        {"alpha": 1, "phases": [0, 11/6, 2/6]}
+    ],
+    7: [
+        {"alpha": 1, "phases": [0, 11/12, 10/12, 17/12]}, 
+        {"alpha": 1, "phases": [0, 1/12, 14/12, 19/12]}
+    ],
+    9: [
+        {"alpha": 1, "phases": [0, 0.366, 0.638, 0.435, 1.697]},
+        {"alpha": 1, "phases": [0, 0.634, 1.362, 0.565, 0.303]}
+    ],
+    11: [
+        {"alpha": 1, "phases": np.array([0, 11, 10, 23, 1, 19]) / 12}, 
+        {"alpha": 1, "phases": np.array([0, 1, 14, 13, 23, 17]) / 12}
+    ],
+    13: [
+        {"alpha": 1, "phases": np.array([0, 9, 42, 11, 8, 37, 2]) / 24}, 
+        {"alpha": 1, "phases": np.array([0, 33, 42, 35, 8, 13, 2]) / 24}
+    ],
+    25: [
+        {"alpha": 1, "phases": np.array([0, 5, 2, 5, 0, 11, 4, 1, 4, 11, 2, 7, 4]) / 6}, 
+        {"alpha": 1, "phases": np.array([0, 11, 2, 11, 0, 5, 4, 7, 4, 5, 2, 1, 4]) / 6}
+    ],
 }
 
 def get_calib_params(
-    backend, pulse_type, 
+    backend, qubit,
+    pulse_type, 
     sigma, duration,
     remove_bg
 ):
     file_dir = os.path.dirname(__file__)
     file_dir = os.path.split(file_dir)[0]
-    calib_dir = os.path.join(file_dir, "calibrations", backend)
+    calib_dir = os.path.join(file_dir, "calibrations", backend, str(qubit))
     params_file = os.path.join(calib_dir, "actual_params.csv")
     
     if os.path.isfile(params_file):
@@ -142,9 +170,10 @@ def linear_func(x, a, b):
 
 def run_check(
     duration, sigma, 
-    pulse_type, remove_bg, N=5, 
-    delay_int=32, delay_min=32, delay_max=3200,
-    freq_int=32, freq_min=32, freq_max=3200,
+    pulse_type, remove_bg, N=5, composites_version=0,# can be 0 or 1 
+    delay_int=None, delay_min=32, delay_max=3200,
+    amp_int=None, amp_min=0, amp_max=2,
+    det_int=None, det_min=-1e6, det_max=1e6,
     intensity_int=32, intensity_min=32, intensity_max=3200, 
     max_exp_per_job=50,
     num_shots=1024, backend="manila",
@@ -161,15 +190,17 @@ def run_check(
     #     num_exp
     # )
     # Ns = np.arange(0, N_max + N_interval / 2, N_interval, dtype="int64")
-    delays = np.arange(delay_min, delay_max, delay_int)
-    # frequencies = np.arange(freq_min, freq_max, freq_int)
-    # intensities = np.arange(intensity_min, intensity_max, intensity_int)
+    natural_freq = q_freq[qubit]
+    delays = [0] if delay_int is None else np.arange(delay_min, delay_max, delay_int)
+    frequencies = [natural_freq] if det_int is None else np.arange(natural_freq + det_min, natural_freq + det_max, det_int)
+    intensities = [1] if amp_int is None else np.arange(amp_min, amp_max, amp_int)
     
     amplitude_values = np.ones((N))
-    amplitude_values[0] = COMP_PARAMS[N]["alpha"]
+    amplitude_values[0] = COMP_PARAMS[N][composites_version]["alpha"]
+    amplitude_values *= closest_amp
     phase_values = np.empty((N))
-    phase_values[:int(N/2) + 1] = np.array(COMP_PARAMS[N]["phases"])
-    phase_values[int(N/2) + 1:] = np.array(COMP_PARAMS[N]["phases"])[::-1][1:]
+    phase_values[:int(N/2) + 1] = np.array(COMP_PARAMS[N][composites_version]["phases"])
+    phase_values[int(N/2) + 1:] = np.array(COMP_PARAMS[N][composites_version]["phases"])[::-1][1:]
     
     freq = Parameter("freq")
     rabi_intensity = Parameter("rabi_intensity")
@@ -243,8 +274,12 @@ def run_check(
     base_circ.append(comp_gate, [qubit])
     base_circ.measure(qubit, 0)
     base_circ.add_calibration(comp_gate, (qubit,), sched, [freq, rabi_intensity, delay])
-    circs = [base_circ.assign_parameters({freq: q_freq[qubit], rabi_intensity: 1, delay: d}, inplace=False) 
-             for d in delays]
+    circs = [
+        base_circ.assign_parameters({freq: q, rabi_intensity: i, delay: d}, inplace=False) 
+        for q in frequencies
+        for i in intensities
+        for d in delays
+    ]
         # for d in delays:
         #     params_dict_copy = params_dict.copy()
         #     params_dict_copy[delay] = d
@@ -255,12 +290,15 @@ def run_check(
         #         )
         #     )
 
-    max_experiments_per_job = 100
+    parameters = [(q, i, d) for q in frequencies for i in intensities for d in delays]
+    # print(parameters)
     # num_shots = 1024
     sweep_values, job_ids = run_jobs(circs, backend, duration * len(delays), num_shots_per_exp=num_shots)
-
+    plt.scatter(frequencies, sweep_values)
+    plt.show()
+    print(sweep_values)
     # print(Ns, np.array(sweep_values).reshape(np.round(N_max / N_interval + 1).astype(np.int64), len(amplitudes)))
-    return N, np.array(sweep_values)
+    return frequencies, intensities, delays, np.array(sweep_values)
 
 
 def find_least_variation(x, ys, init_params=[1, 1], bounds=[[-100, -100],[100, 100]]):
@@ -288,12 +326,24 @@ if __name__ == "__main__":
         help="Pulse duration parameter")
     parser.add_argument("-N", "--N", default=5, type=int,
         help="Number of composite pulses to use.")
-    parser.add_argument("-di", "--delay_int", default=32, type=int,
+    parser.add_argument("-di", "--delay_int", default=None, type=int,
         help="Delay number step between the composite pulses.")
     parser.add_argument("-dmn", "--delay_min", default=32, type=int,
         help="Minimum delay between the composite pulses.")
     parser.add_argument("-dmx", "--delay_max", default=1000, type=int,
         help="Maximum delay between the composite pulses.")
+    parser.add_argument("-ai", "--amp_int", default=None, type=float,
+        help="Interval of the amplitude of the composite pulses.")
+    parser.add_argument("-amn", "--amp_min", default=0, type=float,
+        help="Minimum amplitude of the composite pulses.")
+    parser.add_argument("-amx", "--amp_max", default=2, type=float,
+        help="Maximum amplitude of the composite pulses.")
+    parser.add_argument("-deti", "--det_int", default=None, type=float,
+        help="Interval of the detuning of the composite pulses.")
+    parser.add_argument("-detmn", "--det_min", default=-1e6, type=float,
+        help="Initial detuning of the composite pulses.")
+    parser.add_argument("-detmx", "--det_max", default=1e6, type=float,
+        help="Final detuning of the composite pulses.")
     parser.add_argument("-rb", "--remove_bg", default=1, type=int,
         help="Whether to drop the background (tail) of the pulse (0 or 1).")
     parser.add_argument("-epj", "--max_experiments_per_job", default=100, type=int,
@@ -320,6 +370,12 @@ if __name__ == "__main__":
     delay_int = args.delay_int
     delay_min = args.delay_min
     delay_max = args.delay_max
+    amp_int = args.amp_int
+    amp_min = args.amp_min
+    amp_max = args.amp_max
+    det_int = args.det_int
+    det_min = args.det_min
+    det_max = args.det_max
     remove_bg = args.remove_bg
     max_experiments_per_job = args.max_experiments_per_job
     num_shots = args.num_shots
@@ -329,22 +385,24 @@ if __name__ == "__main__":
     num_iterations = args.num_iterations
 
     l, p, x0 = get_calib_params(
-        backend, pulse_type, 
+        backend, qubit, pulse_type, 
         sigma, duration,
         remove_bg
     )
     for i in range(num_iterations):
-        x, ys = run_check(
+        frequencies, intensities, delays, values = run_check(
             # amp_span / (10**i), 
             duration, sigma, 
             pulse_type, remove_bg,
             N=N, delay_int=delay_int, 
-            delay_min=delay_min, 
-            delay_max=delay_max,
+            delay_min=delay_min, delay_max=delay_max,
+            amp_int=amp_int, amp_min=amp_min, 
+            amp_max=amp_max, det_int=det_int, 
+            det_min=det_min, det_max=det_max,
             max_exp_per_job=max_experiments_per_job,
             num_shots=num_shots, 
             backend=backend,
             l=l, p=p, x0=x0,
             closest_amp=closest_amp)
-        index = find_least_variation(x, ys)
-        closest_amp = x[index]
+        index = find_least_variation(intensities, values)
+        closest_amp = intensities[index]
