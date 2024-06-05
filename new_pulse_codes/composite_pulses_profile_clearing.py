@@ -1,6 +1,7 @@
 import os
 import sys
 import argparse
+import pickle
 from copy import deepcopy
 from datetime import datetime
 
@@ -83,6 +84,13 @@ COMP_PARAMS = {
         {"alpha": 1, "phases": np.array([0, 11, 2, 11, 0, 5, 4, 7, 4, 5, 2, 1, 4]) / 6}
     ],
 }
+
+def make_all_dirs(path):
+    folders = path.split("/")
+    for i in range(2, len(folders) + 1):
+        folder = "/".join(folders[:i])
+        if not os.path.isdir(folder):
+            os.mkdir(folder)
 
 def get_calib_params(
     backend, qubit,
@@ -170,7 +178,7 @@ def linear_func(x, a, b):
 
 def run_check(
     duration, sigma, 
-    pulse_type, remove_bg, N=5, composites_version=0,# can be 0 or 1 
+    pulse_type, remove_bg, N=5, variant=0,# can be 0 or 1 
     delay_int=None, delay_min=32, delay_max=3200,
     amp_int=None, amp_min=0, amp_max=2,
     det_int=None, det_min=-1e6, det_max=1e6,
@@ -196,11 +204,11 @@ def run_check(
     intensities = [1] if amp_int is None else np.arange(amp_min, amp_max, amp_int)
     
     amplitude_values = np.ones((N))
-    amplitude_values[0] = COMP_PARAMS[N][composites_version]["alpha"]
+    amplitude_values[0] = COMP_PARAMS[N][variant]["alpha"]
     amplitude_values *= closest_amp
     phase_values = np.empty((N))
-    phase_values[:int(N/2) + 1] = np.array(COMP_PARAMS[N][composites_version]["phases"])
-    phase_values[int(N/2) + 1:] = np.array(COMP_PARAMS[N][composites_version]["phases"])[::-1][1:]
+    phase_values[:int(N/2) + 1] = np.array(COMP_PARAMS[N][variant]["phases"])
+    phase_values[int(N/2) + 1:] = np.array(COMP_PARAMS[N][variant]["phases"])[::-1][1:]
     
     freq = Parameter("freq")
     rabi_intensity = Parameter("rabi_intensity")
@@ -290,13 +298,11 @@ def run_check(
         #         )
         #     )
 
-    parameters = [(q, i, d) for q in frequencies for i in intensities for d in delays]
-    # print(parameters)
     # num_shots = 1024
     sweep_values, job_ids = run_jobs(circs, backend, duration * len(delays), num_shots_per_exp=num_shots)
-    plt.scatter(frequencies, sweep_values)
-    plt.show()
     print(sweep_values)
+    plt.scatter(intensities, sweep_values)
+    plt.show()
     # print(Ns, np.array(sweep_values).reshape(np.round(N_max / N_interval + 1).astype(np.int64), len(amplitudes)))
     return frequencies, intensities, delays, np.array(sweep_values)
 
@@ -326,6 +332,8 @@ if __name__ == "__main__":
         help="Pulse duration parameter")
     parser.add_argument("-N", "--N", default=5, type=int,
         help="Number of composite pulses to use.")
+    parser.add_argument("-v", "--variant", default=0, type=int,
+        help="Composite pulses variant to use (0 or 1).")
     parser.add_argument("-di", "--delay_int", default=None, type=int,
         help="Delay number step between the composite pulses.")
     parser.add_argument("-dmn", "--delay_min", default=32, type=int,
@@ -367,6 +375,7 @@ if __name__ == "__main__":
     sigma = args.sigma
     duration = args.duration
     N = args.N
+    variant = args.variant
     delay_int = args.delay_int
     delay_min = args.delay_min
     delay_max = args.delay_max
@@ -384,25 +393,78 @@ if __name__ == "__main__":
     amp_span = args.span
     num_iterations = args.num_iterations
 
+    dt_now = datetime.now()
+
     l, p, x0 = get_calib_params(
         backend, qubit, pulse_type, 
         sigma, duration,
         remove_bg
     )
-    for i in range(num_iterations):
-        frequencies, intensities, delays, values = run_check(
-            # amp_span / (10**i), 
-            duration, sigma, 
-            pulse_type, remove_bg,
-            N=N, delay_int=delay_int, 
-            delay_min=delay_min, delay_max=delay_max,
-            amp_int=amp_int, amp_min=amp_min, 
-            amp_max=amp_max, det_int=det_int, 
-            det_min=det_min, det_max=det_max,
-            max_exp_per_job=max_experiments_per_job,
-            num_shots=num_shots, 
-            backend=backend,
-            l=l, p=p, x0=x0,
-            closest_amp=closest_amp)
-        index = find_least_variation(intensities, values)
-        closest_amp = intensities[index]
+    # for i in range(num_iterations):
+    frequencies, intensities, delays, values = run_check(
+        # amp_span / (10**i), 
+        duration, sigma, 
+        pulse_type, remove_bg,
+        N=N, variant=variant, delay_int=delay_int, 
+        delay_min=delay_min, delay_max=delay_max,
+        amp_int=amp_int, amp_min=amp_min, 
+        amp_max=amp_max, det_int=det_int, 
+        det_min=det_min, det_max=det_max,
+        max_exp_per_job=max_experiments_per_job,
+        num_shots=num_shots, 
+        backend=backend,
+        l=l, p=p, x0=x0,
+        closest_amp=closest_amp)
+        # index = find_least_variation(intensities, values)
+        # closest_amp = intensities[index]
+
+    file_dir = os.path.dirname(__file__)
+    file_dir = os.path.split(file_dir)[0]
+    time = dt_now.strftime("%H%M%S")
+    date = dt_now.strftime("%Y-%m-%d")
+    plot_save_dir = os.path.join(file_dir, "plots", backend, str(qubit), "composites", date)
+    data_save_dir = os.path.join(file_dir, "data", backend, str(qubit), "composites", date)
+    make_all_dirs(plot_save_dir.replace("\\","/"))
+    make_all_dirs(data_save_dir.replace("\\","/"))
+    with open(os.path.join(data_save_dir, f"{time}_composites_{duration}dt_{N}pulses_v{variant}.pkl").replace("\\","/"), 'wb') as f:
+        pickle.dump((frequencies, intensities, delays, values), f)
+    print("Save to pickle successful!")
+    
+    params = np.array([(q, i, d) for q in frequencies for i in intensities for d in delays])
+    print(params)
+    is_variable = [None] * 3
+    for i in range(len(params[0])):
+        is_variable[i] = False if (params[:, i] == np.roll(params[:, i], 1)).all() else True
+    
+    variable_dict = {
+        0: "Detuning [MHz]",
+        1: "Amplitude [arb. units]",
+        2: "Delays [dt]"
+    }
+    num_variables = np.sum(is_variable)
+    if num_variables == 1:
+        variable_type = np.where(is_variable)[0][0]
+        variable = params[:, variable_type]
+    elif num_variables == 2:
+        variable_type = [np.where(is_variable)[0][0], np.where(is_variable)[0][1]]
+        variable = [params[:, variable_type[0]], params[:, variable_type[1]]]
+    else:
+        print("Too few/many variables, choose 1 or 2 manually.")
+
+    if num_variables == 1:
+        fig, ax = plt.subplots()
+        sc = ax.scatter(variable, values)
+        ax.set_xlabel(variable_dict[variable_type])
+        ax.set_ylabel("Transition probability")
+        plt.show()
+        plt.savefig(os.path.join(plot_save_dir, f"{time}_composites_{variable_dict[variable_type]}_{duration}dt_{N}pulses_v{variant}.png").replace("\\","/"))
+    
+    if num_variables == 2:
+        fig, ax = plt.subplots(1, 1)
+        c = ax.pcolormesh(variable[0], variable[1], values.reshape(len(variable[0]), len(variable[1])))
+        ax.set_xlabel(variable_dict[variable_type[0]])
+        ax.set_ylabel(variable_dict[variable_type[1]])
+        fig.colorbar(c, ax=ax)
+        plt.show()
+        plt.savefig(os.path.join(plot_save_dir, f"{time}_composites_{variable_dict[variable_type[0]]},{variable_dict[variable_type[1]]}_{duration}dt_{N}pulses_v{variant}.png").replace("\\","/"))
+    print("Figure saved successfully!")
