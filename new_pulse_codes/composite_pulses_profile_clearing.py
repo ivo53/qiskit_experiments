@@ -57,32 +57,55 @@ pulse_dict = {
 #     13: {"alpha": 0.5065, "phases": [0.0065, 1.7755, 0.7155, 0.5188, 0.2662, 1.2251, 1.3189]},
 #     15: {"alpha": 0.3213, "phases": [1.2316, 0.9204, 0.2043, 1.9199, 0.8910, 0.7381, 1.9612, 1.3649]},
 # }
+# COMP_PARAMS = {
+#     3: [{"alpha": 1, "phases": [0, 1/2]}],
+#     5: [
+#         {"alpha": 1, "phases": [0, 5/6, 2/6]}, 
+#         {"alpha": 1, "phases": [0, 11/6, 2/6]}
+#     ],
+#     7: [
+#         {"alpha": 1, "phases": [0, 11/12, 10/12, 17/12]}, 
+#         {"alpha": 1, "phases": [0, 1/12, 14/12, 19/12]}
+#     ],
+#     9: [
+#         {"alpha": 1, "phases": [0, 0.366, 0.638, 0.435, 1.697]},
+#         {"alpha": 1, "phases": [0, 0.634, 1.362, 0.565, 0.303]}
+#     ],
+#     11: [
+#         {"alpha": 1, "phases": np.array([0, 11, 10, 23, 1, 19]) / 12}, 
+#         {"alpha": 1, "phases": np.array([0, 1, 14, 13, 23, 17]) / 12}
+#     ],
+#     13: [
+#         {"alpha": 1, "phases": np.array([0, 9, 42, 11, 8, 37, 2]) / 24}, 
+#         {"alpha": 1, "phases": np.array([0, 33, 42, 35, 8, 13, 2]) / 24}
+#     ],
+#     25: [
+#         {"alpha": 1, "phases": np.array([0, 5, 2, 5, 0, 11, 4, 1, 4, 11, 2, 7, 4]) / 6}, 
+#         {"alpha": 1, "phases": np.array([0, 11, 2, 11, 0, 5, 4, 7, 4, 5, 2, 1, 4]) / 6}
+#     ],
+# }
+
 COMP_PARAMS = {
-    3: [{"alpha": 1, "phases": [0, 1/2]}],
-    5: [
-        {"alpha": 1, "phases": [0, 5/6, 2/6]}, 
-        {"alpha": 1, "phases": [0, 11/6, 2/6]}
-    ],
-    7: [
-        {"alpha": 1, "phases": [0, 11/12, 10/12, 17/12]}, 
-        {"alpha": 1, "phases": [0, 1/12, 14/12, 19/12]}
-    ],
-    9: [
-        {"alpha": 1, "phases": [0, 0.366, 0.638, 0.435, 1.697]},
-        {"alpha": 1, "phases": [0, 0.634, 1.362, 0.565, 0.303]}
-    ],
-    11: [
-        {"alpha": 1, "phases": np.array([0, 11, 10, 23, 1, 19]) / 12}, 
-        {"alpha": 1, "phases": np.array([0, 1, 14, 13, 23, 17]) / 12}
-    ],
-    13: [
-        {"alpha": 1, "phases": np.array([0, 9, 42, 11, 8, 37, 2]) / 24}, 
-        {"alpha": 1, "phases": np.array([0, 33, 42, 35, 8, 13, 2]) / 24}
-    ],
-    25: [
-        {"alpha": 1, "phases": np.array([0, 5, 2, 5, 0, 11, 4, 1, 4, 11, 2, 7, 4]) / 6}, 
-        {"alpha": 1, "phases": np.array([0, 11, 2, 11, 0, 5, 4, 7, 4, 5, 2, 1, 4]) / 6}
-    ],
+    "X": {
+        1: [{"alpha": 1, "phases": [1/2]}],
+        3: [{"alpha": 1, "phases": [1/6, 5/6]}],
+        5: [{"alpha": 1, "phases": [0.0672, 0.3854, 1.1364]}],
+        7: [{"alpha": 1, "phases": [0.2560, 1.6839, 0.5933, 0.8306]}],
+        9: [{"alpha": 1, "phases": [0.3951, 1.2211, 0.7806, 1.9335, 0.4580]}],
+        11: [{"alpha": 1, "phases": [0.7016, 1.1218, 1.8453, 0.9018, 0.3117, 0.1699]}],
+        13: [{"alpha": 1, "phases": [0.1200, 0.3952, 1.5643, 0.0183, 0.9219, 0.4975,1.1096]}],
+        15: [{"alpha": 1, "phases": [0.5672, 1.4322, 0.9040, 0.2397, 0.9118, 0.5426, 1.6518, 0.1406]}],
+        17: [{"alpha": 1, "phases": [0.3604, 1.1000, 0.7753, 1.6298, 1.2338, 0.2969, 0.6148, 1.9298, 0.4443]}]
+    },
+    "H": {
+        3: [{"alpha": 0.6399, "phases": [0.8442, 0.0587]}],
+        5: [{"alpha": 0.45, "phases": [1.9494, 0.5106, 1.3179]}],
+        7: [{"alpha": 0.2769, "phases": [1.6803, 0.2724, 0.8255, 1.6624]}],
+        9: [{"alpha": 0.2947, "phases": [1.2711, 0.1069, 0.5283, 1.1283, 1.9884]}],
+        11: [{"alpha": 0.2985, "phases": [1.7377, 0.1651, 0.9147, 0.1510, 0.9331, 1.6415]}],
+        13: [{"alpha": 0.5065, "phases": [0.0065, 1.7755, 0.7155, 0.5188, 0.2662, 1.2251, 1.3189]}],
+        15: [{"alpha": 0.3132, "phases": [1.2316, 0.9204, 0.2043, 1.9199, 0.8910, 0.7381, 1.9612, 1.3649]}],
+    }
 }
 
 def make_all_dirs(path):
@@ -178,7 +201,7 @@ def linear_func(x, a, b):
 
 def run_check(
     duration, sigma, 
-    pulse_type, remove_bg, N=5, variant=0,# can be 0 or 1 
+    pulse_type, remove_bg, N=5, variant=0, gate_name=None,
     delay_int=None, delay_min=32, delay_max=3200,
     amp_int=None, amp_min=0, amp_max=2,
     det_int=None, det_min=-1e6, det_max=1e6,
@@ -204,11 +227,14 @@ def run_check(
     intensities = [1] if amp_int is None else np.arange(amp_min, amp_max, amp_int)
     
     amplitude_values = np.ones((N))
-    amplitude_values[0] = COMP_PARAMS[N][variant]["alpha"]
+    alpha = COMP_PARAMS[N][variant]["alpha"] if gate_name is None else COMP_PARAMS[gate_name][N][variant]["alpha"]
+    phases = COMP_PARAMS[N][variant]["phases"] if gate_name is None else COMP_PARAMS[gate_name][N][variant]["phases"]
+    amplitude_values[0] = alpha
+    amplitude_values[-1] = alpha
     amplitude_values *= closest_amp
     phase_values = np.empty((N))
-    phase_values[:int(N/2) + 1] = np.array(COMP_PARAMS[N][variant]["phases"])
-    phase_values[int(N/2) + 1:] = np.array(COMP_PARAMS[N][variant]["phases"])[::-1][1:]
+    phase_values[:int(N/2) + 1] = np.array(phases)
+    phase_values[int(N/2) + 1:] = np.array(phases)[::-1][1:]
     
     freq = Parameter("freq")
     rabi_intensity = Parameter("rabi_intensity")
@@ -334,6 +360,8 @@ if __name__ == "__main__":
         help="Number of composite pulses to use.")
     parser.add_argument("-v", "--variant", default=0, type=int,
         help="Composite pulses variant to use (0 or 1).")
+    parser.add_argument("-gt", "--gate_name", default=None, type=str,
+        help="Gate to compose using CPs.")
     parser.add_argument("-di", "--delay_int", default=None, type=int,
         help="Delay number step between the composite pulses.")
     parser.add_argument("-dmn", "--delay_min", default=32, type=int,
@@ -376,6 +404,7 @@ if __name__ == "__main__":
     duration = args.duration
     N = args.N
     variant = args.variant
+    gate_name = args.gate_name
     delay_int = args.delay_int
     delay_min = args.delay_min
     delay_max = args.delay_max
@@ -405,8 +434,9 @@ if __name__ == "__main__":
         # amp_span / (10**i), 
         duration, sigma, 
         pulse_type, remove_bg,
-        N=N, variant=variant, delay_int=delay_int, 
-        delay_min=delay_min, delay_max=delay_max,
+        N=N, variant=variant, gate_name=gate_name,
+        delay_int=delay_int, delay_min=delay_min, 
+        delay_max=delay_max,
         amp_int=amp_int, amp_min=amp_min, 
         amp_max=amp_max, det_int=det_int, 
         det_min=det_min, det_max=det_max,
