@@ -461,7 +461,7 @@ if __name__ == "__main__":
     print("Save to pickle successful!")
     
     params = np.array([(q, i, d) for q in frequencies for i in intensities for d in delays])
-    print(params)
+    # print(params)
     is_variable = [None] * 3
     for i in range(len(params[0])):
         is_variable[i] = False if (params[:, i] == np.roll(params[:, i], 1)).all() else True
