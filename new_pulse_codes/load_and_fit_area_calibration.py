@@ -11,6 +11,7 @@ from scipy.optimize import curve_fit
 resonant_frequencies = {
     "sherbrooke": {42: 4635663704.124764},
     # "manila": 4962284031.287086,
+    "kyoto": {46: 4803622879.278402},
     "osaka": {0: 5019850020.72268},
 }
 def make_all_dirs(path):
