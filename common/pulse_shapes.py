@@ -163,7 +163,7 @@ def fcq(
     T: float,
     beta: float
 ):
-    f = np.heaviside(t, 1) * np.heaviside(T - t, 1) * (1 + beta * (((t - T/2) / T/2) ** 2 - 1))
+    f = np.heaviside(t, 1) * np.heaviside(T - t, 1) * (1 + beta * (((t - T/2) / (T/2)) ** 2 - 1))
     return f
 
 pulse_shapes = {
