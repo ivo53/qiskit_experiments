@@ -54,7 +54,7 @@ for n_d, d in enumerate(d_range):
                                [0,0,0,0,0,0,np.sqrt(7),15/4],])
         output = qutip.mesolve(
             [
-                H0, 
+                H0,
                 [H1, omega]
             ],
             rho0=rho0,
