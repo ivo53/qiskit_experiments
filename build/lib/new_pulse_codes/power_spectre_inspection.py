@@ -17,7 +17,7 @@ from qiskit_ibm_provider import IBMProvider
 # package_path = os.path.abspath(os.path.split(current_dir)[0])
 # sys.path.insert(0, package_path)
 
-import qiskit_experiments.pulse_types as pt
+import common.pulse_types as pt
 from utils.run_jobs import run_jobs
 
 pulse_dict = {

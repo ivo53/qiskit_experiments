@@ -9,8 +9,10 @@ import pandas as pd
 from scipy.optimize import curve_fit
 
 resonant_frequencies = {
-    "manila": 4962284031.287086,
-    "osaka": 5019850020.72268,
+    "sherbrooke": {42: 4635663704.124764},
+    # "manila": 4962284031.287086,
+    "kyoto": {46: 4803622879.278402},
+    "osaka": {0: 5019850020.72268},
 }
 def make_all_dirs(path):
     path = path.replace("\\", "/")
@@ -47,54 +49,47 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-b", "--backend", default="manila", type=str,
-        help="Backend on which area was calibrated."
-    )
+        help="Backend on which area was calibrated.")
+    parser.add_argument(
+        "-q", "--qubit", default=0, type=int,
+        help="Qubit on which the calibration was done.")
     parser.add_argument(
         "-pt", "--pulse_type", default="lor", type=str,
-        help="Pulse type (e.g. sq, gauss, sine, sech etc.)."
-    )
+        help="Pulse type (e.g. sq, gauss, sine, sech etc.).")
     parser.add_argument(
         "-T", "--duration", default=1080, type=int,
-        help="Pulse duration parameter"
-    )
+        help="Pulse duration parameter")
     parser.add_argument(
         "-s", "--sigma", default=180, type=int,
-        help="Pulse width parameter"
-    )
+        help="Pulse width parameter")
     parser.add_argument(
         "-rb", "--remove_bg", default=1, type=int,
-        help="Whether background was removed."
-    )
+        help="Whether background was removed.")
     parser.add_argument(
         "-d", "--date", default="2023-02-26", type=str,
-        help="Date on which pulse area was calibrated."
-    )
+        help="Date on which pulse area was calibrated.")
     parser.add_argument(
         "-l", "--l_init", default=100, type=float,
-        help="Initial value for l."
-    )
+        help="Initial value for l.")
     parser.add_argument(
         "-p", "--p_init", default=0.2, type=float,
-        help="Initial value for p."
-    )
+        help="Initial value for p.")
     parser.add_argument(
         "-N", "--N", default=1, type=int,
-        help="N parameter for inverse parabolae."
-    )
+        help="N parameter for inverse parabolae.")
     parser.add_argument(
         "-be", "--beta", default=0, type=float,
-        help="Beta parameter for fcq pulse."
-    )
+        help="Beta parameter for fcq pulse.")
     # parser.add_argument(
     #     "-t", "--time", default="180032", type=str,
     #     help="Date on which pulse area was calibrated."
     # )
     parser.add_argument(
         "-sv", "--save", default=0, type=int,
-        help="Whether to save the result (0 or 1)."
-    )
+        help="Whether to save the result (0 or 1).")
     args = parser.parse_args()
     backend = args.backend
+    qubit = args.qubit
     pulse_type = args.pulse_type
     duration = args.duration
     sigma = args.sigma
@@ -108,20 +103,21 @@ if __name__ == "__main__":
     save = bool(args.save)
     
     backend_name = backend
-    backend = "ibm_" + backend \
-        if backend in ["perth", "lagos", "nairobi", "oslo"] \
-            else "ibmq_" + backend
+    backend = "ibm_" + backend
+        # if backend in ["perth", "lagos", "nairobi", "oslo"] \
+        #     else "ibmq_" + backend
 
     file_dir = os.path.dirname(__file__)
     file_dir = os.path.split(file_dir)[0]
     curr_date = datetime.now()
     current_date = curr_date.strftime("%Y-%m-%d")
-    load_dir = os.path.join(file_dir, "data", backend_name, "calibration", date)
+    load_dir = os.path.join(file_dir, "data", backend_name, str(qubit),"calibration", date)
     calib_dir = os.path.join(file_dir, "calibrations")
-    save_dir = os.path.join(calib_dir, backend_name, date)
+    save_dir = os.path.join(calib_dir, backend_name, str(qubit), date)
 
     for calib_file in os.listdir(save_dir):
         split_calib_file = calib_file.split("_")
+        # print(split_calib_file)
         if split_calib_file[-1] == "areacal.png":
             if pulse_type == split_calib_file[1] and \
                 duration == int(split_calib_file[3]) and \
@@ -212,7 +208,7 @@ if __name__ == "__main__":
     # exit()
     if save:
         new_entry = pd.DataFrame(param_dict)
-        params_file = os.path.join(calib_dir, backend_name, "actual_params.csv")
+        params_file = os.path.join(calib_dir, backend_name, str(qubit), "actual_params.csv")
         if os.path.isfile(params_file):
             param_df = pd.read_csv(params_file)
             param_df = add_entry_and_remove_duplicates(param_df, new_entry)

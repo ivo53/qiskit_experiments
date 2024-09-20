@@ -8,20 +8,22 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from scipy.optimize import curve_fit, differential_evolution
-from qiskit import pulse, IBMQ, QuantumCircuit, transpile
+from qiskit import pulse, QuantumCircuit, transpile
 from qiskit.circuit import Parameter, Gate
 # This Pulse module helps us build sampled pulses for common pulse shapes
 # from qiskit.pulse import library as pulse_lib
-from qiskit.tools.monitor import job_monitor
+# from qiskit.tools.monitor import job_monitor
 # from qiskit.providers.ibmq.managed import IBMQJobManager
-from qiskit_ibm_provider import IBMProvider
+# from qiskit_ibm_provider import IBMProvider
+from qiskit_ibm_runtime import QiskitRuntimeService, SamplerV2 as Sampler
+from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
 
-current_dir = os.path.dirname(__file__)
-package_path = os.path.abspath(os.path.split(current_dir)[0])
-sys.path.insert(0, package_path)
+# current_dir = os.path.dirname(__file__)
+# package_path = os.path.abspath(os.path.split(current_dir)[0])
+# sys.path.insert(0, package_path)
 
 from utils.run_jobs import run_jobs
-import pulse_types as pt
+import common.pulse_types as pt
 
 def make_all_dirs(path):
     path = path.replace("\\", "/")
@@ -144,11 +146,11 @@ if __name__ == "__main__":
     date = datetime.now()
     time = date.strftime("%H%M%S")
     current_date = date.strftime("%Y-%m-%d")
-    calib_dir = os.path.join(file_dir, "calibrations", backend_name)
+    calib_dir = os.path.join(file_dir, "calibrations", backend_name, str(qubit))
     save_dir = os.path.join(calib_dir, current_date)
     # if not os.path.isdir(save_dir):
     #     os.mkdir(save_dir)
-    data_folder = os.path.join(file_dir, "data", backend_name, "calibration", current_date)
+    data_folder = os.path.join(file_dir, "data", backend_name, str(qubit), "calibration", current_date)
     # if not os.path.isdir(data_folder):
     #     os.mkdir(data_folder)
     make_all_dirs(save_dir)
@@ -167,7 +169,9 @@ if __name__ == "__main__":
     # provider = IBMQ.load_account()
     # backend = provider.get_backend(backend)
     
-    backend = IBMProvider().get_backend(backend)
+    # backend = IBMProvider().get_backend(backend)
+    backend = QiskitRuntimeService(channel="ibm_quantum").backend(backend)
+    pm = generate_preset_pass_manager(backend=backend, optimization_level=0)
     # #
     # # with Fake provider only
     # backend = FakeManilaV2()
@@ -313,11 +317,11 @@ if __name__ == "__main__":
     #     ), backend=backend) for a in amplitudes]
 
     circs = [add_circ(a, duration, sigma, qubit=qubit) for a in amplitudes]
-
+    pm_circs = pm.run(circs)
     # rabi_schedule = schedule(circs[-1], backend)
     # rabi_schedule.draw(backend=backend)
 
-    # # with real provider    
+    # # with real provider
     # job_manager = IBMQJobManager()
     # pi_job = job_manager.run(
     #     circs,
@@ -338,8 +342,8 @@ if __name__ == "__main__":
     # pi_sweep_results = pi_job.result()
     # #
 
-    values, job_ids = run_jobs(circs, backend, duration, num_shots_per_exp=num_shots_per_exp)
-
+    values, job_ids = run_jobs(pm_circs, backend, duration, num_shots_per_exp=num_shots_per_exp, pm=pm)
+   
     # print(amplitudes, np.real(pi_sweep_values))
     plt.figure(3)
     plt.scatter(amplitudes, np.real(values), color='black') # plot real part of sweep values
@@ -454,7 +458,7 @@ if __name__ == "__main__":
         "rb": [int(remove_bg)],
         "N": [N],
         "beta": [beta],  
-        "job_id": [",".join(job_ids)]
+        "job_id": None # [",".join(job_ids)]
     }
     print(param_dict)
     if save:

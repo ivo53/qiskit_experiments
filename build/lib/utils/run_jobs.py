@@ -1,17 +1,29 @@
 import time
 from qiskit.providers.jobstatus import JobStatus
-from qiskit_ibm_provider.job import IBMJobApiError
+# from qiskit_ibm_provider.job import IBMJobApiError
+from qiskit_ibm_runtime import SamplerV2 as Sampler
+from qiskit_ibm_runtime.exceptions import (
+    RuntimeJobFailureError, 
+    RuntimeInvalidStateError, 
+    IBMRuntimeError, 
+    RuntimeJobMaxTimeoutError, 
+    RuntimeJobTimeoutError,)
+from qiskit_ibm_runtime.api.exceptions import RequestsApiError
 
 SIZE_LIMIT = 250000
 CIRC_LIMIT = 300
-def run_jobs(circs, backend, duration, num_shots_per_exp=1024):
+def run_jobs(circs, backend, duration, num_shots_per_exp=1024, pm=None):
     num_exp = len(circs)
     size = duration * num_exp * num_shots_per_exp
 
     job_ids = []
     values = []
     if size < SIZE_LIMIT * 1024 and num_exp <= CIRC_LIMIT:
-        pi_job = backend.run(
+        # pi_job = backend.run(
+        #     circs,
+        #     shots=num_shots_per_exp
+        # )
+        pi_job = Sampler(backend).run(
             circs,
             shots=num_shots_per_exp
         )
@@ -19,7 +31,7 @@ def run_jobs(circs, backend, duration, num_shots_per_exp=1024):
         result = pi_job.result()
         for i in range(len(circs)):
             try:
-                counts = result.get_counts(i)["1"]
+                counts = result[i].data.meas.get_counts()['1']
             except KeyError:
                 counts = 0
             values.append(counts / num_shots_per_exp)
@@ -36,7 +48,7 @@ def run_jobs(circs, backend, duration, num_shots_per_exp=1024):
         jobs = []
         num_queued = 0
         for idx, circs_part in enumerate(parts):
-            current_job = backend.run(
+            current_job = Sampler(backend).run(
                 circs_part,
                 shots=num_shots_per_exp
             )
@@ -60,7 +72,7 @@ def run_jobs(circs, backend, duration, num_shots_per_exp=1024):
                               current_job.status() is JobStatus.VALIDATING:
                             time.sleep(10)
                     num_queued -= 1
-                except IBMJobApiError as ex:
+                except RuntimeJobFailureError or RuntimeInvalidStateError or IBMRuntimeError or RuntimeJobMaxTimeoutError or RuntimeJobTimeoutError or RequestsApiError as ex:
                     print("Error encountered: {}".format(ex))
             jobs.append(current_job)
             job_ids.append(current_job.job_id())
@@ -69,7 +81,7 @@ def run_jobs(circs, backend, duration, num_shots_per_exp=1024):
             result = job.result()
             for i in range(len(circs_part)):
                 try:
-                    counts = result.get_counts(i)["1"]
+                    counts = result[i].data.meas.get_counts()['1']
                 except KeyError:
                     counts = 0
                 values.append(counts / num_shots_per_exp)

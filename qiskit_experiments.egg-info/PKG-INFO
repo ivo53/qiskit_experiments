@@ -1,5 +1,5 @@
 Metadata-Version: 2.1
-Name: qiskit-experiments
+Name: qiskit_experiments
 Version: 1.0.0
 Summary: A collection of Qiskit Pulse codes
 Home-page: https://github.com/ivo53/qiskit_experiments
