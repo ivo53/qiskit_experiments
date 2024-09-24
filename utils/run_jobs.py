@@ -31,7 +31,10 @@ def run_jobs(circs, backend, duration, num_shots_per_exp=1024, pm=None):
         result = pi_job.result()
         for i in range(len(circs)):
             try:
-                counts = result[i].data.meas.get_counts()['1']
+                try:
+                    counts = result[i].data.meas.get_counts()['1']
+                except AttributeError as ae:
+                    counts = result[i].data.c.get_counts()['1']
             except KeyError:
                 counts = 0
             values.append(counts / num_shots_per_exp)
@@ -81,7 +84,10 @@ def run_jobs(circs, backend, duration, num_shots_per_exp=1024, pm=None):
             result = job.result()
             for i in range(len(circs_part)):
                 try:
-                    counts = result[i].data.meas.get_counts()['1']
+                    try:
+                        counts = result[i].data.meas.get_counts()['1']
+                    except AttributeError as ae:
+                        counts = result[i].data.c.get_counts()['1']
                 except KeyError:
                     counts = 0
                 values.append(counts / num_shots_per_exp)
