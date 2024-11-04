@@ -7,18 +7,20 @@ from qiskit.pulse.library import SymbolicPulse
 # a constant pulse
 def Constant(duration, amp, name):
     t, duration_sym, amp_sym = sym.symbols("t, duration, amp")
-
+    
+    # Define the constant envelope without Piecewise
+    envelope = amp_sym * sym.Piecewise((1, sym.And(t >= 0, t <= duration_sym)), (0, True))
+    
     instance = SymbolicPulse(
         pulse_type="ConstantCustom",
         duration=duration,
-        parameters={"amp": amp},
-        envelope=amp_sym * sym.Piecewise((1, sym.And(t >= 0, t <= duration_sym)), (0, True)),
+        parameters={"duration": duration, "amp": amp},
+        envelope=envelope,
         name=name,
-        valid_amp_conditions=sym.And(sym.Abs(amp_sym) >= 0, sym.Abs(amp_sym) <= 1),
+        valid_amp_conditions=sym.And(amp_sym >= 0, amp_sym <= 1),
     )
 
     return instance
-
 # a sawtooth pulse
 def Sawtooth(duration, amp, freq, name):
     t, amp_sym, freq_sym = sym.symbols("t, amp, freq")

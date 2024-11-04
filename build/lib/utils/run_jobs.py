@@ -2,6 +2,7 @@ import time
 from qiskit.providers.jobstatus import JobStatus
 # from qiskit_ibm_provider.job import IBMJobApiError
 from qiskit_ibm_runtime import SamplerV2 as Sampler
+from qiskit_ibm_runtime.options import SamplerOptions
 from qiskit_ibm_runtime.exceptions import (
     RuntimeJobFailureError, 
     RuntimeInvalidStateError, 
@@ -12,7 +13,7 @@ from qiskit_ibm_runtime.api.exceptions import RequestsApiError
 
 SIZE_LIMIT = 250000
 CIRC_LIMIT = 300
-def run_jobs(circs, backend, duration, num_shots_per_exp=1024, pm=None):
+def run_jobs(circs, backend, optim_level, duration, num_shots_per_exp=1024, pm=None):
     num_exp = len(circs)
     size = duration * num_exp * num_shots_per_exp
 
@@ -23,7 +24,9 @@ def run_jobs(circs, backend, duration, num_shots_per_exp=1024, pm=None):
         #     circs,
         #     shots=num_shots_per_exp
         # )
-        pi_job = Sampler(backend).run(
+        options = SamplerOptions(optimization_level=optim_level)
+        options.execution.shots = num_shots_per_exp
+        pi_job = Sampler(backend, options=options).run(
             circs,
             shots=num_shots_per_exp
         )
