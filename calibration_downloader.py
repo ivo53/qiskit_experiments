@@ -11,15 +11,26 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 backends = [
-    "ibmq_lima", 
-    "ibmq_belem", 
-    "ibmq_quito", 
-    "ibmq_manila", 
-    "ibmq_jakarta", 
-    "ibm_oslo", 
-    "ibm_nairobi", 
-    "ibm_lagos", 
-    "ibm_perth"
+    # "ibmq_lima", 
+    # "ibmq_belem", 
+    # "ibmq_quito", 
+    # "ibmq_manila", 
+    # "ibmq_jakarta", 
+    # "ibm_oslo", 
+    # "ibm_nairobi", 
+    # "ibm_lagos", 
+    # "ibm_perth",
+    "ibm_sherbrooke",
+    "ibm_kyiv",
+    "ibm_brisbane",
+    "ibm_fez",
+    "ibm_kawasaki",
+    "ibm_nazca",
+    "ibm_torino",
+    "ibm_quebec",
+    "ibm_rensselaer",
+    "ibm_strasbourg",
+    "ibm_brussels"
 ]
 
 def make_all_dirs(path):

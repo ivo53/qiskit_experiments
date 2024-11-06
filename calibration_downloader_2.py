@@ -20,10 +20,22 @@ import numpy as np
 # ]
 
 backends = [
-    "ibm_kyoto",
-    "ibm_brisbane"
-    "ibm_osaka"
+    # "ibm_kyoto",
+    # "ibm_brisbane"
+    # "ibm_osaka"
+    "ibm_sherbrooke",
+    "ibm_kyiv",
+    "ibm_brisbane",
+    "ibm_fez",
+    "ibm_kawasaki",
+    "ibm_nazca",
+    "ibm_torino",
+    "ibm_quebec",
+    "ibm_rensselaer",
+    "ibm_strasbourg",
+    "ibm_brussels"
 ]
+
 def make_all_dirs(path):
     path = path.replace("\\", "/")
     folders = path.split("/")
