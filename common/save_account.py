@@ -5,6 +5,6 @@ from qiskit_ibm_runtime import QiskitRuntimeService
 # token = "39f0923ba8e9408eab3d6d09dd7da5f2dd5464d652987a5beb41bfb984e410dd316d427b29cf6bf96cfd9a9e841f4f61608c902311eec22fb33be7aa9071988d"
 # token_frederika = "e1cd2f702fb183360d77183056e5cfba9ed6779811cc3843429dc2e5fa7724dc2d80759470439b2b5ab199b69589505b6ad4c7af37337345a51a66e1f2317d67"
 # token = "d423d10f74ec51cd81967413c652b3a08c4308158722f79f0084e353ce4803cc98b3243364f45b43ee5b13b43f989cdac64d7e164ece9e04dcf06d0ab20b25d7"
-token = "f6a3f0832b143722ae56747465d2a75c038317e1f7044b01ca5fb8f86221066d36c03ecab244295cafcf5e830887b11ade0d2cd1a446d523b4ce511e9ef822e1"
+token = "c322e5be224169fc6cc62986bf4ddf22f5369babffa219f3bbe24e1c4665c367117d1195cbff7d5164a103782e437129e9a1a885af86b047ae06fcdbceb5c3b6"
 # IBMProvider.save_account(token, overwrite=True)
-QiskitRuntimeService.save_account(token, channel="ibm_quantum", overwrite=True, set_as_default=True)
+QiskitRuntimeService.save_account(token, channel="ibm_quantum", instance='ibm-q/open/main', overwrite=True, set_as_default=True)
