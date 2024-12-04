@@ -11,7 +11,9 @@ import matplotlib.pyplot as plt
 from qiskit import QuantumCircuit
 from qiskit import pulse                  # This is where we access all of our Pulse features!
 from qiskit.circuit import Parameter, Gate # This is Parameter Class for variable parameters.
-from qiskit_ibm_provider import IBMProvider
+# from qiskit_ibm_provider import IBMProvider
+from qiskit_ibm_runtime import QiskitRuntimeService, SamplerV2 as Sampler
+from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
 
 # current_dir = os.path.dirname(__file__)
 # package_path = os.path.abspath(os.path.split(current_dir)[0])
@@ -102,7 +104,10 @@ def initialize_backend(backend):
     
     backend_name = backend
     # provider = IBMQ.load_account()
-    backend = IBMProvider().get_backend(backend_full_name)
+    # backend = IBMProvider().get_backend(backend_full_name)
+    backend = QiskitRuntimeService(channel="ibm_quantum").backend(backend_full_name)
+    pm = generate_preset_pass_manager(backend=backend, optimization_level=0)
+
     print(f"Using {backend_name} backend.")
     backend_defaults = backend.defaults()
     backend_config = backend.configuration()
@@ -112,7 +117,7 @@ def initialize_backend(backend):
     q_freq = [backend_defaults.qubit_freq_est[q] for q in range(num_qubits)]
     # dt = backend_config.dt
 
-    return backend, drive_chan, num_qubits, q_freq
+    return backend, drive_chan, num_qubits, q_freq, pm
 
 def add_circ(backend, drive_chan, pulse_type, amp, duration, sigma, remove_bg, freq, qubit=0):
     with pulse.build(backend=backend, default_alignment='sequential', name="calibrate_area") as sched:
@@ -183,9 +188,9 @@ if __name__ == "__main__":
         help="Number of shots per experiment (datapoint).")
     parser.add_argument("-b", "--backend", default="kyoto", type=str,
         help="The name of the backend to use in the experiment (one of kyoto, osaka).")
-    parser.add_argument("-rA", "--resolution_A", default=100, type=int,
+    parser.add_argument("-rA", "--resolution_A", default=50, type=int,
         help="Resolution in the amplitude axis.")
-    parser.add_argument("-rD", "--resolution_D", default=100, type=int,
+    parser.add_argument("-rD", "--resolution_D", default=50, type=int,
         help="Resolution in the detuning axis.")
     parser.add_argument("-cp", "--cut_param", default=0.2, type=float,
         help="Cutoff point as amp value as a fraction of maximum amplitude.")
@@ -223,6 +228,7 @@ if __name__ == "__main__":
         file_dir,
         "plots",
         f"{backend_name}",
+        str(qubit),
         "power_broadening (narrowing)",
         f"{pulse_type}_pulses",
         current_date
@@ -235,6 +241,7 @@ if __name__ == "__main__":
         file_dir,
         "data",
         f"{backend_name}",
+        str(qubit),
         "power_broadening (narrowing)",
         f"{pulse_type}_pulses",
         current_date,
@@ -242,10 +249,10 @@ if __name__ == "__main__":
     ).replace("\\", "/")
     make_all_dirs(data_folder)
     make_all_dirs(folder_name)
-    calib_dir = os.path.join(file_dir, "calibrations", backend_name)
+    calib_dir = os.path.join(file_dir, "calibrations", backend_name, str(qubit))
     l, p, x0 = get_calib_params(calib_dir, pulse_type, duration, sigma, remove_bg, N, beta)
     
-    backend, drive_chan, num_qubits, q_freq =  initialize_backend(backend)
+    backend, drive_chan, num_qubits, q_freq, pm =  initialize_backend(backend)
 
     center_frequency_Hz = q_freq[qubit]
 
@@ -269,6 +276,7 @@ if __name__ == "__main__":
                                 resolution[1])
 
     a_max = get_amp_for(10 * np.pi, l, p, x0)
+    a_max = min(1, a_max)
     amplitudes = np.linspace(0.001, a_max, resolution[0]).round(3)
 
     assert len(amplitudes) == resolution[0], "amplitudes error"
@@ -292,6 +300,7 @@ if __name__ == "__main__":
 
     num_circs = len(circs)
     # num_shots = 1024
+    pm_circs = pm.run(circs)
 
     transition_probability, job_ids = run_jobs(circs, backend, duration, num_shots_per_exp=num_shots)
 

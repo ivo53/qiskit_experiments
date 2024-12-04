@@ -44,7 +44,7 @@ def InverseParabola(duration, amp, N, name):
         duration=duration,
         parameters={"duration": duration, "amp": amp, "N": N},
         envelope=amp_sym * ((t - duration_sym/2) / (duration_sym/2)) ** (2*N_sym),
-        name=name,
+        name=name
     )
 
     return instance
@@ -58,7 +58,7 @@ def FaceChangingQuadratic(duration, amp, beta, name):
         duration=duration,
         parameters={"duration": duration, "amp": amp, "beta": beta},
         envelope=amp_sym * (1 + beta_sym * (((t - duration_sym / 2) / (duration_sym / 2)) ** 2 - 1)),
-        name=name,
+        name=name
     )
 
     return instance
