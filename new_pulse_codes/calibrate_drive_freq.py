@@ -21,14 +21,16 @@ from qiskit.circuit import Parameter, Gate
 # from qiskit.pulse import Delay,Play
 # This Pulse module helps us build sampled pulses for common pulse shapes
 # from qiskit.pulse import library as pulse_lib
-from qiskit.providers.ibmq.managed import IBMQJobManager
-from qiskit_ibm_provider import IBMProvider
+# from qiskit.providers.ibmq.managed import IBMQJobManager
+# from qiskit_ibm_provider import IBMProvider
+from qiskit_ibm_runtime import QiskitRuntimeService, SamplerV2 as Sampler
+from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
 
-current_dir = os.path.dirname(__file__)
-package_path = os.path.abspath(os.path.split(current_dir)[0])
-sys.path.insert(0, package_path)
+# current_dir = os.path.dirname(__file__)
+# package_path = os.path.abspath(os.path.split(current_dir)[0])
+# sys.path.insert(0, package_path)
 
-import pulse_types as pt
+import common.pulse_types as pt
 from utils.run_jobs import run_jobs
 
 def make_all_dirs(path):
@@ -61,6 +63,9 @@ pulse_dict = {
     "demkov": [pt.Demkov, pt.LiftedDemkov],
     "ipN": [pt.InverseParabola, pt.InverseParabola],
     "fcq": [pt.FaceChangingQuadratic, pt.FaceChangingQuadratic],
+    "lz": [pt.LandauZener, pt.LandauZener],
+    "ae": [pt.AllenEberly, pt.AllenEberly],
+    "dk2": [pt.DemkovKunike2, pt.DemkovKunike2]
 }
 
 
@@ -170,7 +175,9 @@ if __name__ == "__main__":
     meas_chan = pulse.MeasureChannel(qubit)
     acq_chan = pulse.AcquireChannel(qubit)
 
-    backend = IBMProvider().get_backend(backend)
+    # backend = IBMProvider().get_backend(backend)
+    backend = QiskitRuntimeService(channel="ibm_quantum").backend(backend)
+    pm = generate_preset_pass_manager(backend=backend, optimization_level=0)
 
     print(f"Using {backend_name} backend.")
     backend_defaults = backend.defaults()
