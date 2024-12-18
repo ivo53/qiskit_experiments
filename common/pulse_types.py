@@ -21,6 +21,57 @@ def Constant(duration, amp, name):
     )
 
     return instance
+# a constant pulse with Landau-Zener modulation
+def LandauZener(duration, amp, beta, name):
+    t, duration_sym, amp_sym, beta_sym = sym.symbols("t, duration, amp, beta")
+    
+    # Define the constant envelope without Piecewise
+    envelope = amp_sym * sym.Piecewise((1, sym.And(t >= 0, t <= duration_sym)), (0, True))
+    
+    instance = SymbolicPulse(
+        pulse_type="LandauZener",
+        duration=duration,
+        parameters={"duration": duration, "amp": amp, "beta": beta},
+        envelope=envelope * sym.exp(sym.I * 0.5 * beta_sym * t**2),
+        name=name,
+        valid_amp_conditions=sym.And(amp_sym >= 0, amp_sym <= 1),
+    )
+
+    return instance
+# a constant pulse with Allen-Eberly modulation
+def AllenEberly(duration, amp, beta, tau, name):
+    t, duration_sym, amp_sym, beta_sym, tau_sym = sym.symbols("t, duration, amp, beta, tau")
+    
+    # Define the constant envelope without Piecewise
+    envelope = amp_sym * sym.Piecewise((1, sym.And(t >= 0, t <= duration_sym)), (0, True))
+    
+    instance = SymbolicPulse(
+        pulse_type="AllenEberly",
+        duration=duration,
+        parameters={"duration": duration, "amp": amp, "beta": beta, "tau": tau},
+        envelope=envelope * sym.exp(- sym.I * beta_sym * tau_sym * sym.log(sym.cos(t / tau_sym))),
+        name=name,
+        valid_amp_conditions=sym.And(amp_sym >= 0, amp_sym <= 1),
+    )
+
+    return instance
+# a constant pulse with Demkov-Kunike-2 modulation
+def DemkovKunike2(duration, amp, beta, tau, name):
+    t, duration_sym, amp_sym, beta_sym, tau_sym = sym.symbols("t, duration, amp, beta, tau")
+    
+    # Define the constant envelope without Piecewise
+    envelope = amp_sym * sym.Piecewise((1, sym.And(t >= 0, t <= duration_sym)), (0, True))
+    
+    instance = SymbolicPulse(
+        pulse_type="DemkovKunike2",
+        duration=duration,
+        parameters={"duration": duration, "amp": amp, "beta": beta, "tau": tau},
+        envelope=envelope * sym.exp(sym.I * beta_sym * tau_sym * sym.log(sym.cosh(t / tau_sym))),
+        name=name,
+        valid_amp_conditions=sym.And(amp_sym >= 0, amp_sym <= 1),
+    )
+
+    return instance
 # a sawtooth pulse
 def Sawtooth(duration, amp, freq, name):
     t, amp_sym, freq_sym = sym.symbols("t, amp, freq")
