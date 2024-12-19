@@ -139,6 +139,9 @@ if __name__ == "__main__":
         "drag": [pt.Drag, pt.LiftedDrag],
         "ipN": [pt.InverseParabola, pt.InverseParabola],
         "fcq": [pt.FaceChangingQuadratic, pt.FaceChangingQuadratic],
+        "lz": [pt.LandauZener, pt.LandauZener],
+        "ae": [pt.AllenEberly, pt.AllenEberly],
+        "dk2": [pt.DemkovKunike2, pt.DemkovKunike2]
     }
     ## create folder where plots are saved
     file_dir = os.path.dirname(__file__)

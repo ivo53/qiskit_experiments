@@ -22,6 +22,32 @@ def rabi(
     f = np.heaviside(t, 1) * np.heaviside(T - t, 1)
     return f
 
+def landau_zener(
+    t,
+    T: float,
+    beta: float
+):
+    f = np.heaviside(t, 1) * np.heaviside(T - t, 1) * np.exp(1j * 0.5 * beta * t**2)
+    return f
+
+def allen_eberly(
+    t,
+    T: float,
+    beta: float,
+    tau: float
+):
+    f = np.heaviside(t, 1) * np.heaviside(T - t, 1) * np.exp(-1j * beta * tau * np.log(np.cos(t / tau)))
+    return f
+
+def demkov_kunike_2(
+    t,
+    T: float,
+    beta: float,
+    tau: float
+):
+    f = np.heaviside(t, 1) * np.heaviside(T - t, 1) * np.exp(1j * beta * tau * np.log(np.cosh(t / tau)))
+    return f
+
 def lorentz(
     t, 
     T: float,
@@ -168,6 +194,9 @@ def fcq(
 
 pulse_shapes = {
     "rabi": rabi,
+    "lz": landau_zener,
+    "ae": allen_eberly,
+    "dk2": demkov_kunike_2,
     "lor": lorentz,
     "lor2": lorentz2,
     "lor3_2": lorentz3_2,

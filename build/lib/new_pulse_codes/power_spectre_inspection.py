@@ -276,6 +276,7 @@ if __name__ == "__main__":
                                 resolution[1])
 
     a_max = get_amp_for(10 * np.pi, l, p, x0)
+    a_max = min(1, a_max)
     amplitudes = np.linspace(0.001, a_max, resolution[0]).round(3)
 
     assert len(amplitudes) == resolution[0], "amplitudes error"
