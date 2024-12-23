@@ -21,14 +21,16 @@ from qiskit.circuit import Parameter, Gate
 # from qiskit.pulse import Delay,Play
 # This Pulse module helps us build sampled pulses for common pulse shapes
 # from qiskit.pulse import library as pulse_lib
-from qiskit.providers.ibmq.managed import IBMQJobManager
-from qiskit_ibm_provider import IBMProvider
+# from qiskit.providers.ibmq.managed import IBMQJobManager
+# from qiskit_ibm_provider import IBMProvider
+from qiskit_ibm_runtime import QiskitRuntimeService, SamplerV2 as Sampler
+from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
 
-current_dir = os.path.dirname(__file__)
-package_path = os.path.abspath(os.path.split(current_dir)[0])
-sys.path.insert(0, package_path)
+# current_dir = os.path.dirname(__file__)
+# package_path = os.path.abspath(os.path.split(current_dir)[0])
+# sys.path.insert(0, package_path)
 
-import pulse_types as pt
+import common.pulse_types as pt
 from utils.run_jobs import run_jobs
 
 def make_all_dirs(path):
@@ -61,6 +63,9 @@ pulse_dict = {
     "demkov": [pt.Demkov, pt.LiftedDemkov],
     "ipN": [pt.InverseParabola, pt.InverseParabola],
     "fcq": [pt.FaceChangingQuadratic, pt.FaceChangingQuadratic],
+    "lz": [pt.LandauZener, pt.LandauZener],
+    "ae": [pt.AllenEberly, pt.AllenEberly],
+    "dk2": [pt.DemkovKunike2, pt.DemkovKunike2]
 }
 
 
@@ -100,7 +105,9 @@ if __name__ == "__main__":
     parser.add_argument("-N", "--N", default=1, type=int,
         help="The order of inverse parabola pulse(in case of inv. parabola).")
     parser.add_argument("-be", "--beta", default=0, type=float,
-        help="The beta parameter for the face changing quadratic function.")
+        help="The beta parameter for the face changing quadratic and Landau-Zener functions.")
+    parser.add_argument("-tau", "--tau", default=100, type=float,
+        help="The tau parameter for the Allen-Eberly and Demkov-Kunike-2 functions.")
     args = parser.parse_args()
 
     pulse_type = args.pulse_type
@@ -119,6 +126,7 @@ if __name__ == "__main__":
     qubit = args.qubit
     N = float(args.N)
     beta = args.beta
+    tau = args.tau
     backend = args.backend
     backend_name = backend
     backend = "ibm_" + backend \
@@ -170,7 +178,9 @@ if __name__ == "__main__":
     meas_chan = pulse.MeasureChannel(qubit)
     acq_chan = pulse.AcquireChannel(qubit)
 
-    backend = IBMProvider().get_backend(backend)
+    # backend = IBMProvider().get_backend(backend)
+    backend = QiskitRuntimeService(channel="ibm_quantum").backend(backend)
+    pm = generate_preset_pass_manager(backend=backend, optimization_level=0)
 
     print(f"Using {backend_name} backend.")
     backend_defaults = backend.defaults()
@@ -216,11 +226,19 @@ if __name__ == "__main__":
                     name=pulse_type,
                     sigma=sigma,
                 )
-            elif pulse_type == "fcq":
+            elif pulse_type in ["fcq", "lz"]:
                 pulse_played = pulse_dict[pulse_type][remove_bg](
                     duration=dur_dt,
                     amp=amp,
                     beta=beta,
+                    name=pulse_type
+                )
+            elif pulse_type in ["ae", "dk2"]:
+                pulse_played = pulse_dict[pulse_type][remove_bg](
+                    duration=dur_dt,
+                    amp=amp,
+                    beta=beta,
+                    tau=tau,
                     name=pulse_type
                 )
             else:

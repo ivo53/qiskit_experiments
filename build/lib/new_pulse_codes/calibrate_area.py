@@ -91,7 +91,9 @@ if __name__ == "__main__":
     parser.add_argument("-N", "--N", default=1, type=int,
         help="The order of inverse parabola pulse(in case of inv. parabola).")
     parser.add_argument("-be", "--beta", default=0, type=float,
-        help="The beta parameter for the face changing quadratic function.")
+        help="The beta parameter for the face changing quadratic and Landau-Zener functions.")
+    parser.add_argument("-tau", "--tau", default=100, type=float,
+        help="The tau parameter for the Allen-Eberly and Demkov-Kunike-2 functions.")
     parser.add_argument("-sv", "--save", default=0, type=int,
         help="Whether to save the results from the fit (0 or 1).")
     args = parser.parse_args()
@@ -113,6 +115,7 @@ if __name__ == "__main__":
     qubit = args.qubit
     N = float(args.N)
     beta = args.beta
+    tau = args.tau
     save = bool(args.save)
     backend_name = backend
     backend = "ibm_" + backend
@@ -139,6 +142,9 @@ if __name__ == "__main__":
         "drag": [pt.Drag, pt.LiftedDrag],
         "ipN": [pt.InverseParabola, pt.InverseParabola],
         "fcq": [pt.FaceChangingQuadratic, pt.FaceChangingQuadratic],
+        "lz": [pt.LandauZener, pt.LandauZener],
+        "ae": [pt.AllenEberly, pt.AllenEberly],
+        "dk2": [pt.DemkovKunike2, pt.DemkovKunike2]
     }
     ## create folder where plots are saved
     file_dir = os.path.dirname(__file__)
@@ -249,11 +255,19 @@ if __name__ == "__main__":
                     N=N,
                     name=pulse_type
                 )
-            elif pulse_type == "fcq":
+            elif pulse_type in ["fcq", "lz"]:
                 pulse_played = pulse_dict[pulse_type][remove_bg](
                     duration=dur_dt,
                     amp=amp,
                     beta=beta,
+                    name=pulse_type
+                )
+            elif pulse_type in ["ae", "dk2"]:
+                pulse_played = pulse_dict[pulse_type][remove_bg](
+                    duration=dur_dt,
+                    amp=amp,
+                    beta=beta,
+                    tau=tau,
                     name=pulse_type
                 )
             else:

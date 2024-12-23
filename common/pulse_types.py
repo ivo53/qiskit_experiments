@@ -32,7 +32,7 @@ def LandauZener(duration, amp, beta, name):
         pulse_type="LandauZener",
         duration=duration,
         parameters={"duration": duration, "amp": amp, "beta": beta},
-        envelope=envelope * sym.exp(sym.I * 0.5 * beta_sym * t**2),
+        envelope=envelope * sym.exp(sym.I * 0.5 * beta_sym * (t - duration_sym / 2)**2),
         name=name,
         valid_amp_conditions=sym.And(amp_sym >= 0, amp_sym <= 1),
     )
@@ -49,7 +49,7 @@ def AllenEberly(duration, amp, beta, tau, name):
         pulse_type="AllenEberly",
         duration=duration,
         parameters={"duration": duration, "amp": amp, "beta": beta, "tau": tau},
-        envelope=envelope * sym.exp(- sym.I * beta_sym * tau_sym * sym.log(sym.cos(t / tau_sym))),
+        envelope=envelope * sym.exp(- sym.I * beta_sym * tau_sym * sym.log(sym.cos((t - duration_sym / 2) / tau_sym))),
         name=name,
         valid_amp_conditions=sym.And(amp_sym >= 0, amp_sym <= 1),
     )
@@ -66,7 +66,7 @@ def DemkovKunike2(duration, amp, beta, tau, name):
         pulse_type="DemkovKunike2",
         duration=duration,
         parameters={"duration": duration, "amp": amp, "beta": beta, "tau": tau},
-        envelope=envelope * sym.exp(sym.I * beta_sym * tau_sym * sym.log(sym.cosh(t / tau_sym))),
+        envelope=envelope * sym.exp(sym.I * beta_sym * tau_sym * sym.log(sym.cosh((t - duration_sym / 2) / tau_sym))),
         name=name,
         valid_amp_conditions=sym.And(amp_sym >= 0, amp_sym <= 1),
     )

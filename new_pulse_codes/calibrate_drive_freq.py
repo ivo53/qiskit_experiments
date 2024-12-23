@@ -105,7 +105,9 @@ if __name__ == "__main__":
     parser.add_argument("-N", "--N", default=1, type=int,
         help="The order of inverse parabola pulse(in case of inv. parabola).")
     parser.add_argument("-be", "--beta", default=0, type=float,
-        help="The beta parameter for the face changing quadratic function.")
+        help="The beta parameter for the face changing quadratic and Landau-Zener functions.")
+    parser.add_argument("-tau", "--tau", default=100, type=float,
+        help="The tau parameter for the Allen-Eberly and Demkov-Kunike-2 functions.")
     args = parser.parse_args()
 
     pulse_type = args.pulse_type
@@ -124,6 +126,7 @@ if __name__ == "__main__":
     qubit = args.qubit
     N = float(args.N)
     beta = args.beta
+    tau = args.tau
     backend = args.backend
     backend_name = backend
     backend = "ibm_" + backend \
@@ -223,11 +226,19 @@ if __name__ == "__main__":
                     name=pulse_type,
                     sigma=sigma,
                 )
-            elif pulse_type == "fcq":
+            elif pulse_type in ["fcq", "lz"]:
                 pulse_played = pulse_dict[pulse_type][remove_bg](
                     duration=dur_dt,
                     amp=amp,
                     beta=beta,
+                    name=pulse_type
+                )
+            elif pulse_type in ["ae", "dk2"]:
+                pulse_played = pulse_dict[pulse_type][remove_bg](
+                    duration=dur_dt,
+                    amp=amp,
+                    beta=beta,
+                    tau=tau,
                     name=pulse_type
                 )
             else:
