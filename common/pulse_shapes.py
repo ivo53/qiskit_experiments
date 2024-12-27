@@ -22,21 +22,40 @@ def rabi(
     f = np.heaviside(t, 1) * np.heaviside(T - t, 1)
     return f
 
-def landau_zener(
+def landau_zener1(
     t,
     T: float,
-    beta: float
+    beta: float,
+    tau: float
 ):
-    f = np.heaviside(t, 1) * np.heaviside(T - t, 1) * np.exp(1j * 0.5 * beta * (t - T/2)**2)
+    f = np.heaviside(t, 1) * np.heaviside(T - t, 1) * np.exp(1j * 0.5 * beta * tau * ((t - T/2) / tau) ** 2)
     return f
 
-def allen_eberly(
+def landau_zener4(
+    t,
+    T: float,
+    beta: float,
+    tau: float
+):
+    f = np.heaviside(t, 1) * np.heaviside(T - t, 1) * np.exp(1j * 0.5 * beta * tau * np.arctan(np.sinh(((t - T/2) / tau))) ** 2) / np.cosh((t - T/2) / tau)
+    return f
+
+def allen_eberly1(
     t,
     T: float,
     beta: float,
     tau: float
 ):
     f = np.heaviside(t, 1) * np.heaviside(T - t, 1) * np.exp(-1j * beta * tau * np.log(np.cos((t - T/2) / tau)))
+    return f
+
+def allen_eberly5(
+    t,
+    T: float,
+    beta: float,
+    tau: float
+):
+    f = np.heaviside(t, 1) * np.heaviside(T - t, 1) * np.exp(1j * beta * tau * np.log(np.cosh((t - T/2) / tau))) / np.cosh((t - T/2) / tau)
     return f
 
 def demkov_kunike_2(

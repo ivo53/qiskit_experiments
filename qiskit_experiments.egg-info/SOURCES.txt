@@ -16,6 +16,7 @@ new_pulse_codes/calibrate_drive_freq.py
 new_pulse_codes/calibration_with_N_pulses.py
 new_pulse_codes/composite_pulses_profile_clearing.py
 new_pulse_codes/dephasing_induced_shift.py
+new_pulse_codes/excitation_chirp_landscape.py
 new_pulse_codes/load_and_fit_area_calibration.py
 new_pulse_codes/lorentzian_pi_profile.py
 new_pulse_codes/lorentzian_power_narrowing_1d.py
