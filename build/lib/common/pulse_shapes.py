@@ -37,6 +37,19 @@ def landau_zener4(
     beta: float,
     tau: float
 ):
+    f = np.heaviside(t, 1) * np.heaviside(T - t, 1) * 0.5 * np.pi * np.cos((t - T/2) / tau) * np.exp(
+        1j * beta * tau * np.pi**2 / 8 * (
+            np.sin((t - T/2) / tau)
+        ) ** 2
+    )
+    return f
+
+def landau_zener8(
+    t,
+    T: float,
+    beta: float,
+    tau: float
+):
     f = np.heaviside(t, 1) * np.heaviside(T - t, 1) * np.exp(1j * 0.5 * beta * tau * np.arctan(np.sinh(((t - T/2) / tau))) ** 2) / np.cosh((t - T/2) / tau)
     return f
 
@@ -49,7 +62,24 @@ def allen_eberly1(
     f = np.heaviside(t, 1) * np.heaviside(T - t, 1) * np.exp(-1j * beta * tau * np.log(np.cos((t - T/2) / tau)))
     return f
 
-def allen_eberly5(
+def allen_eberly4(
+    t,
+    T: float,
+    beta: float,
+    tau: float
+):
+    f = np.heaviside(t, 1) * np.heaviside(T - t, 1) * 0.5 * np.pi * np.cos((t - T/2) / tau) * np.exp(
+        -1j * beta * tau * np.log(
+            np.cos(
+                np.pi / 2 * np.sin(
+                    (t - T/2) / tau
+                )
+            )
+        )
+    )
+    return f
+
+def allen_eberly8(
     t,
     T: float,
     beta: float,

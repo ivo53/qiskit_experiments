@@ -38,15 +38,15 @@ def LandauZener1(duration, amp, beta, tau, name):
     )
 
     return instance
-# a constant pulse with Landau-Zener modulation 4
-def LandauZener4(duration, amp, beta, tau, name):
+# a constant pulse with Landau-Zener modulation 8
+def LandauZener8(duration, amp, beta, tau, name):
     t, duration_sym, amp_sym, beta_sym, tau_sym = sym.symbols("t, duration, amp, beta, tau")
     
     # Define the constant envelope without Piecewise
     envelope = amp_sym * sym.sech((t - duration_sym / 2) / tau_sym)
     
     instance = SymbolicPulse(
-        pulse_type="LandauZener4",
+        pulse_type="LandauZener8",
         duration=duration,
         parameters={"duration": duration, "amp": amp, "beta": beta, "tau": tau},
         envelope=envelope * sym.exp(sym.I * 0.5 * beta_sym * tau_sym * (sym.atan(sym.sinh((t - duration_sym / 2) / tau_sym))) ** 2),
@@ -55,15 +55,32 @@ def LandauZener4(duration, amp, beta, tau, name):
     )
 
     return instance
-# a sech pulse with Allen-Eberly modulation 5
-def AllenEberly5(duration, amp, beta, tau, name):
+# a constant pulse with Landau-Zener modulation 4
+def LandauZener4(duration, amp, beta, tau, name):
+    t, duration_sym, amp_sym, beta_sym, tau_sym = sym.symbols("t, duration, amp, beta, tau")
+    
+    # Define the cosine envelope
+    envelope = amp_sym * 0.5 * sym.pi * sym.cos((t - duration_sym / 2) / tau_sym)
+    
+    instance = SymbolicPulse(
+        pulse_type="LandauZener4",
+        duration=duration,
+        parameters={"duration": duration, "amp": amp, "beta": beta, "tau": tau},
+        envelope=envelope * sym.exp(sym.I * beta_sym * tau_sym * 1/8 * sym.pi ** 2 * (sym.sin((t - duration_sym / 2) / tau_sym)) ** 2),
+        name=name,
+        valid_amp_conditions=sym.And(amp_sym >= 0, amp_sym <= 1),
+    )
+
+    return instance
+# a sech pulse with Allen-Eberly modulation 8
+def AllenEberly8(duration, amp, beta, tau, name):
     t, duration_sym, amp_sym, beta_sym, tau_sym = sym.symbols("t, duration, amp, beta, tau")
     
     # Define the sech envelope
     envelope = amp_sym * sym.sech((t - duration_sym / 2) / tau_sym)
     
     instance = SymbolicPulse(
-        pulse_type="AllenEberly",
+        pulse_type="AllenEberly8",
         duration=duration,
         parameters={"duration": duration, "amp": amp, "beta": beta, "tau": tau},
         envelope=envelope * sym.exp(sym.I * beta_sym * tau_sym * sym.log(sym.cosh((t - duration_sym / 2) / tau_sym))),
@@ -80,10 +97,27 @@ def AllenEberly1(duration, amp, beta, tau, name):
     envelope = amp_sym * sym.Piecewise((1, sym.And(t >= 0, t <= duration_sym)), (0, True))
     
     instance = SymbolicPulse(
-        pulse_type="AllenEberly",
+        pulse_type="AllenEberly1",
         duration=duration,
         parameters={"duration": duration, "amp": amp, "beta": beta, "tau": tau},
         envelope=envelope * sym.exp(- sym.I * beta_sym * tau_sym * sym.log(sym.cos((t - duration_sym / 2) / tau_sym))), 
+        name=name, 
+        valid_amp_conditions=sym.And(amp_sym >= 0, amp_sym <= 1, duration_sym / (2 * tau_sym) < sym.pi / 2),
+    )
+
+    return instance
+# a cos pulse with Allen-Eberly modulation 4
+def AllenEberly4(duration, amp, beta, tau, name):
+    t, duration_sym, amp_sym, beta_sym, tau_sym = sym.symbols("t, duration, amp, beta, tau")
+    
+    # Define the cosine envelope
+    envelope = amp_sym * 0.5 * sym.pi * sym.cos((t - duration_sym / 2) / tau_sym)
+    
+    instance = SymbolicPulse(
+        pulse_type="AllenEberly4",
+        duration=duration,
+        parameters={"duration": duration, "amp": amp, "beta": beta, "tau": tau},
+        envelope=envelope * sym.exp(- sym.I * beta_sym * tau_sym * sym.log(sym.cos(0.5 * sym.pi * sym.sin((t - duration_sym / 2) / tau_sym)))), 
         name=name, 
         valid_amp_conditions=sym.And(amp_sym >= 0, amp_sym <= 1, duration_sym / (2 * tau_sym) < sym.pi / 2),
     )

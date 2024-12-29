@@ -45,8 +45,10 @@ pulse_dict = {
     "fcq": [pt.FaceChangingQuadratic, pt.FaceChangingQuadratic],
     "lz1": [pt.LandauZener1, pt.LandauZener1],
     "lz4": [pt.LandauZener4, pt.LandauZener4],
+    "lz8": [pt.LandauZener8, pt.LandauZener8],
     "ae1": [pt.AllenEberly1, pt.AllenEberly1],
-    "ae5": [pt.AllenEberly5, pt.AllenEberly5],
+    "ae4": [pt.AllenEberly4, pt.AllenEberly4],
+    "ae8": [pt.AllenEberly8, pt.AllenEberly8],
 }
 
 def make_all_dirs(path):
@@ -91,6 +93,7 @@ def get_calib_params(
     if df.shape[0] > 1:
         raise ValueError("More than one identical entry found!")
     elif df.shape[0] == 0:
+        return 0, 0, 0
         raise ValueError("No entries found!")
     ser = df.iloc[0]
 
@@ -146,14 +149,14 @@ def add_circ(backend, drive_chan, pulse_type, amp, duration, sigma, remove_bg, c
                 N=N,
                 name=pulse_type
             )
-        elif pulse_type in ["fcq", "lz"]:
+        elif pulse_type == "fcq":
             pulse_played = pulse_dict[pulse_type][remove_bg](
                 duration=duration,
                 amp=amp,
                 beta=chirp,
                 name=pulse_type
             )
-        elif pulse_type in ["ae", "dk2"]:
+        elif pulse_type.startswith("lz") or pulse_type.startswith("ae") or pulse_type.startswith("dk2"):
             pulse_played = pulse_dict[pulse_type][remove_bg](
                 duration=duration,
                 amp=amp,
@@ -206,7 +209,7 @@ if __name__ == "__main__":
         help="Resolution in the chirp axis.")
     parser.add_argument("-cp", "--cut_param", default=0.2, type=float,
         help="Cutoff point as amp value as a fraction of maximum amplitude.")
-    parser.add_argument("-a", "--max_amp", default=0.5, type=float,
+    parser.add_argument("-a", "--amplitude", default=0.5, type=float,
         help="Maximum amplitude to reach in the sweep.")
     parser.add_argument("-N", "--N", default=1, type=int,
         help="The order of inverse parabola pulse(in case of inv. parabola).")
@@ -226,11 +229,11 @@ if __name__ == "__main__":
     qubit = args.qubit
     resolution = (args.resolution_A, args.resolution_C)
     cut_param = args.cut_param
-    # a_max = args.max_amp
+    amplitude = args.amplitude
     N = float(args.N)
     beta = args.beta
     tau = args.tau
-    frequency_span = args.frequency_span
+    frequency_span = args.chirp_span
     backend = args.backend
     backend_name = backend
 
@@ -266,7 +269,7 @@ if __name__ == "__main__":
     make_all_dirs(folder_name)
     calib_dir = os.path.join(file_dir, "calibrations", backend_name, str(qubit))
     l, p, x0 = get_calib_params(calib_dir, pulse_type, duration, sigma, remove_bg, N, beta)
-    
+
     backend, drive_chan, num_qubits, q_freq, pm =  initialize_backend(backend)
 
     center_frequency_Hz = q_freq[qubit]
@@ -279,7 +282,7 @@ if __name__ == "__main__":
         # if backend_name in ["perth", "lagos", "nairobi", "oslo", "kyoto", "brisbane"] \
         #     else "ibmq_" + backend_name
 
-    chirp_span_Hz = frequency_span * MHz #5 * MHz #if cut_param < 1 els e 1.25 * MHz
+    chirp_span_Hz = frequency_span 
     chirp_step_Hz = np.round(chirp_span_Hz / resolution[1], 3) #(1/4) * MHz
     
     # We will sweep 20 MHz above and 20 MHz below the estimated frequency
@@ -294,9 +297,12 @@ if __name__ == "__main__":
     chirps_GHz = np.linspace(chirp_min / GHz, 
                              chirp_max / GHz, 
                              resolution[1])
-
-    a_max = get_amp_for(10 * np.pi, l, p, x0)
-    a_max = min(1, a_max)
+    if l == 0 and p == 0 and x0 == 0:
+        a_max = amplitude
+    else:
+        a_max = get_amp_for(10 * np.pi, l, p, x0)
+        a_max = min(1, a_max)
+    
     amplitudes = np.linspace(0.001, a_max, resolution[0]).round(3)
 
     assert len(amplitudes) == resolution[0], "amplitudes error"
@@ -328,8 +334,8 @@ if __name__ == "__main__":
     # print("JobsID:", job_ids)
 
     ## save final data
-    freq_offset = (chirps_Hz - center_frequency_Hz) / 10**6
-    y, x = np.meshgrid(amplitudes, freq_offset)
+    chirps_MHz = chirps_Hz / 10 ** 6
+    y, x = np.meshgrid(amplitudes, chirps_MHz)
     # z = np.reshape(transition_probability, (len(frequencies_Hz),len(amplitudes)))
 
     with open(os.path.join(data_folder, f"{duration}dt_cutparam-{cut_param}_tr_prob.pkl").replace("\\","/"), 'wb') as f1:
@@ -337,14 +343,14 @@ if __name__ == "__main__":
     with open(os.path.join(data_folder, f"{duration}dt_cutparam-{cut_param}_areas.pkl").replace("\\","/"), 'wb') as f2:
         pickle.dump(amplitudes, f2)
     with open(os.path.join(data_folder, f"{duration}dt_cutparam-{cut_param}_detunings.pkl").replace("\\","/"), 'wb') as f3:
-        pickle.dump((chirps_Hz - center_frequency_Hz), f3)
+        pickle.dump(chirps_Hz, f3)
 
     for i, am in enumerate(amplitudes):
         plt.figure(i)
-        plt.plot(freq_offset, transition_probability[i], "bx")
+        plt.plot(chirps_MHz, transition_probability[i], "bx")
         plt.xlabel("Detuning [MHz]")
         plt.ylabel("Transition Probability")
-        plt.title(f"Lorentzian Freq Offset - Amplitude {am.round(3)}")
+        plt.title(f"Model LZ Offset - Amplitude {am.round(3)}")
         plt.savefig(os.path.join(folder_name, f"lor_amp-{am.round(3)}.png").replace("\\","/"))
         plt.close()
 
@@ -355,7 +361,7 @@ if __name__ == "__main__":
     ax.axis([x.min(), x.max(), y.min(), y.max()])
     fig.colorbar(c, ax=ax)
     ax.set_ylabel('Rabi Freq. [a.u.]')
-    ax.set_xlabel('Detuning [MHz]')
+    ax.set_xlabel('Chirp [MHz]')
     plt.axhline(y = 0.5, color = 'w', linestyle = '--')
     plt.axhline(y = 0.9, color = 'w', linestyle = '--')
     plt.savefig(
