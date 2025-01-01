@@ -88,13 +88,98 @@ def allen_eberly8(
     f = np.heaviside(t, 1) * np.heaviside(T - t, 1) * np.exp(1j * beta * tau * np.log(np.cosh((t - T/2) / tau))) / np.cosh((t - T/2) / tau)
     return f
 
-def demkov_kunike_2(
+def half_landau_zener1(
     t,
     T: float,
     beta: float,
     tau: float
 ):
-    f = np.heaviside(t, 1) * np.heaviside(T - t, 1) * np.exp(1j * beta * tau * np.log(np.cosh((t - T/2) / tau)))
+    f = np.heaviside(t, 1) * np.heaviside(T - t, 1) * np.exp(1j * 0.5 * beta * tau * ((t-T) / tau) ** 2)
+    return f
+
+def half_landau_zener4(
+    t,
+    T: float,
+    beta: float,
+    tau: float
+):
+    f = np.heaviside(t, 1) * np.heaviside(T - t, 1) * 0.5 * np.pi * np.cos((t - T) / tau) * np.exp(
+        1j * beta * tau * np.pi**2 / 8 * (
+            np.sin((t-T) / tau)
+        ) ** 2
+    )
+    return f
+
+def half_landau_zener8(
+    t,
+    T: float,
+    beta: float,
+    tau: float
+):
+    f = np.heaviside(t, 1) * np.heaviside(T - t, 1) * np.exp(1j * 0.5 * beta * tau * np.arctan(np.sinh(((t-T) / tau))) ** 2) / np.cosh((t - T) / tau)
+    return f
+
+def half_allen_eberly1(
+    t,
+    T: float,
+    beta: float,
+    tau: float
+):
+    f = np.heaviside(t, 1) * np.heaviside(T - t, 1) * np.exp(-1j * beta * tau * np.log(np.cos((t-T) / tau)))
+    return f
+
+def half_allen_eberly4(
+    t,
+    T: float,
+    beta: float,
+    tau: float
+):
+    f = np.heaviside(t, 1) * np.heaviside(T - t, 1) * 0.5 * np.pi * np.cos((t - T) / tau) * np.exp(
+        -1j * beta * tau * np.log(
+            np.cos(
+                np.pi / 2 * np.sin(
+                    (t-T) / tau
+                )
+            )
+        )
+    )
+    return f
+
+def half_allen_eberly8(
+    t,
+    T: float,
+    beta: float,
+    tau: float
+):
+    f = np.heaviside(t, 1) * np.heaviside(T - t, 1) * np.exp(1j * beta * tau * np.log(np.cosh((t-T) / tau))) / np.cosh((t - T) / tau)
+    return f
+
+def bambini_berman(
+    t,
+    T: float,
+    beta: float,
+    tau: float
+):
+    f = np.heaviside(t, 1) * np.heaviside(T - t, 1) * np.exp(1j * beta * (tau * np.log(np.cosh((t - T/2) / tau)) + t)) / np.cosh((t - T/2) / tau)
+    return f
+
+def demkov_kunike_2(
+    t,
+    T: float,
+    beta: float,
+    delta_0: float,
+    tau: float
+):
+    f = np.heaviside(t, 1) * np.heaviside(T - t, 1) * np.exp(1j * (beta * tau * np.log(np.cosh((t - T/2) / tau)) + delta_0 * t))
+    return f
+
+def cos_sin(
+    t,
+    T: float,
+    beta: float,
+    tau: float
+):
+    f = np.heaviside(t, 1) * np.heaviside(T - t, 1) * np.cos(t/tau)**2 * np.exp(1j * (beta * (2 * t - tau * np.sin(2 * t / tau))))
     return f
 
 def lorentz(

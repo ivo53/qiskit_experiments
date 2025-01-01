@@ -123,18 +123,154 @@ def AllenEberly4(duration, amp, beta, tau, name):
     )
 
     return instance
-# a constant pulse with Demkov-Kunike-2 modulation
-def DemkovKunike2(duration, amp, beta, tau, name):
+# a constant pulse with half Landau-Zener modulation 1
+def HalfLandauZener1(duration, amp, beta, tau, name):
     t, duration_sym, amp_sym, beta_sym, tau_sym = sym.symbols("t, duration, amp, beta, tau")
     
     # Define the constant envelope without Piecewise
     envelope = amp_sym * sym.Piecewise((1, sym.And(t >= 0, t <= duration_sym)), (0, True))
     
     instance = SymbolicPulse(
-        pulse_type="DemkovKunike2",
+        pulse_type="LandauZener1",
         duration=duration,
         parameters={"duration": duration, "amp": amp, "beta": beta, "tau": tau},
-        envelope=envelope * sym.exp(sym.I * beta_sym * tau_sym * sym.log(sym.cosh((t - duration_sym / 2) / tau_sym))),
+        envelope=envelope * sym.exp(sym.I * 0.5 * beta_sym * tau_sym * ((t - duration_sym) / tau_sym)**2),
+        name=name,
+        valid_amp_conditions=sym.And(amp_sym >= 0, amp_sym <= 1),
+    )
+
+    return instance
+# a constant pulse with half Landau-Zener modulation 8
+def HalfLandauZener8(duration, amp, beta, tau, name):
+    t, duration_sym, amp_sym, beta_sym, tau_sym = sym.symbols("t, duration, amp, beta, tau")
+    
+    # Define the constant envelope without Piecewise
+    envelope = amp_sym * sym.sech((t - duration_sym) / tau_sym)
+    
+    instance = SymbolicPulse(
+        pulse_type="LandauZener8",
+        duration=duration,
+        parameters={"duration": duration, "amp": amp, "beta": beta, "tau": tau},
+        envelope=envelope * sym.exp(sym.I * 0.5 * beta_sym * tau_sym * (sym.atan(sym.sinh((t - duration_sym) / tau_sym))) ** 2),
+        name=name,
+        valid_amp_conditions=sym.And(amp_sym >= 0, amp_sym <= 1),
+    )
+
+    return instance
+# a constant pulse with half Landau-Zener modulation 4
+def HalfLandauZener4(duration, amp, beta, tau, name):
+    t, duration_sym, amp_sym, beta_sym, tau_sym = sym.symbols("t, duration, amp, beta, tau")
+    
+    # Define the cosine envelope
+    envelope = amp_sym * 0.5 * sym.pi * sym.cos((t - duration_sym) / tau_sym)
+    
+    instance = SymbolicPulse(
+        pulse_type="LandauZener4",
+        duration=duration,
+        parameters={"duration": duration, "amp": amp, "beta": beta, "tau": tau},
+        envelope=envelope * sym.exp(sym.I * beta_sym * tau_sym * 1/8 * sym.pi ** 2 * (sym.sin((t - duration_sym) / tau_sym)) ** 2),
+        name=name,
+        valid_amp_conditions=sym.And(amp_sym >= 0, amp_sym <= 1),
+    )
+
+    return instance
+# a sech pulse with half Allen-Eberly modulation 8
+def HalfAllenEberly8(duration, amp, beta, tau, name):
+    t, duration_sym, amp_sym, beta_sym, tau_sym = sym.symbols("t, duration, amp, beta, tau")
+    
+    # Define the sech envelope
+    envelope = amp_sym * sym.sech((t - duration_sym) / tau_sym)
+    
+    instance = SymbolicPulse(
+        pulse_type="AllenEberly8",
+        duration=duration,
+        parameters={"duration": duration, "amp": amp, "beta": beta, "tau": tau},
+        envelope=envelope * sym.exp(sym.I * beta_sym * tau_sym * sym.log(sym.cosh((t - duration_sym) / tau_sym))),
+        name=name,
+        valid_amp_conditions=sym.And(amp_sym >= 0, amp_sym <= 1),
+    )
+
+    return instance
+# a constant pulse with half Allen-Eberly modulation 1
+def HalfAllenEberly1(duration, amp, beta, tau, name):
+    t, duration_sym, amp_sym, beta_sym, tau_sym = sym.symbols("t, duration, amp, beta, tau")
+    
+    # Define the constant envelope without Piecewise
+    envelope = amp_sym * sym.Piecewise((1, sym.And(t >= 0, t <= duration_sym)), (0, True))
+    
+    instance = SymbolicPulse(
+        pulse_type="AllenEberly1",
+        duration=duration,
+        parameters={"duration": duration, "amp": amp, "beta": beta, "tau": tau},
+        envelope=envelope * sym.exp(- sym.I * beta_sym * tau_sym * sym.log(sym.cos((t - duration_sym) / tau_sym))), 
+        name=name, 
+        valid_amp_conditions=sym.And(amp_sym >= 0, amp_sym <= 1, duration_sym / (2 * tau_sym) < sym.pi / 2),
+    )
+
+    return instance
+# a cos pulse with half Allen-Eberly modulation 4
+def HalfAllenEberly4(duration, amp, beta, tau, name):
+    t, duration_sym, amp_sym, beta_sym, tau_sym = sym.symbols("t, duration, amp, beta, tau")
+    
+    # Define the cosine envelope
+    envelope = amp_sym * 0.5 * sym.pi * sym.cos((t - duration_sym) / tau_sym)
+    
+    instance = SymbolicPulse(
+        pulse_type="AllenEberly4",
+        duration=duration,
+        parameters={"duration": duration, "amp": amp, "beta": beta, "tau": tau},
+        envelope=envelope * sym.exp(- sym.I * beta_sym * tau_sym * sym.log(sym.cos(0.5 * sym.pi * sym.sin((t - duration_sym) / tau_sym)))), 
+        name=name, 
+        valid_amp_conditions=sym.And(amp_sym >= 0, amp_sym <= 1, duration_sym / (2 * tau_sym) < sym.pi / 2),
+    )
+
+    return instance
+# a constant pulse with BambiniBerman modulation
+def BambiniBerman(duration, amp, beta, tau, name):
+    t, duration_sym, amp_sym, beta_sym, tau_sym = sym.symbols("t, duration, amp, beta, tau")
+    
+    # Define the constant envelope without Piecewise
+    envelope = amp_sym * sym.sech((t - duration_sym / 2) / tau_sym)
+    
+    instance = SymbolicPulse(
+        pulse_type="BambiniBerman",
+        duration=duration,
+        parameters={"duration": duration, "amp": amp, "beta": beta, "tau": tau},
+        envelope=envelope * sym.exp(sym.I * beta_sym * (tau_sym * sym.log(sym.cosh((t - duration_sym / 2) / tau_sym)) + t)),
+        name=name,
+        valid_amp_conditions=sym.And(amp_sym >= 0, amp_sym <= 1),
+    )
+
+    return instance
+# a constant pulse with Demkov-Kunike-2 modulation
+def DemkovKunike2(duration, amp, beta, tau, delta_0, name):
+    t, duration_sym, amp_sym, beta_sym, delta_0_sym, tau_sym = sym.symbols("t, duration, amp, beta, delta_0, tau")
+    
+    # Define the constant envelope without Piecewise
+    envelope = amp_sym * sym.sech((t - duration_sym / 2) / tau_sym)
+    
+    instance = SymbolicPulse(
+        pulse_type="DemkovKunike2",
+        duration=duration,
+        parameters={"duration": duration, "amp": amp, "beta": beta, "delta_0": delta_0, "tau": tau},
+        envelope=envelope * sym.exp(sym.I * (beta_sym * tau_sym * sym.log(sym.cosh((t - duration_sym / 2) / tau_sym)) + delta_0_sym * t)),
+        name=name,
+        valid_amp_conditions=sym.And(amp_sym >= 0, amp_sym <= 1),
+    )
+
+    return instance
+# a constant pulse with Demkov-Kunike-2 modulation
+def CosSin(duration, amp, beta, tau, name):
+    t, duration_sym, amp_sym, beta_sym, tau_sym = sym.symbols("t, duration, amp, beta, tau")
+    
+    # Define the constant envelope without Piecewise
+    envelope = amp_sym * sym.cos(t / tau_sym) ** 2
+    
+    instance = SymbolicPulse(
+        pulse_type="CosSin",
+        duration=duration,
+        parameters={"duration": duration, "amp": amp, "beta": beta, "tau": tau},
+        envelope=envelope * sym.exp(sym.I * 1/4 * beta_sym * (2 * t - tau_sym * sym.sin(2 * t / tau_sym))),
         name=name,
         valid_amp_conditions=sym.And(amp_sym >= 0, amp_sym <= 1),
     )

@@ -49,6 +49,14 @@ pulse_dict = {
     "ae1": [pt.AllenEberly1, pt.AllenEberly1],
     "ae4": [pt.AllenEberly4, pt.AllenEberly4],
     "ae8": [pt.AllenEberly8, pt.AllenEberly8],
+    "hlz1": [pt.HalfLandauZener1, pt.HalfLandauZener1],
+    "hlz4": [pt.HalfLandauZener4, pt.HalfLandauZener4],
+    "hlz8": [pt.HalfLandauZener8, pt.HalfLandauZener8],
+    "hae1": [pt.HalfAllenEberly1, pt.HalfAllenEberly1],
+    "hae4": [pt.HalfAllenEberly4, pt.HalfAllenEberly4],
+    "hae8": [pt.HalfAllenEberly8, pt.HalfAllenEberly8],
+    "bb": [pt.BambiniBerman, pt.BambiniBerman],
+    "cs": [pt.CosSin, pt.CosSin],
 }
 
 def make_all_dirs(path):
@@ -156,7 +164,9 @@ def add_circ(backend, drive_chan, pulse_type, amp, duration, sigma, remove_bg, c
                 beta=chirp,
                 name=pulse_type
             )
-        elif pulse_type.startswith("lz") or pulse_type.startswith("ae") or pulse_type.startswith("dk2"):
+        elif pulse_type.startswith("lz") or pulse_type.startswith("ae") or pulse_type.startswith("dk2") or\
+            pulse_type.startswith("hlz") or pulse_type.startswith("hae") or pulse_type.startswith("bb") \
+                or pulse_type.startswith("cs"):
             pulse_played = pulse_dict[pulse_type][remove_bg](
                 duration=duration,
                 amp=amp,
