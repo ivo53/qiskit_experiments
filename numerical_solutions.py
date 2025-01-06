@@ -12,13 +12,13 @@ def ndsolve_lorentz_spectre(
     lor_power=1
 ):
     d_end = d_end or -d_start
-    
+
     pulse_type = "lorentz"
 
     def omega(t, args):
         return args["O"] / (1 + ((t) / args["sigma"]) ** 2) ** args["lor_power"]
 
-    
+
     O = pulse_area / quad(lambda t: omega(t, {"O": 1, "sigma": sigma, "lor_power": lor_power}), -T/2, T/2)[0]
 
     tlist = np.linspace(-T/2, T/2, num_t)
@@ -63,7 +63,7 @@ def ndsolve_lorentz_spectre(
     # plt.show()
     return d_range, tr_probs
     
-def ndsolve_lorentz_rabi_osc(   
+def ndsolve_lorentz_rabi_osc(
     sigma, T,
     A_start,
     A_num, d,
