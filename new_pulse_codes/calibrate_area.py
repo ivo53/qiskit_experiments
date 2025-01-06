@@ -142,9 +142,20 @@ if __name__ == "__main__":
         "drag": [pt.Drag, pt.LiftedDrag],
         "ipN": [pt.InverseParabola, pt.InverseParabola],
         "fcq": [pt.FaceChangingQuadratic, pt.FaceChangingQuadratic],
-        "lz": [pt.LandauZener, pt.LandauZener],
-        "ae": [pt.AllenEberly, pt.AllenEberly],
-        "dk2": [pt.DemkovKunike2, pt.DemkovKunike2]
+        "lz1": [pt.LandauZener1, pt.LandauZener1],
+        "lz4": [pt.LandauZener4, pt.LandauZener4],
+        "lz8": [pt.LandauZener8, pt.LandauZener8],
+        "ae1": [pt.AllenEberly1, pt.AllenEberly1],
+        "ae4": [pt.AllenEberly4, pt.AllenEberly4],
+        "ae8": [pt.AllenEberly8, pt.AllenEberly8],
+        "hlz1": [pt.HalfLandauZener1, pt.HalfLandauZener1],
+        "hlz4": [pt.HalfLandauZener4, pt.HalfLandauZener4],
+        "hlz8": [pt.HalfLandauZener8, pt.HalfLandauZener8],
+        "hae1": [pt.HalfAllenEberly1, pt.HalfAllenEberly1],
+        "hae4": [pt.HalfAllenEberly4, pt.HalfAllenEberly4],
+        "hae8": [pt.HalfAllenEberly8, pt.HalfAllenEberly8],
+        "bb": [pt.BambiniBerman, pt.BambiniBerman],
+        "cs": [pt.CosSin, pt.CosSin],
     }
     ## create folder where plots are saved
     file_dir = os.path.dirname(__file__)
