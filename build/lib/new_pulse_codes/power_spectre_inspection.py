@@ -40,7 +40,7 @@ pulse_dict = {
     "sin4": [pt.Sine4, pt.Sine4],
     "sin5": [pt.Sine5, pt.Sine5],
     "demkov": [pt.Demkov, pt.LiftedDemkov],
-    "drag": [pt.Drag, pt.LiftedDrag],
+    "drag": [pt.Drag2, pt.LiftedDrag2],
     "ipN": [pt.InverseParabola, pt.InverseParabola],
     "fcq": [pt.FaceChangingQuadratic, pt.FaceChangingQuadratic],
 }
