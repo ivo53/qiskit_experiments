@@ -139,7 +139,7 @@ if __name__ == "__main__":
         "sin4": [pt.Sine4, pt.Sine4],
         "sin5": [pt.Sine5, pt.Sine5],
         "demkov": [pt.Demkov, pt.LiftedDemkov],
-        "drag": [pt.Drag, pt.LiftedDrag],
+        "drag": [pt.Drag2, pt.LiftedDrag2],
         "ipN": [pt.InverseParabola, pt.InverseParabola],
         "fcq": [pt.FaceChangingQuadratic, pt.FaceChangingQuadratic],
         "lz1": [pt.LandauZener1, pt.LandauZener1],
@@ -156,6 +156,7 @@ if __name__ == "__main__":
         "hae8": [pt.HalfAllenEberly8, pt.HalfAllenEberly8],
         "bb": [pt.BambiniBerman, pt.BambiniBerman],
         "cs": [pt.CosSin, pt.CosSin],
+        "comp": [pt.Composite, pt.Composite]
     }
     ## create folder where plots are saved
     file_dir = os.path.dirname(__file__)
@@ -255,7 +256,7 @@ if __name__ == "__main__":
                 pulse_played = pulse_dict[pulse_type][remove_bg](
                     duration=dur_dt,
                     amp=amp,
-                    beta=1,
+                    beta=beta,
                     name=pulse_type,
                     sigma=sigma,
                 )

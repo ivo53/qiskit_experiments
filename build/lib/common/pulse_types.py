@@ -813,23 +813,22 @@ def LiftedDemkov(duration, amp, sigma, name):
 
     return instance
 
-# a Drag pulse
-def Drag(duration, amp, sigma, beta, name):
-    t, duration_sym, amp_sym, sigma_sym, beta_sym, angle_sym = sym.symbols("t, duration, amp, sigma, beta, angle")
+# a Drag2 pulse
+def Drag2(duration, amp, sigma, beta, name):
+    t, duration_sym, amp_sym, sigma_sym, beta_sym = sym.symbols("t, duration, amp, sigma, beta")
 
     gaussian = sym.exp(- 0.5 * ((t - duration_sym/2) / sigma_sym) ** 2)
     gaussian_deriv = -(t - duration_sym/2) / (sigma_sym**2) * gaussian
-    envelope = amp_sym * (gaussian + sym.I * beta_sym * gaussian_deriv) * sym.exp(sym.I * angle_sym)
+    envelope = amp_sym * (gaussian + sym.I * beta_sym * gaussian_deriv)
 
-    consts_expr = _sigma > 0
-    valid_amp_conditions_expr = sym.And(sym.Abs(_amp) <= 1.0, sym.Abs(_beta) < _sigma)
+    consts_expr = sigma_sym > 0
+    valid_amp_conditions_expr = sym.And(sym.Abs(amp_sym) <= 1.0, sym.Abs(beta_sym) < sigma_sym)
 
     instance = SymbolicPulse(
-        pulse_type="Drag",
+        pulse_type="Drag2",
         duration=duration,
-        parameters={"duration": duration, "amp": amp, "sigma": sigma, "beta": beta, "angle": angle},
+        parameters={"duration": duration, "amp": amp, "sigma": sigma, "beta": beta},
         envelope=envelope,
-        angle=angle,
         name=name,
         constraints=consts_expr,
         valid_amp_conditions=valid_amp_conditions_expr,
@@ -837,13 +836,13 @@ def Drag(duration, amp, sigma, beta, name):
 
     return instance
 
-# a LiftedDrag pulse
-def LiftedDrag(duration, amp, sigma, beta, name, angle=0.):
-    t, duration_sym, amp_sym, sigma_sym, beta_sym, angle_sym = sym.symbols("t, duration, amp, sigma, beta, angle")
+# a LiftedDrag2 pulse
+def LiftedDrag2(duration, amp, sigma, beta, name):
+    t, duration_sym, amp_sym, sigma_sym, beta_sym = sym.symbols("t, duration, amp, sigma, beta")
 
     gaussian = sym.exp(- 0.5 * ((t - duration_sym/2) / sigma_sym) ** 2)
     gaussian_deriv = -(t - duration_sym/2) / (sigma_sym**2) * gaussian
-    envelope = amp_sym * (gaussian + sym.I * beta_sym * gaussian_deriv) * sym.exp(sym.I * angle_sym)
+    envelope = amp_sym * (gaussian + sym.I * beta_sym * gaussian_deriv)
     new_amp = amp_sym / (amp_sym - envelope.subs(t, 0))
     lifted_envelope = new_amp * (envelope - envelope.subs(t, 0))
     # lifted_envelope = [sym.re(lifted_envelope), sym.im(lifted_envelope)]
@@ -851,11 +850,10 @@ def LiftedDrag(duration, amp, sigma, beta, name, angle=0.):
     valid_amp_conditions_expr = sym.And(sym.Abs(amp_sym) <= 1.0, sym.Abs(beta_sym) < sigma_sym)
 
     instance = SymbolicPulse(
-        pulse_type="LiftedDrag",
+        pulse_type="LiftedDrag2",
         duration=duration,
-        parameters={"duration": duration, "amp": amp, "sigma": sigma, "beta": beta, "angle": angle},
+        parameters={"duration": duration, "amp": amp, "sigma": sigma, "beta": beta},
         envelope=lifted_envelope,
-        angle=angle,
         name=name,
         constraints=consts_expr,
         valid_amp_conditions=valid_amp_conditions_expr,
