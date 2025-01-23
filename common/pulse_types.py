@@ -22,7 +22,7 @@ def Constant(duration, amp, name):
     return instance
 
 # a composite pulse
-def Composite(duration, amps, phases, name):
+def Composite(duration, amp, amps, phases, name):
     def _heaviside(x):
         return (x + sym.Abs(x)) / (2 * sym.Abs(x) + 1e-300)
     assert len(amps) == len(phases)
