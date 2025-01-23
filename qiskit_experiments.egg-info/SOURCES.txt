@@ -11,6 +11,7 @@ finite_pulses/sine_offres_rabi.py
 finite_pulses/sq_vs_sine_brd.py
 finite_pulses/twod_landscape.py
 new_pulse_codes/__init__.py
+new_pulse_codes/analyze_leakage_vs_detuning.py
 new_pulse_codes/calibrate_area.py
 new_pulse_codes/calibrate_drive_freq.py
 new_pulse_codes/calibration_with_N_pulses.py

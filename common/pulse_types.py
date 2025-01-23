@@ -22,44 +22,40 @@ def Constant(duration, amp, name):
     return instance
 
 # a composite pulse
-def Composite(duration, amps, phases, name):
+def Composite(duration, amp, amps, phases, name):
     def _heaviside(x):
         return (x + sym.Abs(x)) / (2 * sym.Abs(x) + 1e-300)
     assert len(amps) == len(phases)
 
-    t, duration_sym = sym.symbols("t, duration")
-
-    # Create symbols for amplitude and phase for each pulse
-    amp_sym = sym.symbols([f"amp{n}" for n in range(num_pulses)])
-    phase_sym = sym.symbols([f"phase{n}" for n in range(num_pulses)])
+    t, duration_sym, amp_sym = sym.symbols("t, duration, amp")
 
     num_pulses = len(amps)
     indices = range(num_pulses)
 
+    # Create symbols for amplitude and phase for each pulse
+    amps_sym = sym.symbols([f"amp{n}" for n in range(num_pulses)])
+    phases_sym = sym.symbols([f"phase{n}" for n in range(num_pulses)])
+
     # Define parameters dictionary
     parameters = {
         "duration": duration,
-        **{str(amp): val for amp, val in zip(amp_sym, amps)},
-        **{str(phase): val for phase, val in zip(phase_sym, phases)},
+        "amp": amp,
+        **{str(a): val for a, val in zip(amps_sym, amps)},
+        **{str(p): val for p, val in zip(phases_sym, phases)},
     }
 
     envelope = 0
     for n, amp, phase in zip(indices, amps, phases):
 
-        envelope += amp_sym[n] * sym.exp(sym.I * phase_sym[n]) * _heaviside(t - duration_sym * n / num_pulses) * _heaviside(duration_sym * (n + 1) / num_pulses - t)
-    
-    # t, duration_sym, amp_sym, phase_sym = sym.symbols("t, duration, amp")
-    
-    # Define the constant envelope without Piecewise
-    # envelope = amp_sym * sym.Piecewise((1, sym.And(t >= 0, t <= duration_sym)), (0, True))
-    
+        envelope += amps_sym[n] * sym.exp(sym.I * phases_sym[n]) * _heaviside(t - duration_sym * n / num_pulses) * _heaviside(duration_sym * (n + 1) / num_pulses - t)
+        
     instance = SymbolicPulse(
         pulse_type="Composite",
         duration=duration,
         parameters=parameters,
-        envelope=envelope,
+        envelope=amp_sym * envelope,
         name=name,
-        # valid_amp_conditions=sym.And(amp_sym >= 0, amp_sym <= 1),
+        valid_amp_conditions=sym.And(amp_sym >= 0, amp_sym <= 1),
     )
 
     return instance

@@ -56,6 +56,39 @@ def add_entry_and_remove_duplicates(df, new_entry, cols_to_check=["pulse_type", 
     
     return df
 
+COMP_PARAMS = {
+    "X": {
+        1: [{"alpha": 1, "phases": [1/2]}],
+        3: [{"alpha": 1, "phases": [1/6, 5/6]}],
+        5: [{"alpha": 1, "phases": [0.0672, 0.3854, 1.1364]}],
+        6: [{
+                "alpha": [0.25897065, 0.31579605, 0.31907684, 0.32474782, 0.30207873, 0.27153638], 
+                "phases": [0.64128025, 1.35410576, -0.63968337, -1.19841068, 1.00119089, 1.31535192],
+            }], # for qubit 94 kyiv
+        7: [{"alpha": 1, "phases": [0.2560, 1.6839, 0.5933, 0.8306]},
+           {"alpha": [0.26216650072338854, 0.31654687577570756, 0.31654687577570756, 0.31654687577570756, 0.31654687577570756, 0.31654687577570756, 0.23991346939666508], 
+            "phases": [-0.2681786687850911, 0.262007101043305, 0.1158282957504724, 0.058347259736134145, -0.2714955767202196, -0.1544419019664696, 0.38186913558140173]},
+            {
+                "alpha": [2.48679409e-01, 7.35181109e-02, 9.88250774e-02, 2.84600212e-01, 3.30750000e-01, 3.30750000e-01, 1.21189702e-01], 
+                "phases": [-6.24175979e-01, 3.41266737e-01, 9.04041508e-01, 8.74381215e-01, 1.43158780e+00, -1.32953460e-04, -7.86870494e-01]
+        }], # for qubit 80 sherbrooke
+        9: [{"alpha": 1, "phases": [0.3951, 1.2211, 0.7806, 1.9335, 0.4580]}],
+        11: [{"alpha": 1, "phases": [0.7016, 1.1218, 1.8453, 0.9018, 0.3117, 0.1699]}],
+        13: [{"alpha": 1, "phases": [0.1200, 0.3952, 1.5643, 0.0183, 0.9219, 0.4975,1.1096]}],
+        15: [{"alpha": 1, "phases": [0.5672, 1.4322, 0.9040, 0.2397, 0.9118, 0.5426, 1.6518, 0.1406]}],
+        17: [{"alpha": 1, "phases": [0.3604, 1.1000, 0.7753, 1.6298, 1.2338, 0.2969, 0.6148, 1.9298, 0.4443]}]
+    },
+    "H": {
+        3: [{"alpha": 0.6399, "phases": [1.8442, 1.0587]}],
+        5: [{"alpha": 0.45, "phases": [1.9494, 0.5106, 1.3179]}],
+        7: [{"alpha": 0.2769, "phases": [1.6803, 0.2724, 0.8255, 1.6624]}],
+        9: [{"alpha": 0.2947, "phases": [1.2711, 0.1069, 0.5283, 1.1283, 1.9884]}],
+        11: [{"alpha": 0.2985, "phases": [1.7377, 0.1651, 0.9147, 0.1510, 0.9331, 1.6415]}],
+        13: [{"alpha": 0.5065, "phases": [0.0065, 1.7755, 0.7155, 0.5188, 0.2662, 1.2251, 1.3189]}],
+        15: [{"alpha": 0.3132, "phases": [1.2316, 0.9204, 0.2043, 1.9199, 0.8910, 0.7381, 1.9612, 1.3649]}],
+    }
+}
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-pt", "--pulse_type", default="gauss", type=str,
@@ -96,6 +129,14 @@ if __name__ == "__main__":
         help="The tau parameter for the Allen-Eberly and Demkov-Kunike-2 functions.")
     parser.add_argument("-sv", "--save", default=0, type=int,
         help="Whether to save the results from the fit (0 or 1).")
+    parser.add_argument("-v", "--variant", default=0, type=int,
+        help="The variant of the composite pulses that are to be used.")
+    parser.add_argument("-g", "--gate_type", default="X", type=str,
+        help="The type of the composite gate that is played.")
+    parser.add_argument("-np", "--num_pulses", default=5, type=int,
+        help="Num composite pulses inside the composite gate that is played.")
+    parser.add_argument("-nr", "--num_reps", default=1, type=int,
+        help="Num repetitions of the composite gate that is played.")
     args = parser.parse_args()
 
     # cutoff = args.cutoff
@@ -116,6 +157,10 @@ if __name__ == "__main__":
     N = float(args.N)
     beta = args.beta
     tau = args.tau
+    variant = args.variant
+    gate_type = args.gate_type
+    num_pulses= args.num_pulses
+    num_reps= args.num_reps
     save = bool(args.save)
     backend_name = backend
     backend = "ibm_" + backend
@@ -156,6 +201,7 @@ if __name__ == "__main__":
         "hae8": [pt.HalfAllenEberly8, pt.HalfAllenEberly8],
         "bb": [pt.BambiniBerman, pt.BambiniBerman],
         "cs": [pt.CosSin, pt.CosSin],
+        "comp": [pt.Composite, pt.Composite]
     }
     ## create folder where plots are saved
     file_dir = os.path.dirname(__file__)
@@ -255,7 +301,7 @@ if __name__ == "__main__":
                 pulse_played = pulse_dict[pulse_type][remove_bg](
                     duration=dur_dt,
                     amp=amp,
-                    beta=1,
+                    beta=beta,
                     name=pulse_type,
                     sigma=sigma,
                 )
@@ -266,6 +312,14 @@ if __name__ == "__main__":
                     N=N,
                     name=pulse_type
                 )
+            elif pulse_type == "comp":
+                pulse_played = pulse_dict[pulse_type][remove_bg](
+                    duration=dur_dt,
+                    amp=amp,
+                    amps=COMP_PARAMS[gate_type][num_pulses][variant]["alpha"],
+                    phases=COMP_PARAMS[gate_type][num_pulses][variant]["phases"],
+                    name=pulse_type
+                )            
             elif pulse_type in ["fcq", "lz"]:
                 pulse_played = pulse_dict[pulse_type][remove_bg](
                     duration=dur_dt,
