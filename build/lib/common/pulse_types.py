@@ -3,7 +3,6 @@
 import symengine as sym
 from qiskit.pulse.library import SymbolicPulse
 
-
 # a constant pulse
 def Constant(duration, amp, name):
     t, duration_sym, amp_sym = sym.symbols("t, duration, amp")
@@ -21,6 +20,51 @@ def Constant(duration, amp, name):
     )
 
     return instance
+
+# a composite pulse
+def Composite(duration, amp, amps, phases, name):
+    def _heaviside(x):
+        return (x + sym.Abs(x)) / (2 * sym.Abs(x) + 1e-300)
+    assert len(amps) == len(phases)
+
+    t, duration_sym, amp_sym = sym.symbols("t, duration, amp")
+
+    num_pulses = len(amps)
+    indices = range(num_pulses)
+
+    # Create symbols for amplitude and phase for each pulse
+    amps_sym = sym.symbols([f"amp{n}" for n in range(num_pulses)])
+    phases_sym = sym.symbols([f"phase{n}" for n in range(num_pulses)])
+
+    # Define parameters dictionary
+    parameters = {
+        "duration": duration,
+        "amp": amp,
+        **{str(a): val for a, val in zip(amps_sym, amps)},
+        **{str(p): val for p, val in zip(phases_sym, phases)},
+    }
+
+    envelope = 0
+    for n, amp, phase in zip(indices, amps, phases):
+
+        envelope += amps_sym[n] * sym.exp(sym.I * phases_sym[n]) * _heaviside(t - duration_sym * n / num_pulses) * _heaviside(duration_sym * (n + 1) / num_pulses - t)
+    
+    # t, duration_sym, amp_sym, phase_sym = sym.symbols("t, duration, amp")
+    
+    # Define the constant envelope without Piecewise
+    # envelope = amp_sym * sym.Piecewise((1, sym.And(t >= 0, t <= duration_sym)), (0, True))
+    
+    instance = SymbolicPulse(
+        pulse_type="Composite",
+        duration=duration,
+        parameters=parameters,
+        envelope=amp_sym * envelope,
+        name=name,
+        valid_amp_conditions=sym.And(amp_sym >= 0, amp_sym <= 1),
+    )
+
+    return instance
+
 # a constant pulse with Landau-Zener modulation 1
 def LandauZener1(duration, amp, beta, tau, name):
     t, duration_sym, amp_sym, beta_sym, tau_sym = sym.symbols("t, duration, amp, beta, tau")

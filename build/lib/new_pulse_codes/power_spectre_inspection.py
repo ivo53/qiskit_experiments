@@ -43,6 +43,7 @@ pulse_dict = {
     "drag": [pt.Drag2, pt.LiftedDrag2],
     "ipN": [pt.InverseParabola, pt.InverseParabola],
     "fcq": [pt.FaceChangingQuadratic, pt.FaceChangingQuadratic],
+    "comp": [pt.Composite, pt.Composite]
 }
 
 def make_all_dirs(path):
@@ -111,7 +112,7 @@ def initialize_backend(backend):
     print(f"Using {backend_name} backend.")
     backend_defaults = backend.defaults()
     backend_config = backend.configuration()
-    print("Warning: dt =",backend_config.dt)
+    print("Warning: dt =", backend_config.dt)
     num_qubits = backend_config.n_qubits
 
     q_freq = [backend_defaults.qubit_freq_est[q] for q in range(num_qubits)]
@@ -119,7 +120,7 @@ def initialize_backend(backend):
 
     return backend, drive_chan, num_qubits, q_freq, pm
 
-def add_circ(backend, drive_chan, pulse_type, amp, duration, sigma, remove_bg, freq, qubit=0):
+def add_circ(backend, drive_chan, pulse_type, amp, duration, sigma, remove_bg, amps, phases, freq, qubit=0):
     with pulse.build(backend=backend, default_alignment='sequential', name="calibrate_area") as sched:
         pulse.set_frequency(freq, drive_chan)
         if pulse_type == "sq" or "sin" in pulse_type:
@@ -142,6 +143,22 @@ def add_circ(backend, drive_chan, pulse_type, amp, duration, sigma, remove_bg, f
                 N=N,
                 name=pulse_type
             )
+        elif pulse_type == "drag":
+            pulse_played = pulse_dict[pulse_type][remove_bg](
+                duration=duration,
+                amp=amp,
+                beta=beta,
+                name=pulse_type,
+                sigma=sigma,
+            )
+        elif pulse_type == "comp":
+            pulse_played = pulse_dict[pulse_type][remove_bg](
+                duration=duration,
+                amps=amps,
+                phases=phases,
+                name=pulse_type,
+            )
+
         elif pulse_type == "fcq":
             pulse_played = pulse_dict[pulse_type][remove_bg](
                 duration=duration,
