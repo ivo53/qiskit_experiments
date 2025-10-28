@@ -351,7 +351,7 @@ def fwhm_report(delta0: jnp.ndarray, P: jnp.ndarray) -> float:
     ge = p >= half
     if ge.all():
         return float(d[-1] - d[0])
-    if (~ge).all():
+    if (~ge).all(): # unnecessary
         return 0.0
     center = int(_np.argmin(_np.abs(d)))
     trans = ge[:-1] & (~ge[1:])
