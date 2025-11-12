@@ -393,13 +393,15 @@ def build_loss(cfg: Config, t, dt, delta0_grid):
         P_lo = line_shape_for_scale(Om_capped, Ph, De_templ, dt, delta0_grid, cfg.amp_scales[0])
         P_hi = line_shape_for_scale(Om_capped, Ph, De_templ, dt, delta0_grid, cfg.amp_scales[1])
 
+
         # Frequency-mask cost (Riemann sum over Δ0 grid)
-        dΔ = delta0_grid[1] - delta0_grid[0]
-        pass_cost_lo = cfg.w_pass * jnp.sum((1.0 - P_lo) ** 2 * pass_mask) * dΔ
-        stop_cost_lo = cfg.w_stop * jnp.sum((P_lo) ** 2 * stop_mask) * dΔ
-        pass_cost_hi = cfg.w_pass * jnp.sum((1.0 - P_hi) ** 2 * pass_mask) * dΔ
-        stop_cost_hi = cfg.w_stop * jnp.sum((P_hi) ** 2 * stop_mask) * dΔ
+        dd = delta0_grid[1] - delta0_grid[0]
+        pass_cost_lo = cfg.w_pass * jnp.sum((1.0 - P_lo) ** 2 * pass_mask) * dd
+        stop_cost_lo = cfg.w_stop * jnp.sum((P_lo) ** 2 * stop_mask) * dd
+        pass_cost_hi = cfg.w_pass * jnp.sum((1.0 - P_hi) ** 2 * pass_mask) * dd
+        stop_cost_hi = cfg.w_stop * jnp.sum((P_hi) ** 2 * stop_mask) * dd
         mask_cost = 0.5 * (pass_cost_lo + stop_cost_lo + pass_cost_hi + stop_cost_hi)
+
 
         # Smoothness penalties
         dOm = jnp.diff(Om_capped, prepend=Om_capped[:1])
@@ -417,23 +419,100 @@ def build_loss(cfg: Config, t, dt, delta0_grid):
 
         return mask_cost + smooth + pn
 
-    # Diagnostics helper (not jitted to allow prints/plots)
+    # ------------------------------------------------------------------------------
+    # NEW, more verbose diagnostics
+    # ------------------------------------------------------------------------------
+    try:
+        # "special function that can be used for printing"
+        from jax import debug as jdbg
+        jprint = jdbg.print
+    except Exception:
+        # fallback to normal print
+        def jprint(msg, *args):
+            print(msg.format(*args))
+
     def diagnostics(vars: Variables):
-        Om_capped = cfg.Omega_max * jnp.tanh(vars.Om / cfg.Omega_max)
-        Ph = vars.Ph
-        De_templ = vars.De
-        P_lo = line_shape_for_scale(Om_capped, Ph, De_templ, dt, delta0_grid, cfg.amp_scales[0])
-        P_hi = line_shape_for_scale(Om_capped, Ph, De_templ, dt, delta0_grid, cfg.amp_scales[1])
-        # Robust, non-jitted FWHM for display
+        import numpy as _np
+
+        # 1) reconstruct capped controls
+        Om_raw = _np.asarray(vars.Om)
+        Om_capped = cfg.Omega_max * _np.tanh(Om_raw / cfg.Omega_max)
+        Ph = _np.asarray(vars.Ph)
+        De_templ = _np.asarray(vars.De)
+
+        # 2) evaluate line shapes (note: we call the same JAX functions but feed numpy;
+        #    JAX will happily accept them and run on CPU)
+        P_lo = _np.asarray(
+            line_shape_for_scale(
+                jnp.asarray(Om_capped),
+                jnp.asarray(Ph),
+                jnp.asarray(De_templ),
+                dt,
+                jnp.asarray(delta0_grid),
+                cfg.amp_scales[0],
+            )
+        )
+        P_hi = _np.asarray(
+            line_shape_for_scale(
+                jnp.asarray(Om_capped),
+                jnp.asarray(Ph),
+                jnp.asarray(De_templ),
+                dt,
+                jnp.asarray(delta0_grid),
+                cfg.amp_scales[1],
+            )
+        )
+
+        # 3) FWHM (robust / numpy)
         fw_lo = fwhm_report(delta0_grid, P_lo)
         fw_hi = fwhm_report(delta0_grid, P_hi)
-        P0_lo = float(P_lo[cfg.num_delta // 2])
-        P0_hi = float(P_hi[cfg.num_delta // 2])
+
+        center_idx = cfg.num_delta // 2
+        P0_lo = float(P_lo[center_idx])
+        P0_hi = float(P_hi[center_idx])
+
+        # small helper to print array summaries
+        def _arr_summary(name, arr):
+            arr = _np.asarray(arr)
+            n = arr.size
+            print(
+                f"{name:10s} | shape={arr.shape} | min={arr.min(): .6f} | "
+                f"max={arr.max(): .6f} | mean={arr.mean(): .6f}"
+            )
+            # head/tail for long arrays
+            if n > 10:
+                head = ", ".join(f"{x: .4f}" for x in arr[:5])
+                tail = ", ".join(f"{x: .4f}" for x in arr[-5:])
+                print(f"    head: [{head}, ...]")
+                print(f"    tail: [..., {tail}]")
+            else:
+                body = ", ".join(f"{x: .4f}" for x in arr)
+                print(f"    data: [{body}]")
+
+        print("\n===== DIAGNOSTICS =====")
+        print(f"amp scales: {cfg.amp_scales}")
+        print(f"FWHM(lo={cfg.amp_scales[0]:.2f}) = {fw_lo:.6f}")
+        print(f"FWHM(hi={cfg.amp_scales[1]:.2f}) = {fw_hi:.6f}")
+        print(f"P(Δ0=0) lo/hi = {P0_lo:.4f} / {P0_hi:.4f}")
+
+        _arr_summary("Ω_raw", Om_raw)
+        _arr_summary("Ω_capped", Om_capped)
+        _arr_summary("φ", Ph)
+        _arr_summary("Δ_templ", De_templ)
+        _arr_summary("P_lo", P_lo)
+        _arr_summary("P_hi", P_hi)
+
+        # also print with the JAX debug printer so you can see it even in jitted flows
+        jprint("JAX diag → fw_lo={:.6f}, fw_hi={:.6f}, P0_lo={:.4f}, P0_hi={:.4f}",
+               fw_lo, fw_hi, P0_lo, P0_hi)
+
         return {
             "P_lo": P_lo,
             "P_hi": P_hi,
             "fw_lo": fw_lo,
             "fw_hi": fw_hi,
+            "P0_lo": P0_lo,
+            "P0_hi": P0_hi,
         }
 
     return loss_fn, diagnostics
