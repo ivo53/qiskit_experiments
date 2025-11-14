@@ -94,7 +94,9 @@ def delta_shape(
     if theta_det is None:
         return jnp.full_like(t, delta0)
     beta, Tref = theta_det
-    return delta0 * jnp.tanh(beta * t / jnp.maximum(Tref, 1e-9))
+    print(delta0 * jnp.ones_like(t, delta0))
+    return delta0 * jnp.ones_like(t, delta0)
+    # return delta0 * jnp.tanh(beta * t / jnp.maximum(Tref, 1e-9))
 
 
 # --------------------------------------------------------------------------------------
@@ -108,7 +110,7 @@ class Config:
     N: int = 600    # number of steps
 
     # Detuning scan grid Δ0
-    delta0_max: float = 6.0
+    delta0_max: float = 60.0
     num_delta: int = 241  # must be odd → includes 0
 
     # Pass/stop band settings (frequency-mask)
@@ -117,12 +119,15 @@ class Config:
     w_stop: float = 2.0          # weight outside passband (target P≈0)
 
     # Smoothing & amplitude constraints
-    Omega_max: float = 5.0       # hard cap on |Ω|
+    Omega_max: float = 50.0       # hard cap on |Ω|
     lam_smooth: float = 1e-3     # weights ∑|ΔΩ|^2 and ∑|Δφ|^2 penalties
-    lam_det_smooth: float = 0.0  # set >0 if shaping Δ(t)
+    lam_det_smooth: float = 1.0  # set >0 if shaping Δ(t)
+
+    lam_center: float = 5.0      # or whatever
+    w_dark: float = 2.0          # emphasize the “dark” condition if you wish
 
     # Power-narrowing test: evaluate FWHM at two global amplitude scales
-    amp_scales: Tuple[float, float] = (1.0, 1.5)
+    amp_scales: Tuple[float, float, float] = (1.0, 2.0, 3.0)
     lam_pn: float = 1e-2  # penalty for positive slope of FWHM vs amplitude scale
 
     # Optimization
@@ -133,7 +138,7 @@ class Config:
     # Which channels are free to optimize (True → free samples, False → keep seeded)
     free_amp: bool = True
     free_phase: bool = True
-    free_det: bool = False   # set True to optimize Δ(t) (requires lam_det_smooth > 0 for stability)
+    free_det: bool = True   # set True to optimize Δ(t) (requires lam_det_smooth > 0 for stability)
 
     # Seed parameters for shapes (only used to initialize the free samples)
     theta_amp: Tuple[float, float] = (3.0, 2.0)    # (Ω0, T) for Lorentzian seed
@@ -160,7 +165,7 @@ def hat_from_controls(Om: jnp.ndarray, Ph: jnp.ndarray, De: jnp.ndarray) -> jnp.
     sx = jnp.sin(Ph)
     Hx = (Om * cx)[:, None, None] * SX[None, :, :]
     Hy = (Om * sx)[:, None, None] * SY[None, :, :]
-    Hz = (De)[:, None, None] * SZ[None, :, :]
+    Hz = -(De)[:, None, None] * SZ[None, :, :]
     return 0.5 * (Hx + Hy + Hz)
 
 
@@ -254,6 +259,9 @@ def seed_controls(cfg: Config) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, j
 
     # Clip Ω to [0, Ω_max] initially
     Omega_seed = jnp.clip(Omega_seed, 0.0, cfg.Omega_max)
+
+    # Fix Omega area to PI
+    Omega_seed *= jnp.pi / jnp.sum(Omega_seed)
 
     return t, dt, Omega_seed, Phi_seed, De1, delta0_grid
 
@@ -386,21 +394,43 @@ def build_loss(cfg: Config, t, dt, delta0_grid):
     def loss_fn(vars: Variables) -> float:
         # Enforce amplitude cap softly via tanh, but also add penalty if exceeded
         Om_capped = cfg.Omega_max * jnp.tanh(vars.Om / cfg.Omega_max)
+        Om_capped *= jnp.pi / jnp.sum(Om_capped)
         Ph = vars.Ph
         De_templ = vars.De
 
-        # Evaluate line shapes at two amplitude scales
-        P_lo = line_shape_for_scale(Om_capped, Ph, De_templ, dt, delta0_grid, cfg.amp_scales[0])
-        P_hi = line_shape_for_scale(Om_capped, Ph, De_templ, dt, delta0_grid, cfg.amp_scales[1])
+
+        # Evaluate line shapes at three amplitude scales
+        P1 = line_shape_for_scale(Om_capped, Ph, De_templ, dt, delta0_grid, cfg.amp_scales[0])
+        P2 = line_shape_for_scale(Om_capped, Ph, De_templ, dt, delta0_grid, cfg.amp_scales[1])
+        P3 = line_shape_for_scale(Om_capped, Ph, De_templ, dt, delta0_grid, cfg.amp_scales[2])
+
+        # ---- new central-value 1–0–1 metric ----
+        cidx = center_idx  # index where Δ0 = 0 in delta0_grid
+
+        P1c = P1[cidx]   # P0(Δ0=0) at amp 1
+        P2c = P2[cidx]   # at amp 2
+        P3c = P3[cidx]   # at amp 3
+
+        # We want: P1c ≈ 1, P2c ≈ 0, P3c ≈ 1
+        # You can bias the dark-level weight with w_dark if needed
+        loss_center = cfg.lam_center * (
+            (P1c - 1.0)**2 +
+            cfg.w_dark * (P2c - 0.0)**2 +
+            (P3c - 1.0)**2
+        )
+
+        # # Evaluate line shapes at two amplitude scales
+        # P_lo = line_shape_for_scale(Om_capped, Ph, De_templ, dt, delta0_grid, cfg.amp_scales[0])
+        # P_hi = line_shape_for_scale(Om_capped, Ph, De_templ, dt, delta0_grid, cfg.amp_scales[1])
 
 
-        # Frequency-mask cost (Riemann sum over Δ0 grid)
-        dd = delta0_grid[1] - delta0_grid[0]
-        pass_cost_lo = cfg.w_pass * jnp.sum((1.0 - P_lo) ** 2 * pass_mask) * dd
-        stop_cost_lo = cfg.w_stop * jnp.sum((P_lo) ** 2 * stop_mask) * dd
-        pass_cost_hi = cfg.w_pass * jnp.sum((1.0 - P_hi) ** 2 * pass_mask) * dd
-        stop_cost_hi = cfg.w_stop * jnp.sum((P_hi) ** 2 * stop_mask) * dd
-        mask_cost = 0.5 * (pass_cost_lo + stop_cost_lo + pass_cost_hi + stop_cost_hi)
+        # # Frequency-mask cost (Riemann sum over Δ0 grid)
+        # dd = delta0_grid[1] - delta0_grid[0]
+        # pass_cost_lo = cfg.w_pass * jnp.sum((1.0 - P_lo) ** 2 * pass_mask) * dd
+        # stop_cost_lo = cfg.w_stop * jnp.sum((P_lo) ** 2 * stop_mask) * dd
+        # pass_cost_hi = cfg.w_pass * jnp.sum((1.0 - P_hi) ** 2 * pass_mask) * dd
+        # stop_cost_hi = cfg.w_stop * jnp.sum((P_hi) ** 2 * stop_mask) * dd
+        # mask_cost = 0.5 * (pass_cost_lo + stop_cost_lo + pass_cost_hi + stop_cost_hi)
 
 
         # Smoothness penalties
@@ -411,13 +441,14 @@ def build_loss(cfg: Config, t, dt, delta0_grid):
         smooth += cfg.lam_det_smooth * jnp.sum(dDe * dDe)
 
         # Power-narrowing penalty: encourage FWHM at high scale < at low scale
-        fw_lo = fwhm(delta0_grid, P_lo, center_idx)
-        fw_hi = fwhm(delta0_grid, P_hi, center_idx)
-        slope = (fw_hi - fw_lo) / jnp.maximum(cfg.amp_scales[1] - cfg.amp_scales[0], 1e-9)
+        fw_lo = fwhm(delta0_grid, P1, center_idx)
+        fw_hi = fwhm(delta0_grid, P3, center_idx)
+        slope = fw_hi / fw_lo
+        # (fw_hi - fw_lo) / jnp.maximum(cfg.amp_scales[2] - cfg.amp_scales[0], 1e-9)
         pn = cfg.lam_pn * jnp.maximum(slope, 0.0)
-        pn = lax.stop_gradient(pn)  # do not backprop through the FWHM heuristic
+        # pn = lax.stop_gradient(pn)  # do not backprop through the FWHM heuristic
 
-        return mask_cost + smooth + pn
+        return loss_center + pn + smooth
 
     # ------------------------------------------------------------------------------
     # NEW, more verbose diagnostics
@@ -437,6 +468,7 @@ def build_loss(cfg: Config, t, dt, delta0_grid):
         # 1) reconstruct capped controls
         Om_raw = _np.asarray(vars.Om)
         Om_capped = cfg.Omega_max * _np.tanh(Om_raw / cfg.Omega_max)
+        Om_capped *= jnp.pi / jnp.sum(Om_capped)
         Ph = _np.asarray(vars.Ph)
         De_templ = _np.asarray(vars.De)
 
@@ -459,7 +491,7 @@ def build_loss(cfg: Config, t, dt, delta0_grid):
                 jnp.asarray(De_templ),
                 dt,
                 jnp.asarray(delta0_grid),
-                cfg.amp_scales[1],
+                cfg.amp_scales[2],
             )
         )
 
@@ -489,22 +521,22 @@ def build_loss(cfg: Config, t, dt, delta0_grid):
                 body = ", ".join(f"{x: .4f}" for x in arr)
                 print(f"    data: [{body}]")
 
-        print("\n===== DIAGNOSTICS =====")
-        print(f"amp scales: {cfg.amp_scales}")
-        print(f"FWHM(lo={cfg.amp_scales[0]:.2f}) = {fw_lo:.6f}")
-        print(f"FWHM(hi={cfg.amp_scales[1]:.2f}) = {fw_hi:.6f}")
-        print(f"P(Δ0=0) lo/hi = {P0_lo:.4f} / {P0_hi:.4f}")
+        # print("\n===== DIAGNOSTICS =====")
+        # print(f"amp scales: {cfg.amp_scales}")
+        # print(f"FWHM(lo={cfg.amp_scales[0]:.2f}) = {fw_lo:.6f}")
+        # print(f"FWHM(hi={cfg.amp_scales[1]:.2f}) = {fw_hi:.6f}")
+        # print(f"P(Δ0=0) lo/hi = {P0_lo:.4f} / {P0_hi:.4f}")
 
-        _arr_summary("Ω_raw", Om_raw)
-        _arr_summary("Ω_capped", Om_capped)
-        _arr_summary("φ", Ph)
-        _arr_summary("Δ_templ", De_templ)
-        _arr_summary("P_lo", P_lo)
-        _arr_summary("P_hi", P_hi)
+        # _arr_summary("Ω_raw", Om_raw)
+        # _arr_summary("Ω_capped", Om_capped)
+        # _arr_summary("φ", Ph)
+        # _arr_summary("Δ_templ", De_templ)
+        # _arr_summary("P_lo", P_lo)
+        # _arr_summary("P_hi", P_hi)
 
-        # also print with the JAX debug printer so you can see it even in jitted flows
-        jprint("JAX diag → fw_lo={:.6f}, fw_hi={:.6f}, P0_lo={:.4f}, P0_hi={:.4f}",
-               fw_lo, fw_hi, P0_lo, P0_hi)
+        # # also print with the JAX debug printer so you can see it even in jitted flows
+        # jprint("JAX diag → fw_lo={:.6f}, fw_hi={:.6f}, P0_lo={:.4f}, P0_hi={:.4f}",
+        #        fw_lo, fw_hi, P0_lo, P0_hi)
 
         return {
             "P_lo": P_lo,
@@ -603,7 +635,8 @@ def main(cfg: Config):
             print(
                 f"iter {k:4d} | FWHM scales {cfg.amp_scales}: ("
                 f"{d['fw_lo']:.4f}, {d['fw_hi']:.4f}) | P0: "
-                f"({d['P_lo'][cfg.num_delta // 2]:.3f}, {d['P_hi'][cfg.num_delta // 2]:.3f})"
+                f"({d['P_lo'][cfg.num_delta // 2]:.3f}, {d['P_hi'][cfg.num_delta // 2]:.3f}),"
+                f" | P_max: ({jnp.amax(d['P_lo']):.3f}, {jnp.amax(d['P_hi']):.3f})"
             )
 
     # Final diagnostics & plot
@@ -611,7 +644,7 @@ def main(cfg: Config):
     if HAVE_PLOT:
         fig, ax = plt.subplots()
         ax.plot(delta0_grid, d["P_lo"], label=f"scale={cfg.amp_scales[0]:.2f}")
-        ax.plot(delta0_grid, d["P_hi"], label=f"scale={cfg.amp_scales[1]:.2f}")
+        ax.plot(delta0_grid, d["P_hi"], label=f"scale={cfg.amp_scales[2]:.2f}")
         ax.axvline(-cfg.W, linestyle="--")
         ax.axvline(cfg.W, linestyle="--")
         ax.set_xlabel(r"$\Delta_0$")
@@ -633,12 +666,14 @@ if __name__ == "__main__":
         w_pass=1.0,
         w_stop=2.0,
         Omega_max=20.0,
-        lam_smooth=1e-3,
-        lam_det_smooth=0.0,
-        amp_scales=(1.0, 7.0), 
-        lam_pn=5e-2, #1e-2,
+        lam_smooth=1,
+        lam_det_smooth=1e-2,#0.0,
+        amp_scales=(1.0, 2.0, 3.0), 
+        lam_center=1.0e1,
+        w_dark=0.5,
+        lam_pn=1.0,
         steps=1000,
-        lr=5e-2,
+        lr=1e-2,
         print_every=50,
         free_amp=True,
         free_phase=True,
