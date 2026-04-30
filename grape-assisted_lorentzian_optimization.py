@@ -121,18 +121,20 @@ class Config:
     # Smoothing & amplitude constraints
     Omega_max: float = 50.0       # hard cap on |Ω|
     lam_smooth: float = 1e-3     # weights ∑|ΔΩ|^2 and ∑|Δφ|^2 penalties
-    lam_det_smooth: float = 1.0  # set >0 if shaping Δ(t)
+    lam_det_smooth: float = 1e-3  # set >0 if shaping Δ(t)
 
-    lam_center: float = 5.0      # or whatever
-    w_dark: float = 2.0          # emphasize the “dark” condition if you wish
+    lam_center: float = 1.0      # or whatever
+    w_dark: float = 1.0          # emphasize the “dark” condition if you wish
+    P_target: float = 0.95
+    P_dark_max: float = 0.05
 
     # Power-narrowing test: evaluate FWHM at two global amplitude scales
     amp_scales: Tuple[float, float, float] = (1.0, 2.0, 3.0)
-    lam_pn: float = 1e-2  # penalty for positive slope of FWHM vs amplitude scale
+    lam_pn: float = 10.0  # penalty for positive slope of FWHM vs amplitude scale
 
     # Optimization
     steps: int = 800
-    lr: float = 5e-2
+    lr: float = 1e-2
     print_every: int = 50
 
     # Which channels are free to optimize (True → free samples, False → keep seeded)
@@ -413,10 +415,14 @@ def build_loss(cfg: Config, t, dt, delta0_grid):
 
         # We want: P1c ≈ 1, P2c ≈ 0, P3c ≈ 1
         # You can bias the dark-level weight with w_dark if needed
+        violation_P1 = jnp.maximum(cfg.P_target - P1c, 0.0)   # >0 only if P1c < 0.95
+        violation_P2 = jnp.maximum(P2c - cfg.P_dark_max, 0.0) # >0 only if P2c > 0.05
+        violation_P3 = jnp.maximum(cfg.P_target - P3c, 0.0)   # >0 only if P3c < 0.95
+
         loss_center = cfg.lam_center * (
-            (P1c - 1.0)**2 +
-            cfg.w_dark * (P2c - 0.0)**2 +
-            (P3c - 1.0)**2
+            violation_P1**2 +
+            cfg.w_dark * violation_P2**2 +
+            violation_P3**2
         )
 
         # # Evaluate line shapes at two amplitude scales
@@ -443,12 +449,16 @@ def build_loss(cfg: Config, t, dt, delta0_grid):
         # Power-narrowing penalty: encourage FWHM at high scale < at low scale
         fw_lo = fwhm(delta0_grid, P1, center_idx)
         fw_hi = fwhm(delta0_grid, P3, center_idx)
-        slope = fw_hi / fw_lo
+        ratio = fw_hi / jnp.maximum(fw_lo, 1e-6)
         # (fw_hi - fw_lo) / jnp.maximum(cfg.amp_scales[2] - cfg.amp_scales[0], 1e-9)
-        pn = cfg.lam_pn * jnp.maximum(slope, 0.0)
+        pn = cfg.lam_pn * ratio ** 2
         # pn = lax.stop_gradient(pn)  # do not backprop through the FWHM heuristic
 
-        return loss_center + pn + smooth
+        total = loss_center + pn + smooth
+        jdbg.print("loss={:.4e} | center={:.4e} | pn={:.4e} | smooth={:.4e}",
+                total, loss_center, pn, smooth)
+
+        return total
 
     # ------------------------------------------------------------------------------
     # NEW, more verbose diagnostics
@@ -666,13 +676,15 @@ if __name__ == "__main__":
         w_pass=1.0,
         w_stop=2.0,
         Omega_max=20.0,
-        lam_smooth=1,
-        lam_det_smooth=1e-2,#0.0,
+        lam_smooth=1e-3,
+        lam_det_smooth=0.0,
         amp_scales=(1.0, 2.0, 3.0), 
-        lam_center=1.0e1,
-        w_dark=0.5,
-        lam_pn=1.0,
-        steps=1000,
+        lam_center=1.,
+        w_dark=1.,
+        P_target=0.95,
+        P_dark_max=0.05,
+        lam_pn=10.0,
+        steps=600,
         lr=1e-2,
         print_every=50,
         free_amp=True,
